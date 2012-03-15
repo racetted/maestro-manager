@@ -1,0 +1,13 @@
+<NODE_RESOURCES>
+
+    <!-- loop definition
+    supported attributes: start, step, set, end
+    -->
+    <LOOP start="1" set="48" end="192"/>
+
+    <!-- dependency definition 
+    supported attributes: dep_name, status="end", type="node"
+    -->
+   <DEPENDS_ON dep_name="/enkf_mod/Trials/transfer_trials" status="end" type="node"/>
+
+</NODE_RESOURCES>

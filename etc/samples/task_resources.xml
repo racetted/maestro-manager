@@ -1,0 +1,18 @@
+<NODE_RESOURCES>
+  <!-- batch resource definition 
+  supported attributes: machine, queue, memory, mpi, wallclock, catchup, cpu, soumet_args
+
+  -->
+  <BATCH machine="saiph" queue="xfer" memory="200M" mpi="0" wallclock="20" catchup="4" cpu="1" soumet_args="-waste 10 -smt -norset"/>
+
+  <!-- dependency definition (multiple definitions supported)
+    supported attributes: dep_name, status="end", type="node", hour, index, local_index
+  -->
+  <DEPENDS_ON dep_name="/enkf_mod/anal_mod" status="end" type="node"/>
+  <DEPENDS_ON dep_name="/sample_mod/Family_1/Loop_example/outer_Loop/A_Loop_Task" status="end" type="node" local_index="outer_Loop=CURRENT_INDEX" index="outer_Loop=CURRENT_INDEX"/>
+  <DEPENDS_ON type="node" dep_name="/sample_mod/Family_1/Loop_example/outer_Loop/A_Loop_Task"  index="A_Loop_Task=*" status="end"/>
+
+  <!-- abort actions definition -->
+  <ABORT_ACTION name="rerun"/>
+
+</NODE_RESOURCES>

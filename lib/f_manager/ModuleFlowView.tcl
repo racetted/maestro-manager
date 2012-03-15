@@ -63,7 +63,11 @@ proc ModuleFlowView_createWidgets { _expPath _moduleNode } {
    Label ${topWidget}.exp_path -text ${_expPath}
    Label ${topWidget}.mod_node_name -text ${_moduleNode}
 
-   set fileMenu [ModuleFlowView_addFileMenu ${_expPath} ${_moduleNode} ${topWidget}]
+   set topFrame [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} topframe]
+   frame ${topFrame}
+
+   ModuleFlowView_addFileMenu ${_expPath} ${_moduleNode} ${topFrame}
+   ModuleFlowView_addHelpMenu ${_expPath} ${_moduleNode} ${topFrame}
 
    # create toolbar
    set toolbar [ModuleFlowView_addToolbar ${_expPath} ${_moduleNode} ${topWidget}]
@@ -82,20 +86,21 @@ proc ModuleFlowView_createWidgets { _expPath _moduleNode } {
    set statusBar [ModuleFlowView_addStatusBar ${_expPath} ${_moduleNode} ${topWidget}]
 
    # grid ${flowCanvas} -row 0 -column 0 -sticky nsew
-   grid ${fileMenu} -row 0 -sticky w
+   grid ${topFrame} -row 0 -column 0 -sticky w
    grid ${toolbar} -row 1 -sticky w
    grid ${scrolledW} -row 2 -sticky nsew
    grid ${statusBar} -row 3 -sticky ew
 
    grid rowconfigure ${topWidget} 2 -weight 1
    grid columnconfigure ${topWidget} 0 -weight 1
+   #grid columnconfigure ${topWidget} 1 -weight 1
 
    # make sure we have a clean working dir
    ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
 }
 
-proc ModuleFlowView_addFileMenu { _expPath _moduleNode _topWidget } {
-   set menuButtonW ${_topWidget}.menub
+proc ModuleFlowView_addFileMenu { _expPath _moduleNode _parentWidget } {
+   set menuButtonW ${_parentWidget}.file_menub
    set menuW ${menuButtonW}.menu
 
    menubutton ${menuButtonW} -text File -underline 0 -menu ${menuW} \
@@ -104,6 +109,29 @@ proc ModuleFlowView_addFileMenu { _expPath _moduleNode _topWidget } {
 
    ${menuW} add command -label "Quit" -underline 0 \
       -command [list ModuleFlowView_closeWindow ${_expPath} ${_moduleNode}]
+
+   pack $menuButtonW -side left
+
+   return ${menuButtonW}
+}
+
+proc ModuleFlowView_addHelpMenu { _expPath _moduleNode _parentWidget } {
+   global env
+   set menuButtonW ${_parentWidget}.help_menub
+   set menuW ${menuButtonW}.menu
+
+   menubutton ${menuButtonW} -text Help -underline 0 -menu ${menuW} \
+      -relief [SharedData_getMiscData MENU_RELIEF]
+   menu ${menuW} -tearoff 0
+
+   set sampleTaskFile $env(SEQ_MANAGER_BIN)/../etc/samples/task_resources.xml
+   set sampleContainerFile $env(SEQ_MANAGER_BIN)/../etc/samples/container_resources.xml
+
+   ${menuW} add command -label "Sample Task Resource" -underline 7 \
+      -command [list ModuleFlowView_goEditor ${sampleTaskFile}]
+   ${menuW} add command -label "Sample Container Resource" -underline 7 \
+      -command [list ModuleFlowView_goEditor ${sampleContainerFile}]
+   pack $menuButtonW -side left
    return ${menuButtonW}
 }
 
@@ -1213,6 +1241,16 @@ proc ModuleFlowView_toFront { _expPath _moduleNode } {
       raise ${topWidget}
    }
 }
+
+proc ModuleFlowView_goEditor { _file } {
+   if { [info exists Preferences::text_viewer] } {
+      set textViewer "$Preferences::text_viewer $Preferences::text_viewer_args"
+   } else {
+      set textViewer gvim
+   }
+   eval exec ${textViewer} ${_file} &
+}
+
 proc ModuleFlowView_getWidgetName { _expPath _moduleNode _key } {
    puts "ModuleFlowView_getWidgetName _expPath:${_expPath} _moduleNode:${_moduleNode} _key:${_key}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
@@ -1239,6 +1277,7 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
       array set ModuleFlowWidgetNames_${moduleId} \
          [list \
          topwidget ${topWidget} \
+         topframe ${topWidget}.topframe \
          toolbar ${topWidget}.toolbar \
          save_button ${topWidget}.toolbar.save_button \
          addnode_top_widget ${addNodeTopWidget} \

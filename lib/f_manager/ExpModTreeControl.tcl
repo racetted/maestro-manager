@@ -1,22 +1,39 @@
+package require BWidget 1.9
+package require tooltip
+
+SharedData_init
+SharedData_setMiscData IMAGE_DIR $env(SEQ_MANAGER_BIN)/../etc/images
+
+#option add *activeBackground [SharedData_getColor ACTIVE_BG]
+#option add *selectBackground [SharedData_getColor SELECT_BG]
+ 
+MaestroConsole_init
+
 proc ExpModTreeControl_init { _sourceWidget _expPath } {
+   if { [ catch { 
+      if { [ExpModTreeView_isOpened ${_expPath}] == false } {
+         # get exp first module
+         set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
 
-   if { [ExpModTreeView_isOpened ${_expPath}] == false } {
-      # get exp first module
-      set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
+         # recursive read of all module flow.xml
+         # the exp module tree is created at the same time
+         ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
 
-      # recursive read of all module flow.xml
-      # the exp module tree is created at the same time
-      ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
+         # create the exp modules tree gui
+         ExpModTreeView_createWidgets ${_expPath}
 
-      # create the exp modules tree gui
-      ExpModTreeView_createWidgets ${_expPath}
+         # get exp first module
+         set entryModTreeNode [ExpModTree_getEntryModRecord ${_expPath}]
 
-      # get exp first module
-      set entryModTreeNode [ExpModTree_getEntryModRecord ${_expPath}]
-
-      ExpModTreeView_draw ${_expPath} ${entryModTreeNode}
-   } else {
-      ExpModTreeView_toFront ${_expPath}
+         ExpModTreeView_draw ${_expPath} ${entryModTreeNode}
+      } else {
+         ExpModTreeView_toFront ${_expPath}
+      }
+   } errMsg ] } {
+      puts ${errorInfo}
+      MessageDlg .msg_window -icon error -message "${errMsg}" -aspect 400 \
+         -title "Application Error" -type ok -justify center -parent ${_sourceWidget}
+      MaestroConsole_addErrorMsg ${errMsg}
    }
 }
 

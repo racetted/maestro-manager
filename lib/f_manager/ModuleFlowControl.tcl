@@ -30,16 +30,10 @@ proc ModuleFlowControl_configSelected { _expPath _flowNodeRecord } {
 
    puts "ModuleFlowControl_configSelected configFile:${configFile}"
 
-   set textViewer [SharedData_getMiscData TEXT_VIEWER]
-   if { ${textViewer} == "default" } {
-      set textViewer gvim
-   }
-
    if { ! [file readable ${configFile}] } {
       MaestroConsole_addWarningMsg "file ${configFile} does not exists."
    }
-   MaestroConsole_addMsg "${textViewer} ${configFile}"
-   eval exec ${textViewer} ${configFile} &
+   ModuleFlowView_goEditor ${configFile}
 }
 
 proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
@@ -66,16 +60,10 @@ proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
 
    puts "ModuleFlowControl_sourceSelected sourceFile:${sourceFile}"
 
-   set textViewer [SharedData_getMiscData TEXT_VIEWER]
-   if { ${textViewer} == "default" } {
-      set textViewer gvim
-   }
-
    if { ! [file readable ${sourceFile}] } {
       MaestroConsole_addWarningMsg "file ${sourceFile} does not exists."
    }
-   MaestroConsole_addMsg "${textViewer} ${sourceFile}"
-   eval exec ${textViewer} ${sourceFile} &
+   ModuleFlowView_goEditor ${sourceFile}
 }
 
 proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
@@ -94,16 +82,10 @@ proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
 
    puts "ModuleFlowControl_resourceSelected resourceFile:${resourceFile}"
 
-   set textViewer [SharedData_getMiscData TEXT_VIEWER]
-   if { ${textViewer} == "default" } {
-      set textViewer gvim
-   }
-
    if { ! [file readable ${resourceFile}] } {
       MaestroConsole_addWarningMsg "file ${resourceFile} does not exists."
    }
-   MaestroConsole_addMsg "${textViewer} ${resourceFile}"
-   eval exec ${textViewer} ${resourceFile} &
+   ModuleFlowView_goEditor ${resourceFile}
 }
 
 proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNode } {

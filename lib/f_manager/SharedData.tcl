@@ -79,7 +79,6 @@ proc SharedData_initColors {} {
       SharedData_setColor NORMAL_RUN_TEXT black
       SharedData_setColor ACTIVE_BG "#509df4"
       SharedData_setColor SELECT_BG "#509df4"
-      #SharedData_setColor SELECT_BG "#3875d7"
       SharedData_setColor DEFAULT_BG "#ececec"
    }
 

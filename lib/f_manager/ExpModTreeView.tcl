@@ -139,7 +139,7 @@ proc ExpModTreeView_addExpConfig { _expPath _canvas } {
    set iconY [SharedData_getMiscData CANVAS_Y_START]
 
    ${_canvas} create image ${iconStartX} ${iconY} -image ${expCfgImage} -tag "FlowItems ExpConfig"
-   ${_canvas} bind ExpConfig <Double-1> [list ExpModTreeView_configSelected ${_expPath} ${_canvas}]
+   ${_canvas} bind ExpConfig <Double-1> [list ModuleFlowView_goEditor ${_expPath}/experiment.cfg]
    ${_canvas} bind ExpConfig <Button-3> [list ExpModTreeView_ExpConfigMenu ${_expPath} ${_canvas} %X %Y]
 
    tooltip::tooltip ${_canvas}  -items ExpConfig "View/edit experiment config file."
@@ -157,7 +157,7 @@ proc ExpModTreeView_ExpConfigMenu { _expPath _canvas _x _y } {
    }
    menu .pop_menu -title "Exp Config"
    ${popMenu} add command -label "open" -underline 0 -command \
-      [list ExpModTreeView_configSelected ${_expPath} ${_canvas}]
+      [list ModuleFlowView_goEditor ${_expPath}/experiment.cfg]
    $popMenu add separator
 
    tk_popup $popMenu ${_x} ${_y}
@@ -220,22 +220,6 @@ proc ExpModTreeView_clearStatusMsg { _topWidget } {
    set statusFrame [${statusBarW} getframe]
    set statusLabel ${statusFrame}.msg_label
    ${statusLabel} configure -text ""
-}
-
-proc ExpModTreeView_configSelected { _expPath _sourceW } {
-   set textViewer [SharedData_getMiscData TEXT_VIEWER]
-   set defaultConsole [SharedData_getMiscData DEFAULT_CONSOLE]
-
-   set winTitle "Exp=[file tail ${_expPath}] Config"
-   set configFile ${_expPath}/experiment.cfg
-
-   if { ${textViewer} == "default" } {
-      set textViewer gvim
-   }
-
-   set editorCmd "${textViewer} ${configFile} &"
-   # TextEditor_goKonsole ${defaultConsole} ${winTitle} ${editorCmd}
-   eval exec ${editorCmd}
 }
 
 proc ExpModTreeView_vcsSelected { _expPath _sourceW } {

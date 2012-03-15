@@ -18,3 +18,4 @@ proc MiscTkUtils_positionWindow { _sourceWidget _topWidget } {
 proc MiscTkUtils_InitPosition { _topWidget } {
    wm geometry ${_topWidget} +100+100
 }
+
