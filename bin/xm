@@ -1,0 +1,44 @@
+#!/bin/ksh
+
+[[ "$1" = --help || "$1" = -h ]] && set -h
+
+arch=`uname -s`
+
+if [[ "$arch" = "Linux" ]]; then
+       TCLSH=/home/binops/afsi/ssm/domain2/tcl-tk_8.5.11_linux26-i686/bin/wish8.5
+else
+       echo "maestro_center is only supported on Linux platforms"
+       exit 1
+fi
+
+# -- issues with $TMPDIR
+if [ ${#TMPDIR} -eq 0 ];then
+        echo "The env. variable is not defined ... using /tmp/$(id -nu)/$$ "
+	export TMPDIR=/tmp/$(id -nu)/$$
+fi
+
+# -- Language
+#if [ ${#CMCLNG} -eq 0 ];then
+       export CMCLNG=english
+#fi
+
+# -- export SEQ_MANAGER_BIN
+#export SEQ_MANAGER_BIN=/users/dor/afsi/sul/tmp/maestro/maestro-center.rol/bin
+test "${SEQ_MANAGER_BIN}" == "" && print "\nSEQ_MANAGER_BIN not defined! Exiting...\n" && exit 1
+
+# -- VERY first time user --> dont have .maestro.rc file and no Exp's.
+#    >>Convention : .maestro.rc file should alwys reside in user HOME<<
+#    Note : it could be possible that this user has used the interface
+#           before but his .maestro.rc file has been erased for X reason !!
+
+if [ ! -s $HOME/.maestrorc ];then
+   # -- have to create one and Populate it with minimum data
+   cp ${SEQ_MANAGER_BIN}/../etc/config/maestrorc $HOME/.maestrorc
+fi
+
+#-- git
+#eval "`ssmuse sh -d /home/ordenv/ssm-domains/ssm-development -p git_1.7.1.1_linux24-i386`"
+
+arguments=$*
+
+$TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl ${SEQ_MANAGER_BIN} &

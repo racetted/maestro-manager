@@ -4,4 +4,4 @@ ARCH=all
 SWDEST=$(shell pwd)/..
 
 # platform specific definition
-SSMPACKAGE=maestro-manager${VERSION}_$(ARCH)
+SSMPACKAGE=maestro-manager_${VERSION}_$(ARCH)

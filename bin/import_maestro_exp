@@ -1,0 +1,108 @@
+#!/bin/ksh
+#CMOI_PLATFORM op_f
+#CMOI_LEVEL usr
+
+USAGE="\nUSAGE: import_maestro_exp [-h] [-gn] -s source -d destination\n
+ where:\n
+  -h: display help\n
+  -s: path to the source suite/experiment\n
+  -d: destination path with the same suite/experiment name (w/o -n) OR with different name (with -n)\n
+  -n: disable/enable new suite/experiment tag\n
+  -g: disable/enable git depot creation tag\n 
+ Description: retrieve a source maestro suite/experiment and set up its new git repository (if specified)\n
+ Example: import_maestro_exp -s ~afsiops/maestro_suites/ensemble/forecast/e100 -d /tmp -g\n"
+
+if [ "$(uname -s)" != "Linux" ]; then
+  echo "ERROR: import_maestro_exp only runs on Linux" && exit 1
+fi
+
+ntag=0
+gtag=0
+src=""
+dest=""
+
+while getopts hgns:d: options 2> /dev/null; do
+  case $options in
+    h)
+      echo $USAGE && exit 0;;
+    g)
+      gtag=1;;
+    n)
+      ntag=1;;
+    s)
+      src=$(true_path $OPTARG) || exit 1;;
+    d)
+      dest=$OPTARG;;
+    *)
+      echo $USAGE && exit 1;;
+  esac
+done
+#move to the next argument
+shift `expr $OPTIND - 1`
+if [ "$*" != "" ]; then
+  echo $USAGE && exit 1
+fi
+
+if [ "$src" = "" ]; then
+  echo "ERROR: -s option required!" && exit 1
+fi
+if [ "$dest" = "" ]; then
+  echo "ERROR: -d option required!" && exit 1
+fi    
+
+if (touch $dest/.import_maestro_exp 2>&1 | grep -q "Permission denied"); then
+    echo "ERROR: No permission under destination=$dest!" && exit 1
+  else
+    rm -f $dest/.import_maestro_exp
+fi
+
+if [ $ntag -eq 1 ]; then
+  # with -n option: renaming the suite/experiment
+  final_exp=$(basename $dest)
+  dest=$(true_path $(dirname $dest)) || exit 1
+else
+  # w/o -n option
+  final_exp=$(basename $(true_path $src))
+  dest=$(true_path $dest) || exit 1
+fi
+
+if [[ -d $dest/${final_exp} || -f $dest/${final_exp} || -L $dest/${final_exp} ]]; then
+  echo "$dest/${final_exp} exists. Overwrite? (y/n) "
+  read answer
+  if [[ "$answer" = "Y" || "$answer" = "y" ]]; then
+    echo "Removing $dest/${final_exp}..."
+    rm -rf $dest/${final_exp}
+  else
+    echo "Skip importing!"
+    exit 0
+  fi
+fi
+
+echo "Retrieving $exp...\n
+SOURCE=$src\n
+DESTINATION=$dest\n"
+
+rsync -rlpv --exclude ".git/" --exclude "hub/" --exclude "logs/" --exclude "sequencing/" --exclude "listings/" $src/ $dest/${final_exp}/
+
+cd $src
+# copy only the first level of logs, listings and sequencing
+find . \( -name logs -o -name listings -o -name sequencing \) \( -type d -o -type l \) -exec rsync -dlpRv {} $dest/${final_exp}/ \;
+# copy directories/links under hub
+find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv {} $dest/${final_exp}/ \;
+
+# tell git to ignore its operations under logs/listings/sequencing
+echo "*" > $TMPDIR/.gitignore
+find $dest/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
+
+# special case for afsisio when group permission is required to run as afsiops
+if [ "$(id -nu)" = "afsisio" ]; then
+  find $dest/${final_exp}/* \( -name logs -o -name sequencing -o -name listings -o -name ExpDate -o -name ExpOptions.xml -o -name ExpTimings -o -name flow.xml \) \( -type d -o -type f \) -exec chmod -R 775 {} \;
+else
+  chmod -R 755 $dest/${final_exp}
+fi
+
+if [ $gtag -eq 1 ]; then
+  # setup a local git repository
+  cd $dest/${final_exp} && setup_git_repository
+fi
+echo "\nDone importing ${final_exp}\n"
