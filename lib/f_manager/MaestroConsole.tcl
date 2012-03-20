@@ -144,9 +144,10 @@ proc MaestroConsole_addMsg { _message {_colorTag ""} } {
 }
 
 proc MaestroConsole_isActive {} {
-   set isActive true
+   set isActive false
    catch {
       set isActive [SharedData_getMiscData MC_SHOW_CONSOLE]
+      if { ${isActive} == "" } { set isActive false }
    }
    return ${isActive}
 }

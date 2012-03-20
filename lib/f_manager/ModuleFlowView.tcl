@@ -345,9 +345,11 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {cleanup false} } {
 
       global Module_Writable_${moduleId}
       global Link_Module_${moduleId}
+      global TypeOption_${moduleId} `
 
       catch { unset Module_Writable_${moduleId} }
       catch { unset Link_Module_${moduleId} }
+      catch { unset TypeOption_${moduleId} }
 
       ModuleFlowView_clearVisualNodes ${_moduleNode}
 
@@ -560,6 +562,12 @@ proc ModuleFlowView_getNodeSubmitIcon { _expPath _flowNodeRecord } {
 proc ModuleFlowView_nodeMenu { _canvas _flowNodeRecord x y } {
    global HighLightRestoreCmd
    set popMenu .popupMenu
+
+   if { ! [record exists instance ${_flowNodeRecord}] } {
+      MessageDlg .msg_window -icon error -message "The node does not exists! The module window should be closed." -aspect 400 \
+         -title "Flow Manager Error" -type ok -justify center -parent ${_canvas}
+      return
+   }
 
    # highlight selected node
    set HighLightRestoreCmd ""
@@ -788,18 +796,24 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    if { ${nofSubmits} == 0 && ${hasSiblings} == false } {
       spinbox ${positionSpinW} -values 0 -state disabled -wrap yes
    } else {
-      set value {}
-      if { ${nofSubmits} > 0 } { set values {serial} }
+      set values {}
+      set initialValue 0
       set count 0
       while { ${count} <= ${nofSubmits} } {
          set values [lappend values ${count}]
+	 if { ${count} == ${nofSubmits} } { set initialValue  ${count} }
          incr count
       }
+
+      if { ${nofSubmits} > 0 } { lappend values serial }
+
       # parent node replaces current node and submits current node... but you cannot do it for a module node
       if { ${hasSiblings} == true && [${_flowNodeRecord} cget -type] != "ModuleNode" } {
          lappend values "parent"
       }
       spinbox ${positionSpinW} -values ${values} -wrap yes
+      ${positionSpinW} set ${initialValue}
+
    }
    ${positionSpinW} configure -command [list ModuleFlowView_addPositionChanged ${positionSpinW} ${typeOption}]
 

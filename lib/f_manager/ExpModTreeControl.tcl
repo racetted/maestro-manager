@@ -10,6 +10,7 @@ SharedData_setMiscData IMAGE_DIR $env(SEQ_MANAGER_BIN)/../etc/images
 MaestroConsole_init
 
 proc ExpModTreeControl_init { _sourceWidget _expPath } {
+   global errorInfo
    if { [ catch { 
       if { [ExpModTreeView_isOpened ${_expPath}] == false } {
          # get exp first module

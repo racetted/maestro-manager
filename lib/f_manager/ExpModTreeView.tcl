@@ -29,6 +29,26 @@ proc ExpModTreeView_toFront { _expPath } {
 }
 
 proc ExpModTreeView_createWidgets { _expPath } {
+   set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
+   destroy ${topWidget}
+
+   toplevel ${topWidget}
+   # MiscTkUtils_InitPosition ${topWidget}
+   
+   set descmenu {
+        "&File" all file 0 {
+            {command "&Close" {} "Close Flow Manager" {} -command { puts "here" }}
+        }
+     }
+    set prgtext   "Creating MainFrame..."
+    set prgindic  0
+    set mainframe ${topWidget}.mainframe
+    MainFrame ${mainframe} -menu $descmenu
+    pack ${mainframe} -fill both -expand yes
+
+}
+
+proc ExpModTreeView_createWidgets { _expPath } {
 
    set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
    if { [winfo exists ${topWidget}] } {
@@ -36,6 +56,7 @@ proc ExpModTreeView_createWidgets { _expPath } {
    }
 
    toplevel ${topWidget}
+
    MiscTkUtils_InitPosition ${topWidget}
 
    wm title ${topWidget} "Exp=[file tail ${_expPath}]"

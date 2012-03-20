@@ -320,6 +320,10 @@ proc ModuleFlowControl_cancelWrite { _expPath _moduleNode _failedOp _sourceW } {
 }
 
 proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
+   if { [ModuleFlowControl_validateModuleNode ${_expPath} ${_moduleNode} ${_topWidget}] == false } {
+      return
+   }
+
    # the flow xml must be saved in the module work dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set moduleFlowXml ${modWorkDir}/flow.xml
@@ -360,11 +364,19 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
 
 proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
    puts "ModuleFlowControl_refreshSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   if { [ModuleFlowControl_validateModuleNode ${_expPath} ${_moduleNode} ${_topWidget}] == false } {
+      return
+   }
+
    set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
    set parentNodeRecord [ModuleFlow_getParentContainer ${modNodeRecord}]
 
+
    if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
         [ModuleFlowView_flowChangeNotify ${_expPath} ${_moduleNode} ${_topWidget}] == true  } {
+
+      ModuleFlowView_clearStatusMsg ${_topWidget}
+
       # clear module working dir
       ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
 
@@ -474,4 +486,15 @@ proc ModuleFlowControl_getModDefaultDepot {} {
       MaestroConsole_addErrorMsg ${errMsg}
    }
    return ${defaultDepot}
+}
+
+proc ModuleFlowControl_validateModuleNode { _expPath _moduleNode { _sourceWidget ""} } {
+   set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
+   if { ! [record exists instance ${modNodeRecord}] } {
+      MessageDlg .msg_window -icon error -message "The module node does not exists! The module window should be closed." -aspect 400 \
+         -title "Flow Manager Error" -type ok -justify center -parent ${_sourceWidget}
+      return false
+   }
+
+   return true
 }
