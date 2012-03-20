@@ -92,7 +92,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
    puts "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNode:${_parentFlowNode}"
-   global errorInfo Link_Module_${moduleId}
+   global errorInfo ${moduleId}_Link_Module
    # get entry values
    set positionSpinW [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_pos_spinbox]
    set insertPosition [${positionSpinW} get]
@@ -125,7 +125,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
          return
       }
 
-      catch { set useModuleLink [set Link_Module_${moduleId}] }
+      catch { set useModuleLink [set ${moduleId}_Link_Module] }
 
       if { [ catch { ExpLayout_checkModPathExists ${_expPath} ${_parentFlowNode}/${nodeName} ${modulePath} ${useModuleLink} } errMsg] } {
             MessageDlg .msg_window -icon error -message "The new module path already exists!" \
@@ -173,7 +173,7 @@ proc ModuleFlowControl_renameNodeOk { _topWidget _expPath _moduleNode _flowNodeR
    set nodeType [${_flowNodeRecord} cget -type]
 
    puts "ModuleFlowControl_renameNodeOk ${_expPath} _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord} _allModules:${_allModules}"
-   global Link_Module_${moduleId}
+   global ${moduleId}_Link_Module
    # get entry values
    set nameEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} rename_name_entry]
    set nodeName [${nameEntry} get]
@@ -414,9 +414,9 @@ proc ModuleFlowControl_copyLocalSelected { _expPath _moduleNode } {
 proc ModuleFlowControl_addPostSaveCmd { _expPath _moduleNode _cmdArgs } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-   global gPostSave_${moduleId}
-   puts "ModuleFlowControl_addPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode} gPostSave_${moduleId}"
-   lappend gPostSave_${moduleId} ${_cmdArgs} 
+   global ${moduleId}_gPostSave
+   puts "ModuleFlowControl_addPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode} ${moduleId}_gPostSave"
+   lappend ${moduleId}_gPostSave ${_cmdArgs} 
 }
 
 # Go on and process any operations that were postponed. this is called at flow save time.
@@ -424,9 +424,9 @@ proc ModuleFlowControl_goPostSaveCmd { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
    puts "ModuleFlowControl_goPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode}"
-   global gPostSave_${moduleId}
-   if { [info exists gPostSave_${moduleId}] } {
-      foreach cmd [set gPostSave_${moduleId}] {
+   global ${moduleId}_gPostSave
+   if { [info exists ${moduleId}_gPostSave] } {
+      foreach cmd [set ${moduleId}_gPostSave] {
          catch {
             puts "ModuleFlowControl_goPostSaveCmd cmd:${cmd}"
             eval ${cmd}
@@ -439,8 +439,8 @@ proc ModuleFlowControl_goPostSaveCmd { _expPath _moduleNode } {
 # clears postponed cmds
 proc ModuleFlowControl_clearPostSaveCmd { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global gPostSave_${moduleId}
-   catch { unset gPostSave_${moduleId} }
+   global ${moduleId}_gPostSave
+   catch { unset ${moduleId}_gPostSave }
 }
 
 # reads user defined configuration (mc_mod_depot)

@@ -990,15 +990,15 @@ proc ModuleFlow_setModuleChanged { _expPath _moduleNode _isChanged } {
    # when the flow is changed, the following global var is set to true
    # the module flow listens to this var to notify the user when
    # he refreshes or quit the module flow window
-   global FlowChanged_${moduleId}
-   set FlowChanged_${moduleId} ${_isChanged}
+   global ${moduleId}_FlowChanged
+   set ${moduleId}_FlowChanged ${_isChanged}
 }
 
 proc ModuleFlow_isModuleChanged { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global FlowChanged_${moduleId}
-   if { [info exists FlowChanged_${moduleId}] } {
-      return [set FlowChanged_${moduleId}]
+   global ${moduleId}_FlowChanged
+   if { [info exists ${moduleId}_FlowChanged] } {
+      return [set ${moduleId}_FlowChanged]
    }
    return false
 }
@@ -1016,9 +1016,9 @@ proc ModuleFlow_isModuleNew { _expPath _moduleNode } {
 
 proc ModuleFlow_cleanup { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global FlowChanged_${moduleId}
+   global ${moduleId}_FlowChanged
 
-   catch { unset FlowChanged_${moduleId} }
+   catch { unset ${moduleId}_FlowChanged }
 }
 
 proc ModuleFlow_printNode { _domNode } {

@@ -209,12 +209,12 @@ proc ModuleFlowView_saveStatus { _expPath _moduleNode _status } {
 proc ModuleFlowView_checkReadOnlyNotify { _expPath _moduleNode } {
    if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == false } {
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-      global Module_Writable_${moduleId}
-      if { ! [info exists Module_Writable_${moduleId}] } {
+      global ${moduleId}_Module_Writable
+      if { ! [info exists ${moduleId}_Module_Writable] } {
          set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
          MessageDlg .msg_window -icon warning -message "This module is read-only, you will not be allowed to save the flow." \
                -aspect 400 -title "Module Flow Notification" -type ok -justify center -parent ${topWidget}
-         set Module_Writable_${moduleId} 1
+         set ${moduleId}_Module_Writable 1
       }
    }
 }
@@ -232,18 +232,18 @@ proc ModuleFlowView_flowChangeNotify { _expPath _moduleNode _topWidget } {
 
 proc ModuleFlowView_multiEditNotify { _expPath _moduleNode _topWidget } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global Module_Multi_Instance_${moduleId}
+   global ${moduleId}_Module_Multi_Instance
    set isContinue true
 
    if { [ExpModTree_getModInstances ${_expPath} ${_moduleNode}] > 1 } {
-      if { ! [info exists Module_Multi_Instance_${moduleId}] } {
+      if { ! [info exists ${moduleId}_Module_Multi_Instance] } {
          # we only ask the user once per module flow opening
          set answer [MessageDlg .msg_window -icon warning -message "This module is used in more than one instance in the experiment, are you sure you want to continue?" \
                -aspect 400 -title "Module Flow Notification" -type okcancel -justify center -parent ${_topWidget}]
          if { ${answer} == 1 } {
             set isContinue false
          }
-         set Module_Multi_Instance_${moduleId} 1
+         set ${moduleId}_Module_Multi_Instance 1
       }
    }
 
@@ -257,11 +257,11 @@ proc ModuleFlowView_multiEditNotify { _expPath _moduleNode _topWidget } {
 proc ModuleFlowView_copyLocalNotify { _expPath _moduleNode _sourceWidget } {
    # I'm using the same variable to notify the user only once
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global Module_Writable_${moduleId}
+   global ${moduleId}_Module_Writable
 
    set topWidget [winfo toplevel ${_sourceWidget}]
    set isCopied false
-   if { ! [info exists Module_Writable_${moduleId}] } {
+   if { ! [info exists ${moduleId}_Module_Writable] } {
       set modInstances [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
       set extraMsg ""
       if { ${modInstances} > 1 } {
@@ -343,13 +343,13 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {cleanup false} } {
 
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-      global Module_Writable_${moduleId}
-      global Link_Module_${moduleId}
-      global TypeOption_${moduleId} `
+      global ${moduleId}_Module_Writable
+      global ${moduleId}_Link_Module
+      global ${moduleId}_TypeOption
 
-      catch { unset Module_Writable_${moduleId} }
-      catch { unset Link_Module_${moduleId} }
-      catch { unset TypeOption_${moduleId} }
+      catch { unset ${moduleId}_Module_Writable }
+      catch { unset ${moduleId}_Link_Module }
+      catch { unset ${moduleId}_TypeOption }
 
       ModuleFlowView_clearVisualNodes ${_moduleNode}
 
@@ -759,7 +759,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
 
    # the type option is used to hold the values of node type selection
-   global TypeOption_${moduleId} Link_Module_${moduleId}
+   global ${moduleId}_TypeOption ${moduleId}_Link_Module
 
    # hightlight parent flow node
    set HighLightRestoreCmd ""
@@ -821,8 +821,8 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set typeLabel [ModuleFlowView_getWidgetName  ${expPath} ${_moduleNode} addnode_type_label]
    Label ${typeLabel} -text "Type:"
 
-   catch { unset TypeOption_${moduleId} }
-   tk_optionMenu ${typeOption} TypeOption_${moduleId} TaskNode NpassTaskNode FamilyNode ModuleNode LoopNode
+   catch { unset ${moduleId}_TypeOption }
+   tk_optionMenu ${typeOption} ${moduleId}_TypeOption TaskNode NpassTaskNode FamilyNode ModuleNode LoopNode
 
    # check if we shoud disable some node type items
    ModuleFlowView_addPositionChanged ${positionSpinW} ${typeOption}
@@ -858,9 +858,9 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set useModLinkLabel [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_link_label]
    set useModLinkCb [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_link_cb]
    Label ${useModLinkLabel} -text "Link Module:"
-   checkbutton ${useModLinkCb} -indicatoron true -variable Link_Module_${moduleId} \
+   checkbutton ${useModLinkCb} -indicatoron true -variable ${moduleId}_Link_Module \
       -onvalue true -offvalue false
-   set Link_Module_${moduleId} true
+   set ${moduleId}_Link_Module true
 
    ::tooltip::tooltip  ${useModLinkCb} "When enabled, module path will be linked instead of being copied locally."
 
@@ -902,7 +902,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    bind ${okButton} <ButtonRelease> [list ModuleFlowControl_addNodeOk ${topWidget} ${expPath} ${_moduleNode} ${_flowNodeRecord}]
 
    # callback when node type is changed
-   trace add variable TypeOption_${moduleId} write "ModuleFlowView_newNodeTypeCallback ${expPath} ${_moduleNode}"
+   trace add variable ${moduleId}_TypeOption write "ModuleFlowView_newNodeTypeCallback ${expPath} ${_moduleNode}"
 }
 
 proc ModuleFlowView_addPositionChanged { _posSpinbox _nodeTypeOption } {
@@ -923,11 +923,11 @@ proc ModuleFlowView_addPositionChanged { _posSpinbox _nodeTypeOption } {
 
 proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global TypeOption_${moduleId}
+   global ${moduleId}_TypeOption
 
    puts "ModuleFlowView_newNodeCancel"
    set topWidget [winfo toplevel ${_sourceWidget}]
-   unset TypeOption_${moduleId}
+   unset ${moduleId}_TypeOption
 
    # destroy window
    after idle destroy ${topWidget}
@@ -936,7 +936,7 @@ proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
 proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    puts "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global TypeOption_${moduleId}
+   global ${moduleId}_TypeOption
 
    # hide or show reference module row depending on selected node type
    set refLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_label]
@@ -949,7 +949,7 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    set useModLinkLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_label]
    set useModLinkCb [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_cb]
 
-   if { [set TypeOption_${moduleId}] == "ModuleNode" } {
+   if { [set ${moduleId}_TypeOption] == "ModuleNode" } {
       grid ${refLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
       grid ${refEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
       grid ${refButton} -row 2 -column 2 -sticky w -padx 2 -pady 2
@@ -1268,11 +1268,11 @@ proc ModuleFlowView_goEditor { _file } {
 proc ModuleFlowView_getWidgetName { _expPath _moduleNode _key } {
    puts "ModuleFlowView_getWidgetName _expPath:${_expPath} _moduleNode:${_moduleNode} _key:${_key}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global array ModuleFlowWidgetNames_${moduleId}
+   global array ${moduleId}_ModuleFlowWidgetNames
    set value ""
-   puts "ModuleFlowView_getWidgetName looking for 'ModuleFlowWidgetNames_${moduleId}($_key)'"
-   if { [info exists ModuleFlowWidgetNames_${moduleId}($_key)] } {
-      set value [set ModuleFlowWidgetNames_${moduleId}($_key)]
+   puts "ModuleFlowView_getWidgetName looking for '${moduleId}_ModuleFlowWidgetNames($_key)'"
+   if { [info exists ${moduleId}_ModuleFlowWidgetNames($_key)] } {
+      set value [set ${moduleId}_ModuleFlowWidgetNames($_key)]
    } else {
       error "ModuleFlowView_getWidgetName invalid widget key name:${_key}"
    }
@@ -1282,13 +1282,13 @@ proc ModuleFlowView_getWidgetName { _expPath _moduleNode _key } {
 proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
    puts "ModuleFlowView_setWidgetNames _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global array ModuleFlowWidgetNames_${moduleId}
-   if { ! [info exists ModuleFlowWidgetNames_${moduleId}] } {
+   global array ${moduleId}_ModuleFlowWidgetNames
+   if { ! [info exists ${moduleId}_ModuleFlowWidgetNames] } {
       set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
       set addNodeTopWidget .add_node_top_${moduleId}
       set renameNodeTopWidget .rename_top_${moduleId}
-      puts "ModuleFlowView_setWidgetNames creating array ModuleFlowWidgetNames_${moduleId}"
-      array set ModuleFlowWidgetNames_${moduleId} \
+      puts "ModuleFlowView_setWidgetNames creating array ${moduleId}_ModuleFlowWidgetNames"
+      array set ${moduleId}_ModuleFlowWidgetNames \
          [list \
          topwidget ${topWidget} \
          topframe ${topWidget}.topframe \
@@ -1327,6 +1327,6 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
 
 proc ModuleFlowView_clearWidgetNames { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global array ModuleFlowWidgetNames_${moduleId}
-   array unset ModuleFlowWidgetNames_${moduleId}
+   global array ${moduleId}_ModuleFlowWidgetNames
+   array unset ${moduleId}_ModuleFlowWidgetNames
 }

@@ -148,7 +148,7 @@ proc ExpModTree_getRecordPrefix { _expPath } {
    return ${prefix}
 }
 
-# returns true if there is a module in the true that have changed
+# returns true if there is a module in the tree that have changed
 # mainly used to ask user to confirm before quiting the application
 proc ExpModTree_isTreeChanged { _expPath } {
    foreach modTreeNode [record show instances ExpModTreeNode] {
