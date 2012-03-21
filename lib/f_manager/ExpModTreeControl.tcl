@@ -1,5 +1,6 @@
 package require BWidget 1.9
 package require tooltip
+package require log
 
 SharedData_init
 SharedData_setMiscData IMAGE_DIR $env(SEQ_MANAGER_BIN)/../etc/images
@@ -12,6 +13,15 @@ MaestroConsole_init
 proc ExpModTreeControl_init { _sourceWidget _expPath } {
    global errorInfo
    if { [ catch { 
+      # tracing settings
+      # by default errors and info level are enabled
+      # debug is disabled, can be turned on from gui
+      ::log::lvSuppress emergency 0
+      ::log::lvSuppress alert 0
+      ::log::lvSuppress critical 0
+      ::log::lvSuppress error 0
+      ::log::lvSuppress info 0
+      ::log::lvSuppress debug
       if { [ExpModTreeView_isOpened ${_expPath}] == false } {
          # get exp first module
          set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
@@ -31,7 +41,7 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
          ExpModTreeView_toFront ${_expPath}
       }
    } errMsg ] } {
-      puts ${errorInfo}
+      ::log::log error ${errorInfo}
       MessageDlg .msg_window -icon error -message "${errMsg}" -aspect 400 \
          -title "Application Error" -type ok -justify center -parent ${_sourceWidget}
       MaestroConsole_addErrorMsg ${errMsg}
@@ -43,7 +53,7 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 #             i.e. /enkf_mod/anal_mod/gem_mod
 #
 proc ExpModTreeControl_moduleSelection { _expPath _moduleNode {_sourceW .} } {
-   puts "ExpModTreeControl_moduleSelection _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ExpModTreeControl_moduleSelection _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
    set moduleColor [ExpModTreeView_getModuleColor ${_expPath} ${_moduleNode}]
    DrawUtil_setShadowColor ${modTreeNodeRecord} [ExpModTreeView_getCanvas ${_expPath}] ${moduleColor}
@@ -51,7 +61,7 @@ proc ExpModTreeControl_moduleSelection { _expPath _moduleNode {_sourceW .} } {
       ModuleFlowView_initModule ${_expPath} ${_moduleNode} ${_sourceW}
       ExpModTreeControl_addOpenedModule ${_expPath} ${_moduleNode}
    } else {
-      puts "ExpModTreeControl_moduleSelection new module"
+      ::log::log debug "ExpModTreeControl_moduleSelection new module"
    }
 }
 
@@ -133,7 +143,7 @@ proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
 #             i.e. /enkf_mod/anal_mod/gem_mod
 proc ExpModTreeControl_moduleDeleted { _expPath _moduleNode } {
 
-   puts "ExpModTreeControl_moduleDeleted: _expPath=${_expPath} _moduleNode=${_moduleNode}"
+   ::log::log debug "ExpModTreeControl_moduleDeleted: _expPath=${_expPath} _moduleNode=${_moduleNode}"
    ExpModTree_deleteModule ${_expPath} ${_moduleNode}
 
    DrawUtil_clearCanvas [ExpModTreeView_getCanvas ${_expPath}]
@@ -147,7 +157,7 @@ proc ExpModTreeControl_moduleDeleted { _expPath _moduleNode } {
 #             i.e. /enkf_mod/anal_mod/gem_mod
 proc ExpModTreeControl_moduleAdded { _expPath _parentModuleNode _moduleNode } {
 
-   puts "ExpModTreeControl_moduleAdded: _expPath=${_expPath} _parentModuleNode:${_parentModuleNode} _moduleNode=${_moduleNode}"
+   ::log::log debug "ExpModTreeControl_moduleAdded: _expPath=${_expPath} _parentModuleNode:${_parentModuleNode} _moduleNode=${_moduleNode}"
    
    ExpModTree_addModule ${_expPath} ${_moduleNode} [ExpModTree_getRecordName ${_expPath} ${_parentModuleNode}]
 
@@ -214,4 +224,15 @@ proc ExpModTreeControl_isModuleFlowChanged { _expPath } {
       set isChanged [set ${expChecksum}_FlowHasChanged]
    }
    return ${isChanged}
+}
+
+proc ExpModTreeControl_debugChanged { _expPath } {
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
+   global ${expChecksum}_DebugOn
+   set isOn [set ${expChecksum}_DebugOn]
+   if { ${isOn} == true } {
+      ::log::lvSuppress debug 0
+   } else {
+      ::log::lvSuppress debug
+   }
 }

@@ -61,7 +61,7 @@ proc ExpModTree_getModInstances { _expPath _moduleNode } {
 # _refName would be used if the module is a link and not local... It is the
 # name of the reference module (might be different than the actual one used (link name vs target)
 proc ExpModTree_addModule { _expPath _moduleNode _parentTreeNodeRecord {_refName ""}} {
-   puts "ExpModTree_addModule _moduleNode:${_moduleNode} _parentNode:${_parentTreeNodeRecord}"
+   ::log::log debug "ExpModTree_addModule _moduleNode:${_moduleNode} _parentNode:${_parentTreeNodeRecord}"
    set moduleName [file tail ${_moduleNode}]
 
    set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
@@ -105,7 +105,7 @@ proc ExpModTree_deleteModule { _expPath _moduleNode } {
    }
 
    # delete current node
-   puts "ExpModTree_deleteModule delete instance ${modTreeNodeRecord}"
+   ::log::log debug "ExpModTree_deleteModule delete instance ${modTreeNodeRecord}"
    record delete instance ${modTreeNodeRecord}
 }
 
@@ -118,7 +118,7 @@ proc ExpModTree_deleteRecord { _expPath _moduleNode {_isRecursive true}} {
          ExpModTree_deleteRecord ${_expPath} ${childNode} ${_isRecursive}
       }
    }
-   puts "ExpModTree_deleteRecord delete instance ${modNodeRecord}"
+   ::log::log debug "ExpModTree_deleteRecord delete instance ${modNodeRecord}"
    record delete instance ${modNodeRecord}
 }
 
@@ -133,7 +133,7 @@ proc ExpModTree_getEntryModRecord { _expPath } {
 # add specific prefix to avoid name class with other records since
 # a record name automatically becomes a tcl command
 proc ExpModTree_getRecordName { _expPath _moduleNode } {
-   puts "ExpModTree_getRecordName _moduleNode:${_moduleNode}"
+   ::log::log debug "ExpModTree_getRecordName _moduleNode:${_moduleNode}"
    set prefix [ExpModTree_getRecordPrefix ${_expPath}]
    if { [string first ${prefix} ${_moduleNode}] == -1 } {
       return ${prefix}${_moduleNode}
@@ -153,7 +153,7 @@ proc ExpModTree_getRecordPrefix { _expPath } {
 proc ExpModTree_isTreeChanged { _expPath } {
    foreach modTreeNode [record show instances ExpModTreeNode] {
       set moduleNode [ExpModTree_record2NodeName ${modTreeNode}]
-      puts "ModuleFlow_isModuleChanged ${_expPath} ${modTreeNode} ${moduleNode}"
+      ::log::log debug "ModuleFlow_isModuleChanged ${_expPath} ${modTreeNode} ${moduleNode}"
          if { [ModuleFlow_isModuleChanged ${_expPath} ${moduleNode}] == true } {
             return true
          }
@@ -166,7 +166,7 @@ proc ExpModTree_isTreeChanged { _expPath } {
 # i.e. mtree_123456_/enkf_mod/assim/gem_mod
 # would return /enkf_mod/assim/gem_mod
 proc ExpModTree_record2NodeName { _modTreeNodeRecord } {
-   puts "ExpModTree_record2NodeName _modTreeNodeRecord:${_modTreeNodeRecord}"
+   ::log::log debug "ExpModTree_record2NodeName _modTreeNodeRecord:${_modTreeNodeRecord}"
    if { [string index ${_modTreeNodeRecord} 0] == ":" } {
       set scannedItems [scan ${_modTreeNodeRecord} "::mtree_%d_%s" moduleid nodeName]
    } else {

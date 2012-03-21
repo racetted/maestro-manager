@@ -83,7 +83,7 @@ proc MaestroConsole_saveSelected { _topWidget } {
       return
    }
 
-   puts "MaestroConsole_saveSelected filename:${filename}"
+   ::log::log debug "MaestroConsole_saveSelected filename:${filename}"
 
    # retrieve data from widget
    set txtWidget ${_topWidget}.sw.txt

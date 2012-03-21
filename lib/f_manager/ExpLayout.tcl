@@ -49,13 +49,13 @@ proc ExpLayout_getWorkDir { _expPath } {
    # recreate target dir 
    if { ! [file exists ${expWorkDirName}/modules] } {
       MaestroConsole_addMsg "Creating experiment temp modules directory ${expWorkDirName}."
-      puts "ExpLayout_getWorkDir creating working dir ${expWorkDirName}/modules"
+      ::log::log debug "ExpLayout_getWorkDir creating working dir ${expWorkDirName}/modules"
       file mkdir ${expWorkDirName}/modules
-      puts "ExpLayout_getWorkDir creating working dir ${expWorkDirName}/resources"
+      ::log::log debug "ExpLayout_getWorkDir creating working dir ${expWorkDirName}/resources"
       file mkdir ${expWorkDirName}/resources
    }
 
-   puts "ExpLayout_getWorkDir working dir ${expWorkDirName}"
+   ::log::log debug "ExpLayout_getWorkDir working dir ${expWorkDirName}"
    
    return ${expWorkDirName}
 }
@@ -75,7 +75,7 @@ proc ExpLayout_getWorkDirName { _expPath } {
 proc ExpLayout_clearWorkDir { _expPath } {
    set expWorkDirName [ExpLayout_getWorkDirName ${_expPath}]
    if { [file isdirectory ${expWorkDirName}] } {
-      puts "ExpLayout_clearWorkDir deleting ${expWorkDirName}..."
+      ::log::log debug "ExpLayout_clearWorkDir deleting ${expWorkDirName}..."
       file delete -force ${expWorkDirName}
    }
 }
@@ -87,7 +87,7 @@ proc ExpLayout_clearWorkDir { _expPath } {
 # _expPath is path to the experiment (SEQ_EXP_HOME)
 # _moduleNode is experiment tree of node i.e. /enkf_mod/anal_mod
 proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModuleLink } {
-   puts "ExpLayout_checkModPathExists _expPath:${_expPath} _moduleNode:${_moduleNode} _refModulePath:${_refModulePath} _useModuleLink:${_useModuleLink}"
+   ::log::log debug "ExpLayout_checkModPathExists _expPath:${_expPath} _moduleNode:${_moduleNode} _refModulePath:${_refModulePath} _useModuleLink:${_useModuleLink}"
    # for now we still use flat modules
    set modulePath ${_expPath}/modules/[file tail ${_moduleNode}]
    set linkTarget ""
@@ -96,7 +96,7 @@ proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModu
       # user wants a link, verifying if it is a link and if it is the same target
       if { [file exists ${modulePath}] && (${linkTarget} == "" || ${linkTarget} != ${_refModulePath}) } {
          if { [exec true_path ${modulePath}] != [exec true_path ${_refModulePath}] } {
-            puts "ExpLayout_checkModPathExists linkTarget:${linkTarget}"
+            ::log::log error "ExpLayout_checkModPathExists linkTarget:${linkTarget}"
             MaestroConsole_addErrorMsg "The path ${modulePath} already exists. Link target: [exec true_path ${modulePath}]"
             error ModulePathExists
          }
@@ -107,7 +107,7 @@ proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModu
       if { [file exists ${modulePath}] } {
          if { [file exists ${_refModulePath}] &&  ([exec true_path ${modulePath}] != [exec true_path ${_refModulePath}]) } {
             # not a link, validate that directory does not exists
-            puts "ExpLayout_checkModPathExists ${modulePath} exists"
+            ::log::log error "ExpLayout_checkModPathExists ${modulePath} exists"
             MaestroConsole_addErrorMsg "The path ${modulePath} already exists (symbolic link)."
             error ModulePathExists
          } elseif { ${linkTarget} != "" } {
@@ -123,7 +123,7 @@ proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModu
 # _moduleNode is experiment tree of node i.e. /enkf_mod/anal_mod
 proc ExpLayout_createModuleLink { _expPath _moduleNode _refModulePath } {
    set modulePath ${_expPath}/modules/[file tail ${_moduleNode}]
-   puts "ExpLayout_createModuleLink link name: ${modulePath} target:${_refModulePath}"
+   ::log::log debug "ExpLayout_createModuleLink link name: ${modulePath} target:${_refModulePath}"
    if { ! [file exists ${modulePath}] } {
       MaestroConsole_addMsg "create link ${modulePath} -> ${_refModulePath}."
       file link ${modulePath} ${_refModulePath} 
@@ -137,7 +137,7 @@ proc ExpLayout_createModuleLink { _expPath _moduleNode _refModulePath } {
 proc ExpLayout_importModule { _expPath _moduleNode _refModulePath } {
    set target ${_expPath}/modules/[file tail ${_moduleNode}]
    if { ! [file exists ${target}] } {
-      puts "ExpLayout_importModule rsync -r ${_refModulePath}/ ${target}"
+      ::log::log debug "ExpLayout_importModule rsync -r ${_refModulePath}/ ${target}"
       MaestroConsole_addMsg "import module: rsync -r ${_refModulePath}/ ${target}."
       exec rsync -r ${_refModulePath}/ ${target}
    } else {
@@ -148,7 +148,7 @@ proc ExpLayout_importModule { _expPath _moduleNode _refModulePath } {
 # create a new module directory under $SEQ_EXP_HOME/modules/module_name
 proc ExpLayout_newModule { _expPath _moduleNode } {
    set modulePath ${_expPath}/modules/[file tail ${_moduleNode}]
-   puts "ExpLayout_newModule mkdir ${modulePath}"
+   ::log::log debug "ExpLayout_newModule mkdir ${modulePath}"
    MaestroConsole_addMsg "create module directory ${modulePath}"
    file mkdir ${modulePath}
 }
@@ -173,7 +173,7 @@ proc ExpLayout_isModuleWritable { _expPath _moduleNode } {
       }
    }
 
-   puts "ExpLayout_isModuleWritable _expPath:${_expPath} _moduleNode:${_moduleNode} ? ${isWritable}"
+   ::log::log debug "ExpLayout_isModuleWritable _expPath:${_expPath} _moduleNode:${_moduleNode} ? ${isWritable}"
 
    return ${isWritable}
 }
@@ -205,17 +205,17 @@ proc ExpLayout_getModLinkTarget { _expPath _moduleNode } {
 # _moduleNode is the module node path i.e. /enkf_mod/anal_mod/Analysis/gem_mod
 # from the experiment tree
 proc ExpLayout_copyModule { _expPath _moduleNode } {
-   puts "ExpLayout_copyModule _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ExpLayout_copyModule _expPath:${_expPath} _moduleNode:${_moduleNode}"
    if { [ExpLayout_isModuleLink ${_expPath} ${_moduleNode}] == true } {
       set referenceModule [ExpLayout_getModLinkTarget ${_expPath} ${_moduleNode}]
       set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
       # first delete link
-      puts "ExpLayout_copyModule deleting link ${modulePath}"
+      ::log::log debug "ExpLayout_copyModule deleting link ${modulePath}"
       MaestroConsole_addMsg "delete module link: ${modulePath}."
       file delete ${modulePath}
 
       # then copy the module locally
-      puts "ExpLayout_copyModule rsync -r ${referenceModule}/ ${modulePath}"
+      ::log::log debug "ExpLayout_copyModule rsync -r ${referenceModule}/ ${modulePath}"
       MaestroConsole_addMsg "copy module locally: rsync -r ${referenceModule}/ ${modulePath}"
       exec rsync -r ${referenceModule}/ ${modulePath}
       
@@ -246,7 +246,7 @@ proc ExpLayout_flowBuilder { _expPath } {
 # Whether if it is a container or a task, it will replace all instances
 # of the node to the new name
 proc ExpLayout_renameListing { _expPath _flowNode _newName } {
-   puts "ExpLayout_renameListing _expPath:${_expPath} _flowNode:${_flowNode} _newName:${_newName}"
+   ::log::log debug "ExpLayout_renameListing _expPath:${_expPath} _flowNode:${_flowNode} _newName:${_newName}"
    set containerDir [file dirname ${_flowNode}]
    set nodeLeaf [file tail ${_flowNode}]
    set listingDir ${_expPath}/listings/latest${containerDir}

@@ -79,7 +79,7 @@ record define LoopNode {
 # _modName is used only for a module node reference, when
 #   the name used in the flow is different than the module reference name
 proc ModuleFlow_readXml { _expPath _moduleXmlFile _parentFlowRecord {_modName ""} } {
-   puts "ModuleFlow_readXml _moduleXmlFile:${_moduleXmlFile} _modName:${_modName}"
+   ::log::log debug "ModuleFlow_readXml _moduleXmlFile:${_moduleXmlFile} _modName:${_modName}"
    MaestroConsole_addMsg "read xml file: ${_moduleXmlFile}"
    if { ! [file readable ${_moduleXmlFile}] } {
       MaestroConsole_addErrorMsg "xml file not readable: ${_moduleXmlFile}"
@@ -142,7 +142,7 @@ proc ModuleFlow_initXml { _moduleXmlFile _moduleNode } {
    set xmlDoc [dom createDocument MODULE]
    set xmlRootNode [${xmlDoc} documentElement]
    set date [clock format [clock seconds] -format "%d %b %Y"]
-   puts "ModuleFlow_initXml creating file:${_moduleXmlFile}"
+   ::log::log debug "ModuleFlow_initXml creating file:${_moduleXmlFile}"
 
    ${xmlRootNode} setAttribute name [file tail ${_moduleNode}]
 
@@ -163,11 +163,11 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
                            ModuleNode MODULE
                            NpassTaskNode NPASS_TASK
                        }
-   puts "ModuleFlow_flowNodeRecord2Xml _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlow_flowNodeRecord2Xml _flowNodeRecord:${_flowNodeRecord}"
    set nodeType [${_flowNodeRecord} cget -type]
    set xmlNodeName [string map ${FlowNodeTypeMap} ${nodeType}]
 
-   puts "ModuleFlow_flowNodeRecord2Xml xmlNodeName:${xmlNodeName}"
+   ::log::log debug "ModuleFlow_flowNodeRecord2Xml xmlNodeName:${xmlNodeName}"
    set xmlDomNode [${_xmlDoc} createElement ${xmlNodeName}]
    ${xmlDomNode} setAttribute name [${_flowNodeRecord} cget -name]
    ${_xmlParentNode} appendChild ${xmlDomNode}
@@ -204,11 +204,11 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
 # _modName is used only for a module node reference, when
 # the name is different than the reference leaf part
 proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNode false} { _modName "" } } {
-   puts "ModuleFlow_parseXmlNode _parentFlowRecord:${_parentFlowRecord}"
+   ::log::log debug "ModuleFlow_parseXmlNode _parentFlowRecord:${_parentFlowRecord}"
    set xmlNodeName [${_domNode} nodeName]
    set parentFlowNode ${_parentFlowRecord}
    set flowNode ""
-   puts "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName}"
+   ::log::log debug "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName}"
    set FlowNodeTypeMap {   TASK "TaskNode"
                            FAMILY "FamilyNode"
                            LOOP "LoopNode"
@@ -221,7 +221,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
       set nodeName [${_domNode} getAttribute name]
       set moduleNode ${parentFlowNode}/${nodeName}
       set moduleXmlFile [ModuleLayout_getFlowXml ${_expPath} ${moduleNode}]
-      puts "ModuleFlow_parseXmlNode moduleFlowFile:${moduleXmlFile}"
+      ::log::log debug "ModuleFlow_parseXmlNode moduleFlowFile:${moduleXmlFile}"
       if { [file exists ${moduleXmlFile}] } {
          if { ${_modName} != "" } {
             ModuleFlow_readXml ${_expPath} ${moduleXmlFile} ${_parentFlowRecord} ${_modName}
@@ -231,7 +231,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
          return
       } else {
          # should send this to a console
-         puts "ERROR: Cannot read module xml file: ${moduleXmlFile}"
+         ::log::log error "ERROR: Cannot read module xml file: ${moduleXmlFile}"
          MaestroConsole_addWarningMsg "Cannot read xml file: ${moduleXmlFile}"
       }
    }
@@ -249,7 +249,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
          }
          set nodeType [string map $FlowNodeTypeMap ${xmlNodeName}]  
          set recordName [ModuleFlow_getRecordName ${_expPath} ${flowNode}]
-         puts "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName} flowNode:${flowNode} nodeName:${nodeName} nodeType:${nodeType}"
+         ::log::log debug "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName} flowNode:${flowNode} nodeName:${nodeName} nodeType:${nodeType}"
          # submit parent is relative to parent container node
          FlowNode ${recordName} -name [file tail ${flowNode}] -type ${nodeType} -submitter [ModuleFlow_searchSubmitter ${_parentFlowRecord} ${recordName}]
 
@@ -302,7 +302,7 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
    foreach submitNode ${submitNodes} {
       set flowSubmitName [${submitNode} getAttribute sub_name ""]
       set flowChildNode ${submitParent}/${flowSubmitName}
-      puts "ModuleFlow_xmlParseSubmits ::textutil::trim::trimPrefix ${flowChildNode} ${submitParent}"
+      ::log::log debug "ModuleFlow_xmlParseSubmits ::textutil::trim::trimPrefix ${flowChildNode} ${submitParent}"
       lappend flowChildren ${flowSubmitName}
    }
    ${_flowNodeRecord} configure -submits ${flowChildren}
@@ -314,7 +314,7 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
 # a modified flow withouth saving...
 #
 proc ModuleFlow_refresh { _expPath _moduleNode } {
-   puts "ModuleFlow_refresh _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlow_refresh _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
    set parentNodeRecord [ModuleFlow_getParentContainer ${modNodeRecord}]
 
@@ -337,7 +337,7 @@ proc ModuleFlow_refresh { _expPath _moduleNode } {
 # _useModLink only used for _nodeType == ModuleNode, indicates whether or not to use a link to
 #       create the module instead of creating  a local module
 proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _insertPosition { _modPath "" } {_useModLink true} } {
-   puts "ModuleFlow_createNewNode _currentNodeRecord:${_currentNodeRecord} _newName:${_newName} _nodeType:${_nodeType} _insertPosition:${_insertPosition} _modPath:${_modPath} _useModLink:${_useModLink}"
+   ::log::log debug "ModuleFlow_createNewNode _currentNodeRecord:${_currentNodeRecord} _newName:${_newName} _nodeType:${_nodeType} _insertPosition:${_insertPosition} _modPath:${_modPath} _useModLink:${_useModLink}"
    
    # if parent is not container, get the container
    if { ${_insertPosition} == "parent" } {
@@ -358,7 +358,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    }
 
    # create new node
-   puts "ModuleFlow_createNewNode FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -submitter ${_currentNodeRecord}"
+   ::log::log debug "ModuleFlow_createNewNode FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -submitter ${_currentNodeRecord}"
    FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -status new
    
    set parentModRecord [ModuleFlow_getModuleContainer ${newNodeRecord}]
@@ -440,7 +440,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 }
 
 proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_isRecursive false} } {
-   puts "ModuleFlow_deleteNode _origFlowNodeRecord:${_origFlowNodeRecord} _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlow_deleteNode _origFlowNodeRecord:${_origFlowNodeRecord} _flowNodeRecord:${_flowNodeRecord}"
 
    set submitter [ModuleFlow_getSubmitter ${_flowNodeRecord}]
    set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_flowNodeRecord}]
@@ -480,7 +480,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_isRe
       # assign the new nodes at the same position as the current
       foreach submitName ${submittedNames} {
          set submitNode ${parentContainer}/${submitName}
-         puts "ModuleFlow_deleteNode ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}"
+         ::log::log debug "ModuleFlow_deleteNode ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}"
          ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}
          incr flowNodePosition
       }
@@ -537,7 +537,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    }
 
    # create new node
-   puts "ModuleFlow_renameNode FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType} -submitter ${submitter}"
+   ::log::log debug "ModuleFlow_renameNode FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType} -submitter ${submitter}"
    FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType} -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
       -submitter [${_flowNodeRecord} cget -submitter] -status new
 
@@ -592,7 +592,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
 # It follows the submit tree of the starting node but does not change the submits relation
 #
 proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecord _childPosition } {
-   puts "ModuleFlow_assignNewContainer _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
+   ::log::log debug "ModuleFlow_assignNewContainer _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
 
    # first the node needs to be removed from its current container node
    ModuleFlow_removeChild [ModuleFlow_getParentContainer ${_flowNodeRecord}] ${_flowNodeRecord}
@@ -626,7 +626,7 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
    }
 
    # delete previous record of the node
-   puts "ModuleFlow_assignNewContainer deleting record ${_flowNodeRecord}"
+   ::log::log debug "ModuleFlow_assignNewContainer deleting record ${_flowNodeRecord}"
    record delete instance ${_flowNodeRecord}
 }
 
@@ -640,7 +640,7 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
 #
 
 proc ModuleFlow_assignNewContainerDir { _expPath _moduleNode _flowNodeRecord _newContainerRecord } {
-   puts "ModuleFlow_assignNewContainerDir _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
+   ::log::log debug "ModuleFlow_assignNewContainerDir _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
    set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
    set containerNode [ModuleFlow_record2NodeName ${_newContainerRecord}]
    ModuleLayout_assignNewContainer ${_expPath} ${_moduleNode} ${containerNode} ${flowNode} [${_flowNodeRecord} cget -type]
@@ -657,7 +657,7 @@ proc ModuleFlow_assignNewContainerDir { _expPath _moduleNode _flowNodeRecord _ne
 # does not touch submits relation
 # does not delete the child node record
 proc ModuleFlow_removeChild { _flowNodeRecord _childNode } {
-   puts "ModuleFlow_removeChild _flowNodeRecord:${_flowNodeRecord} _childNode:${_childNode}"
+   ::log::log debug "ModuleFlow_removeChild _flowNodeRecord:${_flowNodeRecord} _childNode:${_childNode}"
    set currentChilds [${_flowNodeRecord} cget -children]
    set childToSearch [${_childNode} cget -name]
    set childNodeIndex [lsearch ${currentChilds} ${childToSearch}]
@@ -675,7 +675,7 @@ proc ModuleFlow_removeChild { _flowNodeRecord _childNode } {
 proc ModuleFLow_getChildModuleNodes { _flowNodeRecord _modNodes } {
    upvar ${_modNodes} localModNodes
 
-   puts "ModuleFLow_getChildModuleNodes _flowNodeRecord:${_flowNodeRecord} ${_modNodes}"
+   ::log::log debug "ModuleFLow_getChildModuleNodes _flowNodeRecord:${_flowNodeRecord} ${_modNodes}"
    set submitRecords [ModuleFlow_getSubmitRecords ${_flowNodeRecord}]
    foreach submitRecord ${submitRecords} {
       if { [${submitRecord} cget -type] == "ModuleNode" } {
@@ -722,7 +722,7 @@ proc ModuleFlow_getNewNode { _flowNodeRecord _newNodeName } {
 
 # search upwards the node to find the module contianer
 proc ModuleFlow_getModuleContainer { _flowNodeRecord } {
-   puts "ModuleFlow_getModuleContainer _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlow_getModuleContainer _flowNodeRecord:${_flowNodeRecord}"
    set node ${_flowNodeRecord}
    set done false
    set foundNode ""
@@ -735,7 +735,7 @@ proc ModuleFlow_getModuleContainer { _flowNodeRecord } {
       set node ${parentNode}
    }
 
-   puts "ModuleFlow_getModuleContainer _flowNodeRecord:${_flowNodeRecord} foundNode:${foundNode}"
+   ::log::log debug "ModuleFlow_getModuleContainer _flowNodeRecord:${_flowNodeRecord} foundNode:${foundNode}"
    return ${foundNode}
 }
 
@@ -776,14 +776,14 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord } {
       lappend newSubmits ${parentContainer}/${submitNode}
    }
 
-   puts "ModuleFlow_getSubmitRecords _flowNodeRecord:${_flowNodeRecord} newSubmits:${newSubmits}"
+   ::log::log debug "ModuleFlow_getSubmitRecords _flowNodeRecord:${_flowNodeRecord} newSubmits:${newSubmits}"
    return ${newSubmits}
 }
 
 # add node _submitNode to the list of nodes submitted by _flowNodeRecord at position _position
 # _flowNodeRecord & _submitNode are FlowNode records
 proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position end } } {
-   puts "ModuleFlow_addSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord} _position:${_position}"
+   ::log::log debug "ModuleFlow_addSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord} _position:${_position}"
    # attach to submitter
    # submits are stored as relative path to the parent container
    set currentSubmits [${_flowNodeRecord} cget -submits]
@@ -797,7 +797,7 @@ proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position en
 # remove node _submitNode from the list of nodes submitted by _flowNodeRecord
 # _flowNodeRecord & _submitNode are FlowNode records
 proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNode } {
-   puts "ModuleFlow_removeSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNode:${_submitNode}"
+   ::log::log debug "ModuleFlow_removeSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNode:${_submitNode}"
    # detach from submitter
    set submits [${_flowNodeRecord} cget -submits]
    set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
@@ -831,7 +831,7 @@ proc ModuleFlow_addChildNode { _flowNodeRecord _childNode { _position end } } {
    set childrenNodes [${_flowNodeRecord} cget -children]
    if { [lsearch ${childrenNodes} [${_childNode} cget -name] ] == -1 } {
       set childrenNodes [linsert ${childrenNodes} ${_position} [${_childNode} cget -name]]
-      puts "ModuleFlow_addChildNode _flowNodeRecord:${_flowNodeRecord} _childNode: ${_childNode} childrenNodes:${childrenNodes}"
+      ::log::log debug "ModuleFlow_addChildNode _flowNodeRecord:${_flowNodeRecord} _childNode: ${_childNode} childrenNodes:${childrenNodes}"
       ${_flowNodeRecord} configure -children ${childrenNodes}
    }
 }
@@ -848,7 +848,7 @@ proc ModuleFlow_getParentContainer { _flowNodeRecord } {
 # if submitter is a container, returns ""
 # if submitter is task, returns leaf part of task node
 proc ModuleFlow_searchSubmitter { _submitNodeRecord _flowNodeRecord } {
-   puts "ModuleFlow_searchSubmitter _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
+   ::log::log debug "ModuleFlow_searchSubmitter _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
 
    if { ${_submitNodeRecord} == "" } {
          return ""
@@ -863,7 +863,7 @@ proc ModuleFlow_searchSubmitter { _submitNodeRecord _flowNodeRecord } {
    set searchSubmitNode [file tail ${_flowNodeRecord}]
    set foundIndex [lsearch ${submitsNode} ${searchSubmitNode} ]
    if { ${foundIndex} != -1 } {
-      puts "ModuleFlow_searchSubmitter found node _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
+      ::log::log debug "ModuleFlow_searchSubmitter found node _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
       if { [ModuleFlow_isContainer ${_submitNodeRecord}] == true } {
          set foundNode ""
       } else {
@@ -909,7 +909,7 @@ proc ModuleFlow_hasSubmitSiblings { _flowNodeRecord } {
 proc ModuleFlow_getRecordName { _expPath _nodeName } {
    set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
 
-   puts "ModuleFlow_getRecordName _nodeName:${_nodeName}"
+   ::log::log debug "ModuleFlow_getRecordName _nodeName:${_nodeName}"
    set prefix mnode_${expChecksum}_
    if { [string first ${prefix} ${_nodeName}] == -1 } {
       return ${prefix}${_nodeName}
@@ -922,7 +922,7 @@ proc ModuleFlow_getRecordName { _expPath _nodeName } {
 # i.e. mnode_123456_/enkf_mod/assim/gem_mod
 # would return /enkf_mod/assim/gem_mod
 proc ModuleFlow_record2NodeName { _recordName } {
-   puts "ModuleFlow_record2NodeName _recordName:${_recordName}"
+   ::log::log debug "ModuleFlow_record2NodeName _recordName:${_recordName}"
    set scannedItems [scan ${_recordName} "mnode_%d_%s" moduleid nodeName]
    if { ${scannedItems} == 2 } {
       return ${nodeName}
@@ -957,7 +957,7 @@ proc ModuleFlow_deleteRecord { _expPath _flowNode {_isRecursive true}} {
          ModuleFlow_deleteRecord ${_expPath} ${childNode} ${_isRecursive}
       }
    }
-   puts "ModuleFlow_deleteRecord delete instance ${flowNodeRecord}"
+   ::log::log debug "ModuleFlow_deleteRecord delete instance ${flowNodeRecord}"
    record delete instance ${flowNodeRecord}
 }
 
@@ -969,7 +969,7 @@ proc ModuleFlow_deleteRecord { _expPath _flowNode {_isRecursive true}} {
 proc ModuleFlow_cleanRecords { _expPath _flowNode } {
    set expId [ExpLayout_getExpChecksum ${_expPath}]
    
-   puts "ModuleFlow_cleanRecords delete instance ${_flowNode}"
+   ::log::log debug "ModuleFlow_cleanRecords delete instance ${_flowNode}"
    # get all the records defined for the module node
    # with respect to the current experiment
    set nodeRecords [info commands ::mnode_${expId}_${_flowNode}*]
@@ -1007,7 +1007,7 @@ proc ModuleFlow_isModuleChanged { _expPath _moduleNode } {
 # returns false otherwise
 proc ModuleFlow_isModuleNew { _expPath _moduleNode } {
    set flowNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
-   puts "ModuleFlow_isModuleNew ${_expPath} ${_moduleNode} flowNodeRecord=${flowNodeRecord}"
+   ::log::log debug "ModuleFlow_isModuleNew ${_expPath} ${_moduleNode} flowNodeRecord=${flowNodeRecord}"
    if { [record exists instance ${flowNodeRecord}] && [${flowNodeRecord} cget -status] == "new" } {
       return true
    }

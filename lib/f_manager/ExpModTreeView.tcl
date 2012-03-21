@@ -29,26 +29,6 @@ proc ExpModTreeView_toFront { _expPath } {
 }
 
 proc ExpModTreeView_createWidgets { _expPath } {
-   set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
-   destroy ${topWidget}
-
-   toplevel ${topWidget}
-   # MiscTkUtils_InitPosition ${topWidget}
-   
-   set descmenu {
-        "&File" all file 0 {
-            {command "&Close" {} "Close Flow Manager" {} -command { puts "here" }}
-        }
-     }
-    set prgtext   "Creating MainFrame..."
-    set prgindic  0
-    set mainframe ${topWidget}.mainframe
-    MainFrame ${mainframe} -menu $descmenu
-    pack ${mainframe} -fill both -expand yes
-
-}
-
-proc ExpModTreeView_createWidgets { _expPath } {
 
    set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
    if { [winfo exists ${topWidget}] } {
@@ -59,7 +39,7 @@ proc ExpModTreeView_createWidgets { _expPath } {
 
    MiscTkUtils_InitPosition ${topWidget}
 
-   wm title ${topWidget} "Exp=[file tail ${_expPath}]"
+   wm title ${topWidget} "Flow Manager Exp=[file tail ${_expPath}]"
 
    # post process when window closes
    wm protocol $topWidget WM_DELETE_WINDOW \
@@ -67,6 +47,8 @@ proc ExpModTreeView_createWidgets { _expPath } {
 
    # store exp value in toplevel widget
    label ${topWidget}.exp_path -text ${_expPath}
+
+   set topFrame [frame ${topWidget}.top_frame]
 
    # create scrollbable window
    set scrolledW [ScrolledWindow ${topWidget}.canvas_frame -relief sunken -borderwidth 1]
@@ -79,7 +61,10 @@ proc ExpModTreeView_createWidgets { _expPath } {
    ${scrolledW} setwidget ${modCanvas}
 
    # add file menu
-   set fileMenu [ExpModTreeView_addFileMenu ${_expPath} ${topWidget}]
+   set fileMenu [ExpModTreeView_addFileMenu ${_expPath} ${topFrame}]
+
+   # add help menu
+   set helpMenu [ExpModTreeView_addHelpMenu ${_expPath} ${topFrame}]
 
    # create toolbar
    set toolbar [ExpModTreeView_addExpToolbar ${_expPath} ${modCanvas}]
@@ -89,7 +74,8 @@ proc ExpModTreeView_createWidgets { _expPath } {
    #set modCanvas [canvas ${topWidget}.mod_tree_canvas]
    #grid ${modCanvas} -row 0 -column 0 -sticky nsew
 
-   grid ${fileMenu} -row 0 -column 0 -sticky w
+   # grid ${fileMenu} -row 0 -column 0 -sticky w
+   grid ${topFrame} -row 0 -column 0 -sticky w
    grid ${toolbar} -row 1 -column 0 -sticky w
    grid ${scrolledW} -row 2 -column 0 -sticky nsew
    grid ${statusBar} -row 3 -sticky ew
@@ -98,15 +84,40 @@ proc ExpModTreeView_createWidgets { _expPath } {
    grid columnconfigure ${topWidget} 0 -weight 1
 }
 
-proc ExpModTreeView_addFileMenu { _expPath _topWidget } {
-   set menuButtonW ${_topWidget}.menub
+proc ExpModTreeView_addFileMenu { _expPath _parentWidget } {
+   set menuButtonW ${_parentWidget}.menub
    set menuW ${menuButtonW}.menu
 
    menubutton ${menuButtonW} -text File -underline 0 -menu ${menuW} \
       -relief [SharedData_getMiscData MENU_RELIEF]
    menu ${menuW} -tearoff 0
 
-   ${menuW} add command -label "Quit" -underline 0 -command [list ExpModTreeControl_closeWindow ${_expPath} ${_topWidget}]]
+   ${menuW} add command -label "Quit" -underline 0 -command [list ExpModTreeControl_closeWindow ${_expPath} [winfo toplevel ${_parentWidget}]]
+   pack $menuButtonW -side left
+   return ${menuButtonW}
+}
+
+proc ExpModTreeView_addHelpMenu { _expPath _parentWidget } {
+   global env
+   set menuButtonW ${_parentWidget}.help_menub
+   set menuW ${menuButtonW}.menu
+
+   menubutton ${menuButtonW} -text Help -underline 0 -menu ${menuW} \
+      -relief [SharedData_getMiscData MENU_RELIEF]
+   menu ${menuW} -tearoff 0
+
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
+   global ${expChecksum}_DebugOn
+   set ${expChecksum}_DebugOn false
+
+   ${menuW} add checkbutton -label "Debug" -underline 0 -onvalue true -offvalue false -variable ${expChecksum}_DebugOn \
+      -command [list ExpModTreeControl_debugChanged ${_expPath}]
+
+   #::log::lvSuppress debug [set ${expChecksum}_DebugOn]
+   #trace add variable ${expChecksum}_DebugOn write {::log::lvSuppress debug [set ${expChecksum}_DebugOn]}
+   #trace add variable ${expChecksum}_DebugOn write [list ExpModTreeControl_debugChanged ${_expPath}]
+
+   pack $menuButtonW -side left
    return ${menuButtonW}
 }
 
@@ -187,7 +198,7 @@ proc ExpModTreeView_ExpConfigMenu { _expPath _canvas _x _y } {
 # recursively deletes every instance of a module record from the
 # tree of module nodes
 proc ExpModTreeView_deleteNode { _expPath _modTreeNodeRecord } {
-   puts "ExpModTreeView_deleteNode ${_expPath} ${_modTreeNodeRecord}"
+   ::log::log debug "ExpModTreeView_deleteNode ${_expPath} ${_modTreeNodeRecord}"
    set childNodes [${_modTreeNodeRecord} cget -children]
    if { ${childNodes} != "" } {
       # delete child nodes first
@@ -197,7 +208,7 @@ proc ExpModTreeView_deleteNode { _expPath _modTreeNodeRecord } {
    }
 
    set moduleNode [ExpModTree_record2NodeName ${_modTreeNodeRecord}]
-   puts "ExpModTreeView_deleteNode ModuleFlowView_closeWindow ${_expPath} ${moduleNode}"
+   ::log::log debug "ExpModTreeView_deleteNode ModuleFlowView_closeWindow ${_expPath} ${moduleNode}"
 
    # delete any associated module flow widgets and data structures
    ModuleFlowView_closeWindow ${_expPath} ${moduleNode} true
@@ -286,7 +297,7 @@ proc ExpModTreeView_getCanvas { _expPath } {
 }
 
 proc ExpModTreeView_drawModuleNode { _expPath _modTreeNodeRecord _position { _isRootNode false } } {
-   puts "ExpModTreeView_drawModuleNode _modTreeNodeRecord:${_modTreeNodeRecord} _position:${_position}"
+   ::log::log debug "ExpModTreeView_drawModuleNode _modTreeNodeRecord:${_modTreeNodeRecord} _position:${_position}"
 
    set moduleNode [ExpModTree_record2NodeName ${_modTreeNodeRecord}]
    set canvasW [ExpModTreeView_getCanvas ${_expPath}]
@@ -319,7 +330,7 @@ proc ExpModTreeView_drawModuleNode { _expPath _modTreeNodeRecord _position { _is
 
       set lineTagName ${_modTreeNodeRecord}.submit_tag
 
-      puts "parent coords: $displayCoords"
+      ::log::log debug "parent coords: $displayCoords"
       if { ${_position} == 0 } {
          set linex1 $px2
          set liney1 [expr $py1 + ($py2 - $py1) / 2 + $deltaY]
@@ -386,7 +397,7 @@ proc ExpModTreeView_getModuleColor { _expPath _moduleNode } {
       SharedData_setExpData ${_expPath} ColorIndex [expr ${expColorIndex} + 1]
       SharedData_setExpData ${_expPath} ${moduleName} ${moduleColor}
    }
-   puts "SharedData_getExpData ${_expPath} ${moduleName} color?: ${moduleColor}"
+   ::log::log debug "SharedData_getExpData ${_expPath} ${moduleName} color?: ${moduleColor}"
 
    return ${moduleColor}
 }
@@ -408,7 +419,7 @@ proc ExpModTreeView_nodeMenu { _canvas _modTreeNodeRecord x y } {
    # when the menu is destroyed, clears the highlighted node
    bind ${popMenu} <Unmap> [list DrawUtil_resetHighLightNode ${HighLightRestoreCmd}]
 
-   puts "ExpModTreeView_nodeMenu expPath: ${expPath}"
+   ::log::log debug "ExpModTreeView_nodeMenu expPath: ${expPath}"
    ${popMenu} add command -label "open" -underline 0 -command \
       [ list ExpModTreeControl_moduleSelection ${expPath} ${moduleNode} ]
    #$popMenu add separator
@@ -420,7 +431,7 @@ proc ExpModTreeView_nodeMenu { _canvas _modTreeNodeRecord x y } {
 # it's parent coordinates, the module position within its parent and
 # coordinates of it's previous siblings
 proc ExpModTreeView_getModuleY { _modTreeNodeRecord _position } {
-   puts "ExpModTreeView_getModuleY _modTreeNodeRecord:${_modTreeNodeRecord} _position:${_position}"
+   ::log::log debug "ExpModTreeView_getModuleY _modTreeNodeRecord:${_modTreeNodeRecord} _position:${_position}"
    set parentTreeNodeRecord [${_modTreeNodeRecord} cget -parent]
    set parentCoords [ExpModTreeView_getModuleCoord ${parentTreeNodeRecord}]
    if { ${_position} == 0 } {
@@ -439,7 +450,7 @@ proc ExpModTreeView_getModuleY { _modTreeNodeRecord _position } {
 }
 
 proc ExpModTreeView_getBranchMaxY { _modTreeNodeRecord } {
-   puts "ExpModTreeView_getBranchMaxY _modTreeNodeRecord:${_modTreeNodeRecord}"
+   ::log::log debug "ExpModTreeView_getBranchMaxY _modTreeNodeRecord:${_modTreeNodeRecord}"
    set nodeCoords [ExpModTreeView_getModuleCoord ${_modTreeNodeRecord}]
    set maxY [lindex ${nodeCoords} 3]
    set childSubmits [${_modTreeNodeRecord} cget -children]
@@ -455,11 +466,11 @@ proc ExpModTreeView_getBranchMaxY { _modTreeNodeRecord } {
 # sets the display coordinates in the visual node.
 # creates the module visual node if not exists.
 proc ExpModTreeView_setModuleCoord { _modTreeNodeRecord _x1 _y1 _x2 _y2} {
-   puts "ExpModTreeView_setModuleCoord _modTreeNodeRecord:$_modTreeNodeRecord"
+   ::log::log debug "ExpModTreeView_setModuleCoord _modTreeNodeRecord:$_modTreeNodeRecord"
    set visualNodeName [ExpModTreeView_getVisualNodeName ${_modTreeNodeRecord}]
 
    if { ! [record exists instance ${visualNodeName}] } {
-   puts "ExpModTreeView_setModuleCoord creating visualNodeName:$visualNodeName"
+   ::log::log debug "ExpModTreeView_setModuleCoord creating visualNodeName:$visualNodeName"
       FlowVisualNode ${visualNodeName}
    }
 
@@ -470,14 +481,14 @@ proc ExpModTreeView_setModuleCoord { _modTreeNodeRecord _x1 _y1 _x2 _y2} {
 # a list {x1 y1 x2 y2}
 # retusn "" if not exists
 proc ExpModTreeView_getModuleCoord { _modTreeNodeRecord } {
-   puts "ExpModTreeView_getModuleCoord _modTreeNodeRecord:$_modTreeNodeRecord"
+   ::log::log debug "ExpModTreeView_getModuleCoord _modTreeNodeRecord:$_modTreeNodeRecord"
    set visualNodeName [ExpModTreeView_getVisualNodeName ${_modTreeNodeRecord}]
 
-   puts "ExpModTreeView_getModuleCoord visualNodeName:$visualNodeName"
+   ::log::log debug "ExpModTreeView_getModuleCoord visualNodeName:$visualNodeName"
    if { ! [record exists instance ${visualNodeName}] } {
       return ""
    }
-   puts "ExpModTreeView_getModuleCoord visualNodeName exist!"
+   ::log::log debug "ExpModTreeView_getModuleCoord visualNodeName exist!"
 
    set x1 [${visualNodeName} cget -x1]
    set y1 [${visualNodeName} cget -y1]

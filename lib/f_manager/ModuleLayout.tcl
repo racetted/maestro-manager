@@ -10,7 +10,7 @@ package require cksum
 # _moduleNode is experiment tree node i.e /enkf_mod/anal_mod/Analysis/gem_mod
 proc ModuleLayout_getWorkDir { _expPath _moduleNode } {
    global env ${_moduleNode}_workdir
-   puts "ModuleLayout_getWorkDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleLayout_getWorkDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
    if { ! [info exists ${_moduleNode}_workdir] } {
       set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
       set ${_moduleNode}_workdir [ModuleLayout_createWorkingDir ${_expPath} ${_moduleNode}]
@@ -37,12 +37,12 @@ proc ModuleLayout_getWorkResourceDir { _expPath _moduleNode } {
 proc ModuleLayout_clearWorkingDir { _expPath _moduleNode } {
    global ${_moduleNode}_workdir
 
-   #puts "ModuleLayout_clearWorkingDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   #::log::log debug "ModuleLayout_clearWorkingDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set workingDir [ModuleLayout_getWorkDirName ${_expPath} ${_moduleNode}]
    if { [ catch {
       # clear module work dir
       if { [file exists ${workingDir}] } {
-         puts "ModuleLayout_clearWorkingDir deleting ${workingDir}"
+         ::log::log debug "ModuleLayout_clearWorkingDir deleting ${workingDir}"
          MaestroConsole_addMsg "Cleaning temp module directory: ${workingDir}."
          file delete -force ${workingDir}
       }
@@ -53,7 +53,7 @@ proc ModuleLayout_clearWorkingDir { _expPath _moduleNode } {
    if { [ catch {
       # clear resources work dir
       set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
-      puts "ModuleLayout_clearWorkingDir deleting ${resourceWorkDir}"
+      ::log::log debug "ModuleLayout_clearWorkingDir deleting ${resourceWorkDir}"
       MaestroConsole_addMsg "Cleaning temp resource directory: ${resourceWorkDir}."
 
       file delete -force ${resourceWorkDir}
@@ -68,7 +68,7 @@ proc ModuleLayout_clearWorkingDir { _expPath _moduleNode } {
 # _moduleNode is experiment tree node i.e /enkf_mod/anal_mod/Analysis/gem_mod
 proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    global env
-   puts "ModuleLayout_createWorkingDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleLayout_createWorkingDir _expPath:${_expPath} _moduleNode:${_moduleNode}"
 
    set moduleName [file tail ${_moduleNode}]
    set sourceModule ${_expPath}/modules/${moduleName}
@@ -87,7 +87,7 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${workingDir}
 
    # get the modules container files
-   puts "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
+   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
    MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
    exec rsync -r -t ${sourceModule}/ ${workingDir}
 
@@ -104,7 +104,7 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${resourceWorkDir}
 
    # get the resource files
-   puts "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
+   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
    MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
    exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
 
@@ -129,7 +129,7 @@ proc ModuleLayout_getWorkDirName { _expPath _moduleNode } {
 }
 
 proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
-   puts "ModuleLayout_saveWorkingDir: _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleLayout_saveWorkingDir: _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleName [file tail ${_moduleNode}]
    set sourceModule [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set targetModule ${_expPath}/modules/${moduleName}
@@ -138,14 +138,14 @@ proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
 
    # sync the module changes in the work dir with the module within the experiment
    if { [file exists ${sourceModule}] } {
-      puts "ModuleLayout_saveWorkingDir: rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/"
+      ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/"
       MaestroConsole_addMsg "synchronize module: rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/"
       exec rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/
    }
 
    # sync the module resource files in the exp resource work dir with the experiment
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
-   puts "ModuleLayout_saveWorkingDir: rsync --delete -r -t ${resourceWorkDir}/ ${targetResource}/"
+   ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete -r -t ${resourceWorkDir}/ ${targetResource}/"
    MaestroConsole_addMsg "synchronize resources: rsync --delete -r -t ${resourceWorkDir}/ ${targetResource}/"
    exec rsync --delete --update -r -t ${resourceWorkDir}/ ${targetResource}/
    MaestroConsole_addMsg "Saving module ${_moduleNode} done."
@@ -160,13 +160,13 @@ proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
 # _useModLink is true if a link is to be created to the reference module
 #
 proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType { _refModPath ""} { _useModLink true } } {
-    puts "ModuleLayout_createNode _expPath:${_expPath} _moduleNode:${_moduleNode} _newNode:${_newNode} _nodeType:${_nodeType} _refModPath:${_refModPath} _useModLink:${_useModLink}"
+    ::log::log debug "ModuleLayout_createNode _expPath:${_expPath} _moduleNode:${_moduleNode} _newNode:${_newNode} _nodeType:${_nodeType} _refModPath:${_refModPath} _useModLink:${_useModLink}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
 
-   puts "ModuleLayout_createNode modWorkDir:${modWorkDir}"
+   ::log::log debug "ModuleLayout_createNode modWorkDir:${modWorkDir}"
 
    # get relative path vs module node
    # /enkf_mod/postproc_mod & /enkf_mod/postproc_mod/task will result in "/task"
@@ -235,14 +235,14 @@ proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType { _refMod
 # _newName is name of modified node  i.e my_new_runmod
 # _nodeType is type of node to be created
 proc ModuleLayout_renameNode { _expPath _moduleNode _renameNode _newName _nodeType } {
-    puts "ModuleLayout_renameNode _expPath:${_expPath} _moduleNode:${_moduleNode} _renameNode:${_renameNode} _newName:${_newName} _nodeType:${_nodeType}"
+    ::log::log debug "ModuleLayout_renameNode _expPath:${_expPath} _moduleNode:${_moduleNode} _renameNode:${_renameNode} _newName:${_newName} _nodeType:${_nodeType}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
    set newNode [file dirname ${_renameNode}]/${_newName}
 
-   puts "ModuleLayout_renameNode modWorkDir:${modWorkDir}"
+   ::log::log debug "ModuleLayout_renameNode modWorkDir:${modWorkDir}"
 
    # get relative path vs module node
    # /enkf_mod/postproc_mod & /enkf_mod/postproc_mod/task will result in "/task"
@@ -302,7 +302,7 @@ proc ModuleLayout_renameNode { _expPath _moduleNode _renameNode _newName _nodeTy
 # this module is taken out of ModuleLayout_renameNode because the
 # renaming of modules are postponed until the user saves the module flow
 proc ModuleLayout_renameModule { _expPath _moduleNode _newName {_useCopy false} } {
-   puts "ModuleLayout_renameModule _expPath:${_expPath} _moduleNode:${_moduleNode} _newName:${_newName} _useCopy:${_useCopy}"
+   ::log::log debug "ModuleLayout_renameModule _expPath:${_expPath} _moduleNode:${_moduleNode} _newName:${_newName} _useCopy:${_useCopy}"
    set currentModPath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
    set newNode [file dirname ${_moduleNode}]/${_newName}
    set newModPath [ExpLayout_getModulePath ${_expPath} ${newNode}]
@@ -322,7 +322,7 @@ proc ModuleLayout_renameModule { _expPath _moduleNode _newName {_useCopy false} 
 # _affectedNode is experiment tree of node that will be moved i.e. /enkf_mod/anal_mod/Analysis/gem_mod/Upload
 # _nodeType is node type
 proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _affectedNode _nodeType } {
-   puts "ModuleLayout_assignNewContainer _expPath:${_expPath} _moduleNode:${_moduleNode} _newContainerNode:${_newContainerNode} _affectedNode:${_affectedNode} _nodeType:${_nodeType}"
+   ::log::log debug "ModuleLayout_assignNewContainer _expPath:${_expPath} _moduleNode:${_moduleNode} _newContainerNode:${_newContainerNode} _affectedNode:${_affectedNode} _nodeType:${_nodeType}"
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
@@ -343,19 +343,19 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
       TaskNode -
       NpassTaskNode {
          if { [file exists ${affectedNodeFullPath}.tsk] } {
-            puts "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.tsk to ${newContNodeFullPath}/"
+            ::log::log debug "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.tsk to ${newContNodeFullPath}/"
             MaestroConsole_addMsg "move ${affectedNodeFullPath}.tsk to ${newContNodeFullPath}/"
             file rename ${affectedNodeFullPath}.tsk ${newContNodeFullPath}/
          }
 
          if { [file exists ${affectedNodeFullPath}.cfg] } {
-            puts "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.cfg to ${newContNodeFullPath}/"
+            ::log::log debug "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.cfg to ${newContNodeFullPath}/"
             MaestroConsole_addMsg "move ${affectedNodeFullPath}.cfg to ${newContNodeFullPath}/"
             file rename ${affectedNodeFullPath}.cfg ${newContNodeFullPath}/
          }
 
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}.xml] } {
-            puts "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode}.xml to ${resourceWorkDir}${relativeNewContNode}/"
+            ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode}.xml to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "move ${resourceWorkDir}${relativeAffectedNode}.xml to ${resourceWorkDir}${relativeNewContNode}/"
             file rename ${resourceWorkDir}${relativeAffectedNode}.xml ${resourceWorkDir}${relativeNewContNode}/
          }
@@ -363,11 +363,11 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
       FamilyNode -
       LoopNode {
          # move whole container directory to new container parent
-         puts "ModuleLayout_assignNewContainer move ${affectedNodeFullPath} to ${newContNodeFullPath}/"
+         ::log::log debug "ModuleLayout_assignNewContainer move ${affectedNodeFullPath} to ${newContNodeFullPath}/"
          MaestroConsole_addMsg "move ${affectedNodeFullPath} to ${newContNodeFullPath}/"
          file rename ${affectedNodeFullPath} ${newContNodeFullPath}/
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
-            puts "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
+            ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/
          }
@@ -375,7 +375,7 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
       ModuleNode {
          # we only move resource directory since ModuleNode are references
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
-            puts "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
+            ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "Move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/
          }
@@ -386,7 +386,7 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
 }
 
 proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOnly {_keepChildren false}} {
-    puts "ModuleLayout_deleteNode _expPath:${_expPath} _moduleNode:${_moduleNode} _deleteNode:${_deleteNode} _nodeType:${_nodeType} _resOnly:${_resOnly}"
+    ::log::log debug "ModuleLayout_deleteNode _expPath:${_expPath} _moduleNode:${_moduleNode} _deleteNode:${_deleteNode} _nodeType:${_nodeType} _resOnly:${_resOnly}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
@@ -395,7 +395,7 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
    set relativePath [::textutil::trim::trimPrefix ${_deleteNode} ${_moduleNode}]
    set nodeFullPath ${modWorkDir}/${relativePath}
 
-   puts "ModuleLayout_deleteNode nodeFullPath:${nodeFullPath}"
+   ::log::log debug "ModuleLayout_deleteNode nodeFullPath:${nodeFullPath}"
 
    MaestroConsole_addMsg "Deleting node ${_deleteNode}..."
    switch ${_nodeType} {
@@ -419,14 +419,14 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                # delete only container directory... move children files to
                # parent dir
                # we move everything to the parent directory... except container.cfg
-               # puts "ModuleLayout_deleteNode rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
+               # ::log::log debug "ModuleLayout_deleteNode rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
                if { ${_resOnly} == false } {
                   MaestroConsole_addMsg "synchonize module...rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
                   exec rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
                }
 
                # do the same with the resources files
-               # puts "ModuleLayout_deleteNode rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
+               # ::log::log debug "ModuleLayout_deleteNode rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
                MaestroConsole_addMsg "synchonize resources rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
                exec rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]
             }
@@ -437,13 +437,13 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
             }
          }
 
-         puts "ModuleLayout_deleteNode deleting ${resourceDir}"
+         ::log::log debug "ModuleLayout_deleteNode deleting ${resourceDir}"
          MaestroConsole_addMsg "delete ${resourceDir}."
          file delete -force ${resourceDir}
       }
       ModuleNode {
          set resourceDir ${resourceWorkDir}${relativePath}
-         puts "ModuleLayout_deleteNode deleting ${resourceDir}"
+         ::log::log debug "ModuleLayout_deleteNode deleting ${resourceDir}"
          MaestroConsole_addMsg "delete ${resourceDir}."
          file delete -force ${resourceDir}
       }
@@ -473,7 +473,7 @@ proc ModuleLayout_deleteModule { _expPath _moduleNode _deleteNode } {
 
 # creates dummy resource files
 proc ModuleLayout_createDummyResource { _expPath _moduleNode _node } {
-   puts "ModuleLayout_createDummyResource _expPath:${_expPath} _moduleNode:${_moduleNode} _node:${_node}"
+   ::log::log debug "ModuleLayout_createDummyResource _expPath:${_expPath} _moduleNode:${_moduleNode} _node:${_node}"
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
    set relativePath [::textutil::trim::trimPrefix ${_node} ${_moduleNode}]
 
@@ -490,10 +490,10 @@ proc ModuleLayout_createDummyResource { _expPath _moduleNode _node } {
    set xmlData [${xmlDoc} asXML]
 
    set resourceFile ${resourceWorkDir}${relativePath}/container.xml
-   puts "ModuleLayout_createDummyResource writing xml file: ${resourceFile}"
+   ::log::log debug "ModuleLayout_createDummyResource writing xml file: ${resourceFile}"
    MaestroConsole_addMsg "create resource file ${resourceFile}."
    set fileId [open ${resourceFile} w 0664]
-   puts ${fileId} ${xmlData}
+   ::log::log debug ${fileId} ${xmlData}
    close ${fileId}
    
    ${xmlDoc} delete

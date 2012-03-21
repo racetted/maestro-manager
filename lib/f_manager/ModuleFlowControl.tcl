@@ -28,7 +28,7 @@ proc ModuleFlowControl_configSelected { _expPath _flowNodeRecord } {
       set configFile [ModuleLayout_getNodeConfigPath ${_expPath} ${moduleNode} ${flowNode} ${nodeType}]
    }
 
-   puts "ModuleFlowControl_configSelected configFile:${configFile}"
+   ::log::log debug "ModuleFlowControl_configSelected configFile:${configFile}"
 
    if { ! [file readable ${configFile}] } {
       MaestroConsole_addWarningMsg "file ${configFile} does not exists."
@@ -58,7 +58,7 @@ proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
       set sourceFile [ModuleLayout_getNodeSourcePath ${_expPath} ${moduleNode} ${flowNode} ${nodeType}]
    }
 
-   puts "ModuleFlowControl_sourceSelected sourceFile:${sourceFile}"
+   ::log::log debug "ModuleFlowControl_sourceSelected sourceFile:${sourceFile}"
 
    if { ! [file readable ${sourceFile}] } {
       MaestroConsole_addWarningMsg "file ${sourceFile} does not exists."
@@ -80,7 +80,7 @@ proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
       set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${moduleNode} ${flowNode} ${nodeType}]
    }
 
-   puts "ModuleFlowControl_resourceSelected resourceFile:${resourceFile}"
+   ::log::log debug "ModuleFlowControl_resourceSelected resourceFile:${resourceFile}"
 
    if { ! [file readable ${resourceFile}] } {
       MaestroConsole_addWarningMsg "file ${resourceFile} does not exists."
@@ -91,7 +91,7 @@ proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
 proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-   puts "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNode:${_parentFlowNode}"
+   ::log::log debug "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNode:${_parentFlowNode}"
    global errorInfo ${moduleId}_Link_Module
    # get entry values
    set positionSpinW [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_pos_spinbox]
@@ -172,7 +172,7 @@ proc ModuleFlowControl_renameNodeOk { _topWidget _expPath _moduleNode _flowNodeR
    set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
 
-   puts "ModuleFlowControl_renameNodeOk ${_expPath} _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord} _allModules:${_allModules}"
+   ::log::log debug "ModuleFlowControl_renameNodeOk ${_expPath} _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord} _allModules:${_allModules}"
    global ${moduleId}_Link_Module
    # get entry values
    set nameEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} rename_name_entry]
@@ -183,12 +183,12 @@ proc ModuleFlowControl_renameNodeOk { _topWidget _expPath _moduleNode _flowNodeR
    if { ${nodeType} == "ModuleNode" } {
       set modInstances [ExpModTree_getModInstances ${_expPath} ${flowNode}]
       set useCopy false
-      puts "ModuleFlowControl_renameNodeOk modInstances:${modInstances} _allModules:${_allModules}"
+      ::log::log debug "ModuleFlowControl_renameNodeOk modInstances:${modInstances} _allModules:${_allModules}"
       if { ${modInstances} > 1 && ${_allModules} == false } {
          # user wants to rename only selected module node... leave other module unaffected
          # copy the module instead of a move
          set useCopy true
-         puts "ModuleFlowControl_renameNodeOk useCopy true"
+         ::log::log debug "ModuleFlowControl_renameNodeOk useCopy true"
       }
       # rename of module's dir is only done at save
       ModuleFlowControl_addPostSaveCmd ${_expPath} ${_moduleNode} \
@@ -260,7 +260,7 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
    set answer [MessageDlg .delete_window -icon question -message "Are you sure you want to delete selected node(s)?" \
       -title "Delete Node Confirmation" -type okcancel -justify center -parent ${_canvas} ]
 
-   puts "ModuleFlowControl_deleteNodeSelected answer:${answer}"
+   ::log::log debug "ModuleFlowControl_deleteNodeSelected answer:${answer}"
 
    ModuleFlowView_checkReadOnlyNotify ${_expPath} ${_moduleNode}
 
@@ -363,7 +363,7 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
 }
 
 proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
-   puts "ModuleFlowControl_refreshSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowControl_refreshSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
    if { [ModuleFlowControl_validateModuleNode ${_expPath} ${_moduleNode} ${_topWidget}] == false } {
       return
    }
@@ -399,7 +399,7 @@ proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
 }
 
 proc ModuleFlowControl_copyLocalSelected { _expPath _moduleNode } {
-   puts "ModuleFlowControl_copyLocalSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowControl_copyLocalSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
    # first delete module link
    if { [ExpLayout_isModuleLink ${_expPath} ${_moduleNode}] == true } {
       ExpLayout_copyModule ${_expPath} ${_moduleNode}
@@ -415,7 +415,7 @@ proc ModuleFlowControl_addPostSaveCmd { _expPath _moduleNode _cmdArgs } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
    global ${moduleId}_gPostSave
-   puts "ModuleFlowControl_addPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode} ${moduleId}_gPostSave"
+   ::log::log debug "ModuleFlowControl_addPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode} ${moduleId}_gPostSave"
    lappend ${moduleId}_gPostSave ${_cmdArgs} 
 }
 
@@ -423,12 +423,12 @@ proc ModuleFlowControl_addPostSaveCmd { _expPath _moduleNode _cmdArgs } {
 proc ModuleFlowControl_goPostSaveCmd { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-   puts "ModuleFlowControl_goPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowControl_goPostSaveCmd _expPath:${_expPath} _moduleNode:${_moduleNode}"
    global ${moduleId}_gPostSave
    if { [info exists ${moduleId}_gPostSave] } {
       foreach cmd [set ${moduleId}_gPostSave] {
          catch {
-            puts "ModuleFlowControl_goPostSaveCmd cmd:${cmd}"
+            ::log::log debug "ModuleFlowControl_goPostSaveCmd cmd:${cmd}"
             eval ${cmd}
          }
       }

@@ -329,7 +329,7 @@ proc ModuleFlowView_getCanvas { _expPath _moduleNode } {
 
 # make sure everything is cleaned before destroying widgets
 proc ModuleFlowView_closeWindow { _expPath _moduleNode {_force false} } {
-   puts "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} ... "
+   ::log::log debug "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} ... "
    set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
    global ${topWidget}_status_afterid
 
@@ -378,13 +378,13 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {_force false} } {
       destroy ${topWidget}
 
       
-      puts "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} done"
+      ::log::log debug "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} done"
       
    }
 }
 
 proc ModuleFlowView_draw { _expPath _moduleNode } {
-   puts "ModuleFlowView_draw _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowView_draw _moduleNode:${_moduleNode}"
 
    set flowCanvas [ModuleFlowView_getCanvas ${_expPath} ${_moduleNode}]
 
@@ -402,7 +402,7 @@ proc ModuleFlowView_draw { _expPath _moduleNode } {
 }
 
 proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode false } } {
-   puts "ModuleFlowView_drawNode _flowNodeRecord:${_flowNodeRecord} _position:${_position}"
+   ::log::log debug "ModuleFlowView_drawNode _flowNodeRecord:${_flowNodeRecord} _position:${_position}"
 
    # mapping of draw procedures for each node type
    # first is proc to draw the node icon
@@ -532,7 +532,7 @@ proc ModuleFlowView_getLineDeltaSpace { _flowNodeRecord {_deltaValue 0} } {
 proc ModuleFlowView_getNodeText { _expPath _flowNodeRecord _context } {
    set value [${_flowNodeRecord} cget -name]
    set flowNode  [ModuleFlow_record2NodeName ${_flowNodeRecord}]
-   puts "ModuleFlowView_getNodeText flowNode:${flowNode} context:${_context}"
+   ::log::log debug "ModuleFlowView_getNodeText flowNode:${flowNode} context:${_context}"
    if { [${_flowNodeRecord} cget -type] == "ModuleNode" && ${flowNode} == ${_context} } {
       # if the node is the first node of the module
       # it might be a reference module... if the module is a link, we display both
@@ -741,7 +741,7 @@ proc ModuleFlowView_addMenuRename { _menu _canvas _flowNodeRecord } {
 # user has selected to add a new node to be submitted
 # by the _flowNodeRecord
 proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord } {
-   puts "ModuleFlowView_createNodeAddWidgets _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlowView_createNodeAddWidgets _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord}"
    global  HighLightRestoreCmd
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
 
@@ -924,7 +924,7 @@ proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global ${moduleId}_TypeOption
 
-   puts "ModuleFlowView_newNodeCancel"
+   ::log::log debug "ModuleFlowView_newNodeCancel"
    set topWidget [winfo toplevel ${_sourceWidget}]
    unset ${moduleId}_TypeOption
 
@@ -933,7 +933,7 @@ proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
 }
 
 proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
-   puts "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global ${moduleId}_TypeOption
 
@@ -987,7 +987,7 @@ proc ModuleFlowView_newNodeModSelected { _expPath _moduleNode _newModPath _sourc
 
       # add the selected module name in the name entry
       set nameEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_name_entry]
-      puts "ModuleFlowView_newNodeModSelected ${nameEntry} configure -text [file tail ${_newModPath}]"
+      ::log::log debug "ModuleFlowView_newNodeModSelected ${nameEntry} configure -text [file tail ${_newModPath}]"
       ${nameEntry} configure -text [file tail ${_newModPath}]
 }
 
@@ -995,7 +995,7 @@ proc ModuleFlowView_newNodeRefButtonCallback { _expPath _moduleNode _refButton }
    set selectedModule [tk_chooseDirectory -initialdir [ModuleFlowControl_getModDefaultDepot] \
       -parent ${_refButton} -title "Module selection dialog"]
    if { ${selectedModule} != "" } {
-      puts "ModuleFlowView_newNodeRefButtonCallback selectedModule:${selectedModule}"
+      ::log::log debug "ModuleFlowView_newNodeRefButtonCallback selectedModule:${selectedModule}"
 
       # add the selected module path in the ref entry field
       set refEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
@@ -1007,7 +1007,7 @@ proc ModuleFlowView_newNodeRefButtonCallback { _expPath _moduleNode _refButton }
 
 
 proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_allModules false} } {
-   puts "ModuleFlowView_renameNodeWidgets"
+   ::log::log debug "ModuleFlowView_renameNodeWidgets"
    global  HighLightRestoreCmd
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
    set nodeType [${_flowNodeRecord} cget -type]
@@ -1148,7 +1148,7 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
 # it's parent coordinates, the module position within its parent and
 # coordinates of it's previous siblings
 proc ModuleFlowView_getNodeY { _flowNodeRecord _context _position } {
-   puts "ModuleFlowView_getNodeY _flowNodeRecord:${_flowNodeRecord} context:${_context} _position:${_position}"
+   ::log::log debug "ModuleFlowView_getNodeY _flowNodeRecord:${_flowNodeRecord} context:${_context} _position:${_position}"
    set parentNode [ModuleFlow_getSubmitter ${_flowNodeRecord}]
 
    set parentCoords [ModuleFlowView_getNodeCoord ${parentNode} ${_context}]
@@ -1162,13 +1162,13 @@ proc ModuleFlowView_getNodeY { _flowNodeRecord _context _position } {
       set nextY [ModuleFlowView_getBranchMaxY ${previousSibling} ${_context}]
    }
 
-   puts "ModuleFlowView_getNodeY _flowNodeRecord:${_flowNodeRecord} returning ${nextY}"
+   ::log::log debug "ModuleFlowView_getNodeY _flowNodeRecord:${_flowNodeRecord} returning ${nextY}"
    return ${nextY}
 }
 
 # goes down a submit tree and find the max y
 proc ModuleFlowView_getBranchMaxY { _flowNodeRecord _context } {
-   puts "ModuleFlowView_getBranchMaxY _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlowView_getBranchMaxY _flowNodeRecord:${_flowNodeRecord}"
    set nodeCoords [ModuleFlowView_getNodeCoord ${_flowNodeRecord} ${_context}]
    set maxY 0
    if { ${nodeCoords} != "" } {
@@ -1181,18 +1181,18 @@ proc ModuleFlowView_getBranchMaxY { _flowNodeRecord _context } {
          }
       }
    }
-   puts "ModuleFlowView_getBranchMaxY _flowNodeRecord:${_flowNodeRecord} maxY:${maxY}"
+   ::log::log debug "ModuleFlowView_getBranchMaxY _flowNodeRecord:${_flowNodeRecord} maxY:${maxY}"
    return ${maxY}
 }
 
 # sets the display coordinates in the visual node.
 # creates the module visual node if not exists.
 proc ModuleFlowView_setNodeCoord { _flowNodeRecord _context _x1 _y1 _x2 _y2} {
-   puts "ModuleFlowView_setNodeCoord _flowNodeRecord:$_flowNodeRecord"
+   ::log::log debug "ModuleFlowView_setNodeCoord _flowNodeRecord:$_flowNodeRecord"
    set visualNodeName [ModuleFlowView_getVisualNodeName ${_flowNodeRecord} ${_context}]
 
    if { ! [record exists instance ${visualNodeName}] } {
-   puts "ModuleFlowView_setNodeCoord creating visualNodeName:$visualNodeName"
+      ::log::log debug "ModuleFlowView_setNodeCoord creating visualNodeName:$visualNodeName"
       FlowVisualNode ${visualNodeName}
    }
 
@@ -1203,14 +1203,14 @@ proc ModuleFlowView_setNodeCoord { _flowNodeRecord _context _x1 _y1 _x2 _y2} {
 # a list {x1 y1 x2 y2}
 # retusn "" if not exists
 proc ModuleFlowView_getNodeCoord { _flowNodeRecord _context } {
-   puts "ModuleFlowView_getNodeCoord _flowNodeRecord:$_flowNodeRecord _context:${_context}"
+   ::log::log debug "ModuleFlowView_getNodeCoord _flowNodeRecord:$_flowNodeRecord _context:${_context}"
    set visualNodeName [ModuleFlowView_getVisualNodeName ${_flowNodeRecord} ${_context}]
 
-   puts "ModuleFlowView_getNodeCoord visualNodeName:$visualNodeName"
+   ::log::log debug "ModuleFlowView_getNodeCoord visualNodeName:$visualNodeName"
    if { ! [record exists instance ${visualNodeName}] } {
       return ""
    }
-   puts "ModuleFlowView_getNodeCoord visualNodeName exist!"
+   ::log::log debug "ModuleFlowView_getNodeCoord visualNodeName exist!"
 
    set x1 [${visualNodeName} cget -x1]
    set y1 [${visualNodeName} cget -y1]
@@ -1265,21 +1265,22 @@ proc ModuleFlowView_goEditor { _file } {
 }
 
 proc ModuleFlowView_getWidgetName { _expPath _moduleNode _key } {
-   puts "ModuleFlowView_getWidgetName _expPath:${_expPath} _moduleNode:${_moduleNode} _key:${_key}"
+   ::log::log debug "ModuleFlowView_getWidgetName _expPath:${_expPath} _moduleNode:${_moduleNode} _key:${_key}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global array ${moduleId}_ModuleFlowWidgetNames
    set value ""
-   puts "ModuleFlowView_getWidgetName looking for '${moduleId}_ModuleFlowWidgetNames($_key)'"
+   ::log::log debug "ModuleFlowView_getWidgetName looking for '${moduleId}_ModuleFlowWidgetNames($_key)'"
    if { [info exists ${moduleId}_ModuleFlowWidgetNames($_key)] } {
       set value [set ${moduleId}_ModuleFlowWidgetNames($_key)]
    } else {
+      ::log::log error "ModuleFlowView_getWidgetName invalid widget key name:${_key}"
       error "ModuleFlowView_getWidgetName invalid widget key name:${_key}"
    }
    return ${value}
 }
 
 proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
-   puts "ModuleFlowView_setWidgetNames _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   ::log::log debug "ModuleFlowView_setWidgetNames _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    #global array ${moduleId}_ModuleFlowWidgetNames
    global ${moduleId}_ModuleFlowWidgetNames
@@ -1287,7 +1288,7 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
       set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
       set addNodeTopWidget .add_node_top_${moduleId}
       set renameNodeTopWidget .rename_top_${moduleId}
-      puts "ModuleFlowView_setWidgetNames creating array ${moduleId}_ModuleFlowWidgetNames"
+      ::log::log debug "ModuleFlowView_setWidgetNames creating array ${moduleId}_ModuleFlowWidgetNames"
       array set ${moduleId}_ModuleFlowWidgetNames \
          [list \
          topwidget ${topWidget} \

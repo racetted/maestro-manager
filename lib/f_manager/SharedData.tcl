@@ -139,7 +139,7 @@ proc SharedData_readProperties {} {
       set propertiesFile [open ${fileName} r]
 
       while {[gets ${propertiesFile} line] >= 0 && ${errorMsg} == "" } {
-         #puts "SharedData_readProperties processing line: ${line}"
+         #::log::log debug "SharedData_readProperties processing line: ${line}"
          if { [string index ${line} 0] != "#" && [string length ${line}] > 0 } {
             #puts "SharedData_readProperties found data line: ${line}"
             # the = sign is used to separate between the key and the value.
@@ -154,14 +154,15 @@ proc SharedData_readProperties {} {
             } else {
                set keyFound [string toupper [string trim [lindex $splittedList 0]]]
                set valueFound [string trim [lindex $splittedList 1]]
-               puts "SharedData_readProperties found key:${keyFound} value:${valueFound}"
+               ::log::log debug "SharedData_readProperties found key:${keyFound} value:${valueFound}"
                SharedData_setMiscData ${keyFound} ${valueFound}
             }
          }
       }
       catch { close ${propertiesFile} }
       if { ${errorMsg} != "" } {
-         error "Startup Error ${errorMsg}"
+         ::log::log error "Error reading file ${propertiesFile} : ${errorMsg}"
+         error "Error reading file ${propertiesFile} : ${errorMsg}"
       }
    }
 }

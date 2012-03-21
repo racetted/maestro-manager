@@ -85,7 +85,7 @@ proc DrawUtil_drawdashline { canvas x1 y1 x2 y2 arrow fill drawshadow shadowColo
 }
 
 proc DrawUtil_drawBox { canvas tx1 ty1 text maxtext textfill outline fill binder drawshadow shadowColor } {
-   # puts "drawBox canvas:$canvas tx1:$tx1 ty1:$ty1 text:$text textfill=$textfill outline=$outline fill=$fill binder:$binder"
+   # ::log::log debug "drawBox canvas:$canvas tx1:$tx1 ty1:$ty1 text:$text textfill=$textfill outline=$outline fill=$fill binder:$binder"
    $canvas create text ${tx1} ${ty1} -text $maxtext -fill $textfill \
       -justify center -anchor w -tags "FlowItems $binder ${binder}.text"
    set shadowOffset [SharedData_getMiscData CANVAS_SHADOW_OFFSET]
@@ -115,7 +115,7 @@ proc DrawUtil_drawBox { canvas tx1 ty1 text maxtext textfill outline fill binder
 }
 
 proc DrawUtil_drawRoundBox { canvas tx1 ty1 text maxtext textfill outline fill binder drawshadow shadowColor } {
-   # puts "DrawUtil_drawRoundBox canvas:$canvas tx1:$tx1 ty1:$ty1 text:$text textfill=$textfill outline=$outline fill=$fill binder:$binder"
+   # ::log::log debug "DrawUtil_drawRoundBox canvas:$canvas tx1:$tx1 ty1:$ty1 text:$text textfill=$textfill outline=$outline fill=$fill binder:$binder"
    $canvas create text ${tx1} ${ty1} -text $maxtext -fill $textfill \
       -justify center -anchor w -tags "FlowItems $binder ${binder}.text"
    set shadowOffset [SharedData_getMiscData CANVAS_SHADOW_OFFSET]
@@ -237,12 +237,12 @@ proc DrawUtil_highLightNode { _binder _canvas _restoreCmd } {
 }
 
 proc DrawUtil_resetHighLightNode { _restoreCmd } {
-   # puts "DrawUtil_resetHighLightNode _restoreCmd:${_restoreCmd}"
+   # ::log::log debug "DrawUtil_resetHighLightNode _restoreCmd:${_restoreCmd}"
    catch { eval ${_restoreCmd} }
 }
 
 proc DrawUtil_setShadowColor { _binder _canvas _color } {
-   puts "DrawUtil_setShadowColor $_binder $_canvas $_color"
+   ::log::log debug "DrawUtil_setShadowColor $_binder $_canvas $_color"
    ${_canvas} itemconfigure ${_binder}.shadow -fill ${_color}
 }
 
