@@ -143,7 +143,7 @@ proc ExpModTree_getRecordName { _expPath _moduleNode } {
 
 # returns the prefix that will be used to build a module tree record
 proc ExpModTree_getRecordPrefix { _expPath } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    set prefix mtree_${expChecksum}_
    return ${prefix}
 }

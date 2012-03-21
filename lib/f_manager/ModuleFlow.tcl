@@ -907,7 +907,7 @@ proc ModuleFlow_hasSubmitSiblings { _flowNodeRecord } {
 # flow node record is composed of mnode_${checksum_exppath}_${flow_node}
 # i.e. mnode_123456_/enkf_mod/assim/gem_mod
 proc ModuleFlow_getRecordName { _expPath _nodeName } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
 
    puts "ModuleFlow_getRecordName _nodeName:${_nodeName}"
    set prefix mnode_${expChecksum}_

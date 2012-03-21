@@ -328,12 +328,12 @@ proc ModuleFlowView_getCanvas { _expPath _moduleNode } {
 }
 
 # make sure everything is cleaned before destroying widgets
-proc ModuleFlowView_closeWindow { _expPath _moduleNode {cleanup false} } {
-      puts "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} ... "
+proc ModuleFlowView_closeWindow { _expPath _moduleNode {_force false} } {
+   puts "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} ... "
    set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
    global ${topWidget}_status_afterid
 
-   if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
+   if { ${_force} == true || [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
         [ModuleFlowView_flowChangeNotify ${_expPath} ${_moduleNode} ${topWidget}] == true } {
 
       if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == true } {
@@ -343,13 +343,11 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {cleanup false} } {
 
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-      global ${moduleId}_Module_Writable
-      global ${moduleId}_Link_Module
-      global ${moduleId}_TypeOption
-
-      catch { unset ${moduleId}_Module_Writable }
-      catch { unset ${moduleId}_Link_Module }
-      catch { unset ${moduleId}_TypeOption }
+      # close global variables set my the module
+      foreach globalVar [info globals ${moduleId}*] {
+         global [set globalVar]
+         unset [set globalVar]
+      }
 
       ModuleFlowView_clearVisualNodes ${_moduleNode}
 
@@ -361,13 +359,14 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {cleanup false} } {
       # destroy all module records, this part is only executed when the
       # the user closes the whole experiment, all flow node records needs to be cleaned up.
       # When the user closes the module only and not the whole exp, the records are kept in memory
-      if { ${cleanup} == true } {
+      if { ${_force} == true } {
          ModuleFlow_cleanRecords ${_expPath} ${_moduleNode}
       } 
 
       # close any dormant callbacks
       if { [info exists ${topWidget}_status_afterid] } {
          after cancel [set ${topWidget}_status_afterid]
+         unset ${topWidget}_status_afterid
       }
 
       ModuleFlowView_clearWidgetNames ${_expPath} ${_moduleNode}
@@ -1282,7 +1281,8 @@ proc ModuleFlowView_getWidgetName { _expPath _moduleNode _key } {
 proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
    puts "ModuleFlowView_setWidgetNames _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global array ${moduleId}_ModuleFlowWidgetNames
+   #global array ${moduleId}_ModuleFlowWidgetNames
+   global ${moduleId}_ModuleFlowWidgetNames
    if { ! [info exists ${moduleId}_ModuleFlowWidgetNames] } {
       set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
       set addNodeTopWidget .add_node_top_${moduleId}

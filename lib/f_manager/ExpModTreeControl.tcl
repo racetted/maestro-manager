@@ -78,19 +78,26 @@ proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
 }
 
 proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
-   set expChecksum [::crc::cksum ${_expPath}]
-   global ${expChecksum}_OpenedModules
-   global ${_topWidget}_status_afterid env
-   global ${expChecksum}_FlowHasChanged
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
 
-   if { [ExpModTreeControl_isModuleFlowChanged ${_expPath}] == true } {
-      set answer [MessageDlg .msg_window -icon warning -message "You have changed a module flow but did not re-generate \
-               your experiment flow, are you sure you want to continue?" \
-            -aspect 400 -title "Module Center Quit Notification" -type okcancel -justify center -parent ${_topWidget}]
+   if { [ExpModTree_isTreeChanged ${_expPath}] == true } {
+      set answer [MessageDlg .msg_window -icon warning -message "There are unsaved changes in module flow(s), \
+             are you sure you want to continue?" \
+            -aspect 400 -title "Flow Manager Close Notification" -type okcancel -justify center -parent ${_topWidget}]
       if { ${answer} == 1 } {
          return
       }
    }
+
+   if { [ExpModTreeControl_isModuleFlowChanged ${_expPath}] == true } {
+      set answer [MessageDlg .msg_window -icon warning -message "You have changed a module flow but did not re-generate \
+               your experiment flow, are you sure you want to continue?" \
+            -aspect 400 -title "Flow Manager Close Notification" -type okcancel -justify center -parent ${_topWidget}]
+      if { ${answer} == 1 } {
+         return
+      }
+   }
+
    MaestroConsole_addMsg "Closing experiment ${_expPath}."
 
    # recursive delete all module records from the tree of modules
@@ -104,13 +111,18 @@ proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
    destroy ${_topWidget}
 
    # clean any callback waiting
+   global ${_topWidget}_status_afterid
    if { [info exists ${_topWidget}_status_afterid] } {
       after cancel [set ${_topWidget}_status_afterid]
+      unset ${_topWidget}_status_afterid
    }
 
-   catch { unset ${expChecksum}_OpenedModules }
-   catch { unset ${expChecksum}_FlowHasChanged }
-
+   foreach globalVar [info globals ${expChecksum}*] {
+      foreach globalVar [info globals ${expChecksum}*] {
+         global [set globalVar]
+         unset [set globalVar]
+      }
+   }
 }
 
 # this proc is used as a callback when a module node is being deleted from
@@ -152,7 +164,7 @@ proc ExpModTreeControl_redraw { _expPath } {
 }
 
 proc ExpModTreeControl_isOpenedModule { _expPath _moduleNode } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_OpenedModules
    if { [info exists ${expChecksum}_OpenedModules] && [lsearch [set ${expChecksum}_OpenedModules] ${_moduleNode}] != -1 } {
       return true
@@ -161,7 +173,7 @@ proc ExpModTreeControl_isOpenedModule { _expPath _moduleNode } {
 }
 
 proc ExpModTreeControl_removeOpenedModule { _expPath _moduleNode } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_OpenedModules
 
    if { [info exists ${expChecksum}_OpenedModules] } {
@@ -173,7 +185,7 @@ proc ExpModTreeControl_removeOpenedModule { _expPath _moduleNode } {
 }
 
 proc ExpModTreeControl_addOpenedModule { _expPath _moduleNode } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_OpenedModules
    if { ! [info exists ${expChecksum}_OpenedModules] } {
       set ${expChecksum}_OpenedModules {}
@@ -187,14 +199,14 @@ proc ExpModTreeControl_addOpenedModule { _expPath _moduleNode } {
 # save exp flow
 # _isChanged is true or false
 proc ExpModTreeControl_setModuleFlowChanged { _expPath _isChanged } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_FlowHasChanged
    
    set ${expChecksum}_FlowHasChanged ${_isChanged}
 }
 
 proc ExpModTreeControl_isModuleFlowChanged { _expPath } {
-   set expChecksum [::crc::cksum ${_expPath}]
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_FlowHasChanged
 
    set isChanged false
