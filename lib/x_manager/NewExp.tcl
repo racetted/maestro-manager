@@ -36,29 +36,15 @@ proc NewExp::New_xp { exp nbk } {
       wm title $win_new_xp $Dialogs::New_ExpTitle 
       wm minsize $win_new_xp 500 300
 
-      # -- if UsrExpRepository is set up use it. This will happen if first Time User
+      # -- if depot is set up use it. This will happen if first Time User
       set NewExp::initdir ""
 
       # -- get depot for notebook
-      set NewExp::initdir [Preferences::GetTabListDepots $nbk]
+      set NewExp::initdir [Preferences::GetTabListDepots $nbk "w"]
       if {[string compare $NewExp::initdir "" ] == 0 } {
               set NewExp::initdir $::env(HOME)/
       } 
       
-      if { 1 == 2 } {
-      if {[info exists Preferences::UsrExpRepository] != 0 } {
-              # have to check if depot is owned by user
-	      foreach dpt $Preferences::UsrExpRepository {
-	            if {[file writable $dpt]} {
-		          lappend NewExp::initdir $dpt 
-		    }
-	      }
-      } else {
-              set NewExp::initdir $::env(HOME)/
-      }
-      } 
-
-
       set controlframe [frame $win_new_xp.ctrf -border 2 -relief groove]
 
       label $controlframe.lab -text  $Dialogs::New_ExpTitle -font "ansi 12 "
@@ -128,32 +114,32 @@ proc NewExp::New_xp { exp nbk } {
       set ButCancel [Button $controlframe.buttons.cancel  -image $XPManager::img_Cancel -command {destroy $NewExp::win_new_xp}]
       set NextB     [Button $controlframe.buttons.next    -image $XPManager::img_Next -command {\
                         if {[string compare $NewExp::XPname ""] == 0 } {
-	                          Dialogs::show_msgdlg "You Must Provide the Name of Experiment"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ExpNameMiss  ok warning "" $NewExp::win_new_xp
 				  return
                         }
 
                         if { ! [regexp {^[A-Za-z0-9_\-\.]+$} $NewExp::XPname ]} {
-	                          Dialogs::show_msgdlg "Experiment Name contains invalid Characters"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ExpInvalidName  ok warning "" $NewExp::win_new_xp
 				  return
                         }
 
                         if {[string compare $NewExp::EntryModName ""] == 0 } {
-	                          Dialogs::show_msgdlg "You Must Provide the Name of the Entry Module"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_NameEntryMod  ok warning "" $NewExp::win_new_xp
 				  return
                         }
 
                         if { ! [regexp {[A-Za-z0-9_\-\.]+$} $NewExp::EntryModName]} {
-	                          Dialogs::show_msgdlg "Entry Module Name contains invalid characters"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ModInvalidName  ok warning "" $NewExp::win_new_xp
 				  return
                         }
 
                         if {[string compare $NewExp::XpPath ""] == 0} {
-	                          Dialogs::show_msgdlg "You Must provide the Destination path of the Experiment"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_NewExpPath  ok warning "" $NewExp::win_new_xp
 				  return
 		        }
 
-                        if { ! [regexp {[^\/][A-Za-z0-9_\-\.\/]+$} $NewExp::XpPath]} {
-	                          Dialogs::show_msgdlg "Experiment Path contains invalid Characters"  ok warning "" $NewExp::win_new_xp
+                        if { ! [regexp {^\/[A-Za-z0-9_\-\.\/]+$} $NewExp::XpPath]} {
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ExpPathInvalid  ok warning "" $NewExp::win_new_xp
 				  return
 		        }
                         
@@ -162,9 +148,15 @@ proc NewExp::New_xp { exp nbk } {
 			       Dialogs::show_msgdlg "$Dialogs::Dlg_CreatePath : $NewExp::XpPath" ok warning "" $NewExp::win_new_xp
                         } else {
 			       if {[file writable $NewExp::XpPath] == 0 } {
-	                                 Dialogs::show_msgdlg "You dont have the right to write in this Directory"  ok warning "" $NewExp::win_new_xp
+	                                 Dialogs::show_msgdlg $Dialogs::Dlg_PathNotOwned  ok warning "" $NewExp::win_new_xp
 				         return
 			       }
+			}
+
+                        # -- Check if Exp. already there!
+			if {[file exist $NewExp::XpPath/$NewExp::XPname] != 0 } {
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ExpExiste  ok warning "" $NewExp::win_new_xp
+				  return
 			}
 
                         NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName}]
@@ -206,8 +198,8 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      }
 
      set NextResume [toplevel .next_resume]
-     wm title $NextResume "$Dialogs::New_ExpTitle : Continue ... "
-     wm minsize $NextResume 200 100
+     wm title $NextResume "$Dialogs::New_ExpTitle "
+     wm minsize $NextResume 300 200
 
      if {[winfo exists $parent]} {
            destroy $parent
@@ -225,7 +217,7 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      set Nlist [ListBox::create $sfrm.nl \
 	       -relief sunken -borderwidth 1 \
       	       -dragevent 1 \
-	       -width 80 -highlightthickness 0 -selectmode single -selectforeground white\
+	       -width 40 -highlightthickness 0 -selectmode single -selectforeground white\
 	       -height 20 \
 	       -redraw 1 -dragenabled 1 \
 	       -bg #FFFFFF \
@@ -246,22 +238,19 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      pack $frm
 
      # -- Show other Parametres of New experiment:
-     $NElist insert end "Experiment name        :$name\n"     
-     $NElist insert end "Experiment destination :$path\n"      
-     $NElist insert end "Experiment entry module:$entrymod\n"
+     $NElist insert end "$Dialogs::New_ExpName:$name\n"     
+     $NElist insert end "$Dialogs::New_ExpDest:$path\n"      
+     $NElist insert end "$Dialogs::New_ExpEnMo:$entrymod\n"
+     $NElist insert end "_______________________________________\n"
+     $NElist insert end "\n"
 
      foreach loc {bin hub mod seq res lis log} {
               if {[string compare $arlc($loc) "local"] == 0} {
-                      $NElist insert end  "Directory: $::DirFullName($loc) will be created locally\n"
+                      $NElist insert end  "Directory: $::DirFullName($loc) will be created localy\n"
 	      } else {
                       $NElist insert end  "Directory: $::DirFullName($loc) will be a link to  $arent($loc)\n"
 	      }
      }
-
-     #if {[file isdirectory $path] == 0} {
-     #	        Dialogs::show_msgdlg $Dialogs::Dlg_CreatePath  ok warning "" .newxp
-     #}
-     
 }
 
 
@@ -322,7 +311,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       set CancelB        [button $CtrlButton.ok     -image $XPManager::img_Cancel -command {destroy $NewExp::PrefWinDirs}]
       set HelpB          [button $CtrlButton.bhelp  -image $XPManager::img_Help   -command {}]
       set NextB          [button $CtrlButton.next   -image $XPManager::img_Next   -command [\
-                          list NewExp::Next_resume $NewExp::PrefWinDirs $path $name $entrymod \
+                          list NewExp::FinalCheck $NewExp::PrefWinDirs $path $name $entrymod \
 		          NewExp::ArrayDirLocations NewExp::ArrayEntryValues]]
 
       set dir_bin        [label $subfdirs.bin     -text "bin "            -font "10"]
@@ -527,14 +516,11 @@ proc NewExp::ValuePath {widg} {
           # -- if the path not in list path -> Check path ?
           # -- Set the Variable
           set NewExp::XpPath [string trimright [$widg get] "/"]
-
-	  #if {[file isdirectory $NewExp::XpPath] == 0} {
-	  #      Dialogs::show_msgdlg $Dialogs::Dlg_CreatePath  ok warning "" .newxp
-	  #}
 	  if { ! [regexp {[^\/][A-Za-z0-9_\-\.\/]+$} NewExp::XpPath]} {
 	          Dialogs::show_msgdlg $Dialogs::Dlg_NoValExpPath  ok warning "" .newxp
 		  return 0
 	  }
+
 	  # -- path must not be HOME/
 	  if {[string compare $::env(HOME) $NewExp::XpPath] == 0 } {
 	         Dialogs::show_msgdlg $Dialogs::Dlg_NotUnderHOME  ok warning "" .newxp
@@ -549,9 +535,38 @@ proc NewExp::ValueName {widg} {
           
 	  # -- validated by the Enter command
           if { ! [regexp {^[A-Za-z0-9_\-\.]+$} $NewExp::XPname ]} {
-	                          Dialogs::show_msgdlg "Experiment Name contains invalid Characters"  ok warning "" $NewExp::win_new_xp
+	                          Dialogs::show_msgdlg $Dialogs::Dlg_ExpInvalidName  ok warning "" $NewExp::win_new_xp
 				  return
           }
+}
+
+#------------------------------------------------------
+# NewExp::FinalCheck
+#
+# Check if remote dirs have values
+# Note : check here if an exp with the same name exist!!!1
+#------------------------------------------------------
+proc NewExp::FinalCheck { win path name entrmod arlocation arvalues } {
+       
+       upvar  $arlocation arloc
+       upvar  $arvalues   arval
+
+       set arerror {}
+       foreach loc {bin hub res lis} {
+	       if {[string compare $arloc($loc) "remote"] == 0 && \
+	           [string compare $arval($loc) ""] == 0 } {
+	             lappend arerror "$loc"    
+	           }
+       }
+
+  
+      if {[llength $arerror] != 0 } {
+             Dialogs::show_msgdlg $Dialogs::New_NoRemoteDirs:[join $arerror " "]  ok warning "" $win 
+	     return
+      } else {
+             # --Ok create
+	     NewExp::Next_resume $win $path $name $entrmod $arlocation $arvalues
+      }
 }
 
 proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
@@ -566,16 +581,20 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
        #clock format [clock seconds] -format {%Y%m%d%H0000} 2005 01 10 15 16 55
 
        # -- get today's date
-       set date [clock format [clock seconds] -format {%d %b %Y}] 
+       set date    [clock format [clock seconds] -format {%d %b %Y}] 
        set dateExp [clock format [clock seconds] -format {%Y%m%d%H0000}] 
 
        # -- rm trailing slash
        set path [string trimright $path "/"]
 
-      
-       catch {[exec mkdir -p $path/$name]}
-       catch {[exec echo "${dateExp}0000" > $path/$name/ExpDate]} 
-       catch {[exec touch $path/$name/ExpTimings]} 
+       if [catch { 
+               catch {[exec mkdir -p $path/$name]}
+               catch {[exec echo -n "${dateExp}0000" > $path/$name/ExpDate]} 
+               catch {[exec touch $path/$name/ExpTimings]} 
+       } message ] {
+             Dialogs::show_msgdlg "Unable to create Experiment Directory"  ok warning "" $parent 
+	     return
+       }
 
        set header  "<?xml version=\"1.0\" ?>"
        set footer  "</MODULE>" 
@@ -589,30 +608,50 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
        puts  $fo "$footer"  
        close $fo
 
-
-       catch {[exec mkdir -p $path/$name/modules]}
-       catch {[exec mkdir -p $path/$name/sequencing]}
-       catch {[exec mkdir -p $path/$name/logs]}
-
-       catch {[exec mkdir -p $path/$name/modules/$entrymod]}
-       catch {[exec ln -s modules/$entrymod $path/$name/EntryModule]}
-
+       if [catch {
+               catch {[exec mkdir -p $path/$name/modules]}
+               catch {[exec mkdir -p $path/$name/sequencing]}
+               catch {[exec mkdir -p $path/$name/logs]}
+               catch {[exec mkdir -p $path/$name/modules/$entrymod]}
+               catch {[exec ln -s modules/$entrymod $path/$name/EntryModule]}
+       } message ] {
+             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories: $message"  ok warning "" $parent 
+	     return
+       }
        
        set fo [open "$path/$name/modules/$entrymod/flow.xml" "w"] 
        puts  $fo "$header2"  
        puts  $fo "$footer"  
        close $fo
 
+       # -- for local and remote directory Creation
+       set l_error 0
+       set r_error 0
        foreach loc {bin hub res lis} {
 	       if {[string compare $arloc($loc) "local"] == 0 } {
-                           catch {[exec mkdir $path/$name/$::DirFullName($loc)]}
+                           if [catch { exec mkdir -p $path/$name/$::DirFullName($loc) }] {
+                                   set l_error 1
+			   }
                } else {
-	                   catch {[exec ln -s $arentry($loc) $path/$name/$::DirFullName($loc)]}
+	                   if [catch { exec ln -s $arentry($loc) $path/$name/$::DirFullName($loc) }] {
+                                   set r_error 1
+			   }
 	       }
        }
 
+       # -- see if errors  Note no rollback at this point
+       if { $l_error == 1 } {
+             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories (bin|hub|resources|listing)"  ok warning "" $parent 
+       }
+
+       if { $r_error == 1 } {
+             Dialogs::show_msgdlg "Unable to create sub-Experiment links (bin|hub|resources|listing)"  ok warning "" $parent 
+       }
+
        # -- under resources create entry mod.
-       catch {[exec mkdir -p $path/$name/resources/$entrymod]}
+       if [  catch { exec mkdir -p $path/$name/resources/$entrymod } ] {
+             Dialogs::show_msgdlg "Unable to create Entry Module:$entrymod under resources"  ok warning "" $parent 
+       }
 
        # -- if every things is ok update. 
        # Note 1 :First time user do not have a repository yet
@@ -621,7 +660,7 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        # -- get the first and only tab for now
        if {[llength $Preferences::ListUsrTabs] != 1 } {
-               puts "ERROR  Preferences::ListUsrTabs not equal to one"
+               Dialogs::show_msgdlg "Please examine your \$HOME/.maestrorc file, navtabs preference is missing puting default:My_experiments"  ok warning "" $parent 
        }
 
        set ftab [string trim [lindex $Preferences::ListUsrTabs 0] " "]
@@ -634,9 +673,6 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
                      # -- See if path is in Usr Repository
 		     set ltmp [split $ArrayTabsDepot($ftab) ":"]
-		     #regsub -all {/} $ltmp  {\/} ltmp
-                     #regsub -all "$home" $ltmp {} ltmp
-		      
 		     set ltmph [join $ltmp " "]
 
 		     if {[lsearch -regexp $ltmp "\/$npth"] < 0 } {
@@ -652,7 +688,9 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 			       catch {file delete $::env(TMPDIR)/.maestrorc}
 			       catch {[exec cat $::env(HOME)/.maestrorc  | sed "s/^$ftab\.*=\.\*/$ftab=$lpath/g" >  $::env(TMPDIR)/.maestrorc]}
 			       catch {[exec cp  $::env(TMPDIR)/.maestrorc $::env(HOME)/.maestrorc]}
-
+                               
+			       # -- we should update the liste of ALL Exp's :  XPManager::ListExperiments
+			       XPManager::ListExperiments
 		     } 
 		     
 		     # -- Update Tree

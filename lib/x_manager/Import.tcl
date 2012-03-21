@@ -34,26 +34,12 @@ proc Import::ImportExp { exp } {
       set Import::_importGit 0 
       set Import::_importCte 0 
 
-      # -- get everything for now
-      set Import::initdir [Preferences::GetTabListDepots "none"]
+      # -- What if depot is not given
+      # -- Get everything for now
+      set Import::initdir [Preferences::GetTabListDepots "none" "w"]
       if {[string compare $Import::initdir "" ] == 0 } {
                      set Import::initdir $::env(HOME)/
       }
-
-      # -- What if UsrExpRepository is not given
-      if { 1 == 2 } {
-      if {[info exists Preferences::UsrExpRepository] != 0 } {
-                # have to check if depot is owned by user
-		foreach dpt $Preferences::UsrExpRepository {
-		       if {[file writable $dpt]} {
-		               lappend Import::initdir $dpt 
-		       }
-		}
-      } else {
-                set Import::initdir $::env(HOME)/ 
-      }
-      }
-
 
       set frm [frame .import.frame -border 2 -relief groove]
 
@@ -206,8 +192,15 @@ proc Import::NextButton { } {
 			    return
              }
 
-             if {[file writable $Import::Destination] == 0} {
-		            Dialogs::show_msgdlg "You dont have the permission to write in Destination path"  ok warning "" $Import::ImportW
+             if {[file isdirectory $Import::Destination] == 0 } {
+		        Dialogs::show_msgdlg $Dialogs::Dlg_CreatePath  ok warning "" $Import::ImportW
+			if [ catch { exec mkdir -p $Import::Destination } ] {
+		                    Dialogs::show_msgdlg "Could not create Directory:$Import::Destination"  ok error "" $Import::ImportW
+				    return
+			}
+                      
+	     } elseif {[file writable $Import::Destination] == 0 } {
+		            Dialogs::show_msgdlg $Dialogs::Dlg_PathNotOwned  ok warning "" $Import::ImportW
 			    return
 	     }
 
@@ -218,6 +211,11 @@ proc Import::NextButton { } {
 
 proc Import::GetConstantsSize { selected } {
  # -- If this is Only one exp
+ if {[string compare $selected "" ] == 0 } {
+		Dialogs::show_msgdlg $Dialogs::Imp_NoExpSel  ok warning "" $Import::ImportW
+                $Import::ImportCte deselect
+                return
+ }
  if { [file exist $selected/EntryModule] } {
         if {[file exist $selected/hub/constants/]} { 
                  set size [exec du -ms $selected/hub/constants/ | tr \011 \040]
@@ -229,7 +227,24 @@ proc Import::GetConstantsSize { selected } {
 	        set Import::_Importsize 0 
 	}
  } else {
-            puts "selected :$selected MUltiple"
+        # -- this code has to be reviewd!!
+        if { 1 == 2 } {
+	    set hubs [exec  find $selected/ \( -type d -o -type l \) -name hub ]
+	    set listhub [split $hubs "\n"]
+	    puts "list=$listhub"
+	    set sum 0
+	    foreach hb $listhub {
+	               if {[file isdirectory $hb/constants] } {
+                             set size [exec du -ms $hb/constants/ | tr \011 \040]
+	                     set vsize [split $size " "]
+			     puts "vsize=$vsize"
+			     set sum [ expr [lindex $vsize 0]  + "$sum" ]; 
+                       }
+	    }
+	     set Import::_Importsize $sum
+        }
+	# -- For now issue a dialog
+	Dialogs::show_msgdlg "For Now the size is not avaliable but you can\nalways en(dis)able the import of constant files" ok warning "" $Import::ImportW
  }
 }
 
@@ -287,8 +302,8 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       set CancelB2 [button $ButFrame.cancel -text "Cancel"  -command {destroy $Import::ImportW2}]
       set NextB2   [button $ButFrame.next   -text "Proceed" -command [list Import::ExecImport $Import::ImportW2 $newname $srcexp $dest $git $cte]]
      
-      pack $NextB2   -side right  -padx 4
-      pack $CancelB2 -side right 
+      pack $NextB2   -side right  -padx 5 -pady 5
+      pack $CancelB2 -side right  -pady 5
 
       pack $ButFrame -side bottom 
       pack $dptexp   -fill x
@@ -312,9 +327,9 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
 
       # -- Check Constants
       if { $cte == 1 } {
-             $dpexp insert end "Const" -text "Constants Files will be copied locally" 
+             $dpexp insert end "Const" -text "Constants Files will be copied localy" 
       } else {
-             $dpexp insert end "Const" -text "Constants will not be Imported ... You must do link to the Source Exp." 
+             $dpexp insert end "Const" -text "Constants will not be Imported ... You must create links to the original constant files." 
       }
 
       # -- Destination 
@@ -338,6 +353,8 @@ proc Import::CheckName { widgt } {
 
 proc Import::ExecImport {win newname srcexp dest git cte} {
       
+      global SEQ_MANAGER_BIN
+
       variable ExeImport
       variable ERROR  0
       variable SUCCES 0
@@ -351,30 +368,27 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
       }
 
       set ExeImport [toplevel .execimport] 
+      wm title $ExeImport "$Dialogs::Imp_title : proceed ... "
       wm minsize $ExeImport 600 200
 
       set frm [frame $ExeImport.ctrf]
-     
+      set scrolledW [ScrolledWindow ${frm}.scroll_w -relief sunken -borderwidth 1] 
 
       set WinInfoWidget [text $frm.txt -xscrollcommand "$frm.xscroll set" -yscrollcommand "$frm.yscroll set"  \
-                         -width 80 -height 30 -bg #FFFFFF -font 12 -wrap none]
+                         -width 80 -height 30 -bg #FFFFFF -font 12 -wrap word]
       
-      scrollbar $frm.xscroll  -command "$frm.txt xview"
-      scrollbar $frm.yscroll  -command "$frm.txt yview"
+      #scrollbar $frm.xscroll  -command "$frm.txt xview"
+      #scrollbar $frm.yscroll  -command "$frm.txt yview"
+      ${scrolledW} setwidget ${WinInfoWidget}
 
-      set CancelB       [button $frm.cancel -text "Quit" -bg gray -command {destroy $Import::ExeImport}]
+      set CancelB  [button $frm.cancel -text "Quit" -bg gray -command {destroy $Import::ExeImport}]
 
-      #pack $CancelB -side bottom 
+      pack ${scrolledW} -fill both -expand true -padx 5 -pady 5
+      pack  $CancelB -padx 5 -pady 5
       pack $frm -fill both -expand true 
-      grid $frm.txt $frm.yscroll -sticky news
-      #grid $frm.xscroll -sticky news
 
-      #pack $CancelB -side bottom 
-      #pack $scrobarx -fill x
-      #pack $scrobary -side right -fill y
-      #pack $WinInfoWidget -expand true -fill both
-      
-      grid $CancelB -sticky w
+      #grid $frm.txt $frm.yscroll -sticky news
+      #grid $CancelB -sticky w
       
       $WinInfoWidget insert end "New Name=$newname \n"
       $WinInfoWidget insert end "Source=$srcexp \n"
@@ -401,7 +415,7 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
 		set cmdargs "-s $srcexp -d $dest $arg_git $arg_cte"
       }
       
-      $WinInfoWidget insert end "command= $ImportScript $cmdargs\n"
+      $WinInfoWidget insert end "cmd:import_maestro_exp $cmdargs\n"
 
       update 
       set fid [open "|$ImportScript $cmdargs 2>@ stdout" r+]

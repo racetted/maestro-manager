@@ -183,7 +183,7 @@ proc TreeUtil::RunGit { frm tree } {
            set data [$tree itemcget $node -data]
            if {[string compare $data "root"] != 0 } {
                    set path [XTree::getPath $tree $node]
-	           catch {[exec ${SEQ_MANAGER_BIN}/../bin/Exec_Gitk.ksh $path/.git &]}
+	           catch {[exec ${SEQ_MANAGER_BIN}/Exec_Gitk.ksh $path/.git &]}
 	   }
     }
 }
@@ -403,7 +403,7 @@ proc TreeUtil::Refresh_Exp { frmt } {
        set nbk [$XpBrowser::notebook raise]
 
        # every things for now 
-       set listxp [Preferences::GetTabListDepots $nbk]
+       set listxp [Preferences::GetTabListDepots $nbk "r"]
 
        if { [regexp $nbk TreeUtil::$frmt kk] } {
                  if {[string compare $listxp ""] != 0 } {

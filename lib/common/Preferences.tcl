@@ -5,7 +5,7 @@ namespace eval Preferences {
 
            variable  PreferenceWindow
 
-	   variable ERROR_NON_RECOGNIZED_PREF  0
+	   variable ERROR_NOT_RECOGNIZED_PREF  0
            variable ERROR_PARSING_USER_CONFIG 0
 	   variable ERROR_DEPOT_DO_NOT_EXIST 0
            
@@ -13,7 +13,6 @@ namespace eval Preferences {
 	   variable ListUsrTabs
 
 	   # -- Preference variables
-	   variable UsrExpRepository
 	   variable auto_msg_display
 	   variable auto_launch
 	   variable show_abort_type
@@ -165,9 +164,10 @@ proc Preferences::ConfigDepot { } {
 				   $Preferences::SaveBU configure -state normal
 				  }]
 
+      # -- Populate list with user Exp's paths 
       # -- get depot for notebook
-      set listexp [Preferences::GetTabListDepots [string trim $Tname " "]]
-      puts "listxp=$listexp"
+      set listexp [Preferences::GetTabListDepots [string trim $Tname " "] "r"]
+     
       if {[string compare $listexp "" ] != 0 } {
            foreach upath $listexp { 
                if { [string compare $upath "no-selection"] != 0 } {
@@ -175,18 +175,6 @@ proc Preferences::ConfigDepot { } {
                }
            }
       }
-
-      if { 1 == 2 } {
-      # -- Populate list with user Exp's paths 
-      if {[info exists Preferences::UsrExpRepository] != 0 } {
-           foreach upath $Preferences::UsrExpRepository { 
-               if { [string compare $upath "no-selection"] != 0 } {
-                        $listPath insert end "$upath" -text "$upath" 
-               }
-           }
-      }
-      }
-
 
       set CtrlButton [frame $tpane.ctrlbuttons -border 2 -relief flat]
       set OkBU       [button $CtrlButton.ok     -image $XPManager::img_Ok     -command {destroy $Preferences::ConfigDepotWin}]
@@ -210,7 +198,7 @@ proc Preferences::ConfigDepot { } {
       pack $frm     -fill x
       pack $tbook   -fill both -expand yes -padx 4 -pady 4
 
-      # -- first disable until changes in User Xp. list ie: UsrExpRepository
+      # -- first disable until changes in User Xp. list 
       $SaveBU         configure -state disabled
       $CancelBU       configure -state disabled
       $ExpPathsRemove configure -state disabled
@@ -230,7 +218,7 @@ proc Preferences::AddExpToDepot { nbk } {
 
     if { "$ExpDir" != "" } {
                  set numslash [regsub -all {\/} $ExpDir "" kiki]
-                 if {[string compare $ExpDir [file normalize $::env(HOME)]] == 0 || [string compare $ExpDir "/" ] == 0 || $numslash <=4 } {
+                 if {[string compare $ExpDir [file normalize $::env(HOME)]] == 0 || [string compare $ExpDir "/" ] == 0 } {
                              Dialogs::show_msgdlg $Dialogs::Dlg_PathDeep  ok error "" $Preferences::ConfigDepotWin
 	                     return
 	            }
@@ -254,16 +242,12 @@ proc Preferences::AddExpToDepot { nbk } {
                                          }
 
 	                                 if { $_error == 0 } {
-                                                   regsub -all {[ ][\t]*} $ExpDir {} ExpDir; 
+                                                   regsub -all {[ \t]*} $ExpDir {} ExpDir 
                                                    $Preferences::listPath insert end "$ExpDir" -text "$ExpDir" 
-                                                   # -- Ok Update Global Depot
-					           #set Preferences::UsrExpRepository [split [$Preferences::listPath items] " "]
 					 }
-					 # -- Ok, We can save somthing!  NOT NOW
-					 #$Preferences::SaveBU configure -state normal
 				    }
                                   1 {
-		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoExpPath  ok error "" $Preferences::ConfigDepotWin
+		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoExpPath      ok error "" $Preferences::ConfigDepotWin
 					 return
 		                    }
                                   2 {
@@ -271,7 +255,7 @@ proc Preferences::AddExpToDepot { nbk } {
 					 return
 		                    }
                                   3 {
-		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoValExp  ok error "" $Preferences::ConfigDepotWin
+		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoValExp       ok error "" $Preferences::ConfigDepotWin
 					 return
 		                    }
 				  }
@@ -306,8 +290,8 @@ proc Preferences::SaveDepotToConfig { nbk } {
   # Note : A user can add path to his allready defined Exp. paths  
   # -- Check if user has the token in the file
 
-  # -- get depot for notebook
-  set listxp [Preferences::GetTabListDepots $nbk]
+  # -- Get depot for notebook
+  set listxp [Preferences::GetTabListDepots $nbk "r"]
 
   if {[string compare $listxp ""] != 0} {
          # -- Slash is special char. protect it  
@@ -335,11 +319,13 @@ proc Preferences::SaveDepotToConfig { nbk } {
          }
   }
 
-  # -- Ok Update Global Depot
-  #set Preferences::UsrExpRepository [split [$Preferences::listPath items] " "]
-
+  # -- Update depot
   set ArrayTabsDepot($nbk) [join [$Preferences::listPath items] ":"]
- 
+
+  # -- we should update the liste of ALL Exp's :  XPManager::ListExperiments
+  XPManager::ListExperiments
+
+  # -- Update XpBrowser
   set ret [Dialogs::show_msgdlg $Dialogs::Dlg_UpdateExpBrowser  yesno question "" $Preferences::ConfigDepotWin]
   if { $ret == 0 } {
 	       # -- Ok Update XpBrowser NOTE: For Now Always User Tree
@@ -347,13 +333,13 @@ proc Preferences::SaveDepotToConfig { nbk } {
 	       XTree::reinit $::TreesWidgets($nbk) {*}$crap_tcl
   }
 
-  # should disable remobe ,save,cancel button here
+  # should disable remove ,save,cancel button here
   $Preferences::ExpPathsRemove configure -state disabled
   $Preferences::SaveBU         configure -state disabled
   $Preferences::CancelBU       configure -state disabled
   $Preferences::OkBU           configure -state normal
 
-  # -- if no Exp at all Undef Preferences::UsrExpRepository
+  # -- if no Exp at all Undef depot 
   # -- How many tem
   set nitem [$Preferences::listPath items]
   if {[string compare $nitem ""] == 0} {
@@ -1446,7 +1432,7 @@ proc Preferences::FindAndValidateExpDir { path nbk } {
 	      # -- are not the same but the lead to same directory
 
               # -- get depot for notebook
-	      set listxp [Preferences::GetTabListDepots $nbk]
+	      set listxp [Preferences::GetTabListDepots $nbk "r"]
 
 	      if {[string compare $listxp ""] != 0} {
 	             set to_add [string trimright [file join [file normalize $path] { }]]
@@ -1514,7 +1500,7 @@ proc Preferences::ParseUserMaestrorc { } {
    global MUSER
    global array ArrayTabsDepot
 
-   set Preferences::ERROR_NON_RECOGNIZED_PREF  0
+   set Preferences::ERROR_NOT_RECOGNIZED_PREF  0
 
    if [catch [exec grep -v "^#"  $::env(HOME)/.maestrorc | tr -s "=" " " > $::env(TMPDIR)/kaka]] {
                  puts "PROBLEME COPYING CONFIG FILE:.MAESTRORC TO TMPDIR"
@@ -1544,10 +1530,10 @@ proc Preferences::ParseUserMaestrorc { } {
                                    if {[info exists tabs] != 0} {
                                               set Preferences::ListUsrTabs [split $tabs ":"]
                                    } else {
-                                              set Preferences::ListUsrTabs {"My_experiment"}
+                                              set Preferences::ListUsrTabs {"My_experiments"}
 					      # --Put in .maestrorc file
 					      catch {[exec echo "# User can configure his tabs" >> $::env(HOME)/.maestrorc]}
-					      catch {[exec echo "navtabs=My_experiment" >> $::env(HOME)/.maestrorc]}
+					      catch {[exec echo "navtabs=My_experiments" >> $::env(HOME)/.maestrorc]}
                                    }
                                }
    }
@@ -1562,8 +1548,8 @@ proc Preferences::ParseUserMaestrorc { } {
           set lerest   [join [lrange $lname 2 end] " "]
 
            switch -regexp $line {
-	            {^[ \t#]*$}                   { }
-                    "^\[ \t]*UsrExpRepository "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
+	            {^[ \t#]*$}                  { }
+                    "^\[ \t]*UsrExpRepository "  { }
 		    "^\[ \t]*auto_msg_display "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
 		    "^\[ \t]*auto_launch "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
 		    "^\[ \t]*show_abort_type "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
@@ -1589,13 +1575,11 @@ proc Preferences::ParseUserMaestrorc { } {
                                     if {[regexp "\^\[ \]*$ltb " $line]} {
                                            regexp "\^\[ \\t\]\*$ltb\(\.\*\)" $line  match tabdepot
 				           set ArrayTabsDepot($ltb) [string trim $tabdepot " "]
-				           puts "set ArrayTabsDepot($ltb) $tabdepot"
-
 					   set err 0
 				    }
 			       }
 			       if { $err == 1 } {
-		                         set Preferences::ERROR_NON_RECOGNIZED_PREF  1
+		                         set Preferences::ERROR_NOT_RECOGNIZED_PREF  1
 			                 puts "You Have a non Recognize token ... $line "
 			       }
 			   }
@@ -1609,12 +1593,7 @@ proc Preferences::setPrefValues { PName name args } {
 	 
           set word [join $args " "]
 	  switch $PName {
-                 "UsrExpRepository"  { 
-                                        regsub -all {[ \r\n\t]+} $name {} name
-                                        if {[string compare $name ""] != 0} {
-                                                set Preferences::UsrExpRepository [split $name ":"]
-                                        }
-                                     }
+                 "UsrExpRepository"  { }
 		 "auto_msg_display"  { set  Preferences::auto_msg_display $name }
 		 "auto_launch"       { set  Preferences::auto_launch      $name }
 		 "show_abort_type"   { set  Preferences::show_abort_type  $name }
@@ -1671,7 +1650,10 @@ proc Preferences::setPrefValues { PName name args } {
 		 "suites_file"      { }
 		 "vcs_app_name"     { }
 		 "vcs_path"         { }
-                 default            { puts "DEFAULT:$PName name=$name args=$word" }
+                 default            { 
+		                       set Preferences::ERROR_NOT_RECOGNIZED_PREF 1
+		                       puts "DEFAULT:$PName name=$name args=$word" 
+				    }
 	  }
 }
 
@@ -1680,7 +1662,7 @@ proc Preferences::setPrefValues { PName name args } {
 # in  :  list of user tabs
 # out :  list of tabs return all depot
 #--------------------------------------------
-proc Preferences::GetTabListDepots { nbk } {
+proc Preferences::GetTabListDepots { nbk type} {
       global array ArrayTabsDepot
 
       set ldepot {}
@@ -1700,11 +1682,31 @@ proc Preferences::GetTabListDepots { nbk } {
                       set tab $ArrayTabsDepot([string trim $nbk " "])
                       set ldepot [split $tab ":"]
             } else {
-	                set ldepot ""
+	              set ldepot ""
 	    }
       }
-   
-      return $ldepot
+  
+      # -- Check if depot is writable by user
+      set return_this_list {}
+      switch $type {
+           "w" {
+                 if {[string compare $ldepot ""] != 0 } {
+                    foreach ldp $ldepot {
+                      if {[file writable $ldp]} {
+                           lappend  return_this_list $ldp
+                      }
+                    }
+                 } else {
+	            set return_this_list ""
+                 }
+	       }
+           "r" {
+	          lappend return_this_list {*}$ldepot
+	       }
+      }
+
+      return $return_this_list
+
 }
 
 

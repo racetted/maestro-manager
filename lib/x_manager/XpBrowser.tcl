@@ -166,13 +166,11 @@ proc XpBrowser::create { frm } {
       set tcbut [TitleFrame $XpBfrmCb.t -text $Dialogs::Gui_ControlExp -font "ansi 10"]
       set subfcb [$tcbut getframe]
 
-      #set Bmflow     [button $subfcb.mflow       -text $Dialogs::XpB_flowmgr   -command {\
-      #                catch {[exec ${SEQ_MANAGER_BIN}/../bin/Exec_MaestroFlowManager.ksh $::_XpBrSelected &]}}]
-      set Bmflow     [button $subfcb.mflow       -text $Dialogs::XpB_flowmgr]
-      ${Bmflow} configure -command [list XpBrowser::ExpSelected ${Bmflow}]
+      set Bmflow     [button $subfcb.mflow  -text $Dialogs::XpB_flowmgr] 
+      $Bmflow configure -command [list XpBrowser::ExpSelected $Bmflow]
 
       set Bxflow     [button $subfcb.xflow       -text $Dialogs::XpB_xflow     -command {\
-                      catch {[exec ${SEQ_MANAGER_BIN}/../bin/Exec_MaestroXFlow.ksh $::_XpBrSelected &]}}]
+                      catch {[exec ${SEQ_MANAGER_BIN}/Exec_MaestroXFlow.ksh $::_XpBrSelected &]}}]
 
       set Bimport    [button $subfcb.import      -text $Dialogs::XpB_import    -command {\
                       Import::ImportExp $::_XpBrSelected}]
@@ -306,25 +304,43 @@ proc XpBrowser::create { frm } {
 
 proc XpBrowser::SetExpdate {exp value} {
       # -- examine format, need 10 chars
-      if {[regexp {[0-9]{10}$} $value]} {
-	  catch {[exec echo "${value}0000" > $exp/ExpDate]}
+      if { ! [regexp {^[0-9]+$} $value] } {
+             Dialogs::show_msgdlg $Dialogs::Dlg_ExpDateInvalid  ok warning "" .
+             return
       }
+
+      if {[regexp {[0-9]{14}$} $value]} {
+          catch {[exec echo -n "${value}"     > $exp/ExpDate]}
+      } else {
+          catch {[exec echo -n "${value}0000" > $exp/ExpDate]}
+     }
 }
 
 proc XpBrowser::SetCatchup {exp value} {
       
-      catch {[exec rm -f $::env(TMPDIR)/catchup.xml]}
-
-      set fid [open "$::env(TMPDIR)/catchup.xml" w]
-
-      puts  $fid "<?xml version=\"1.0\"?>"
-      puts  $fid "<CATCHUP value=\"$value\"/>"
-      close $fid
-
-      catch {[exec cp $::env(TMPDIR)/catchup.xml  $exp/catchup.xml]}
+      if { ! [regexp {^[0-9]+$} $value] } {
+             Dialogs::show_msgdlg $Dialogs::Dlg_CatchupInvalid  ok warning "" .
+             return
+      }
+      
+      if {[regexp "^\[0-9\]\{1,2\}$" $value]} {
+               catch {[exec rm -f $::env(TMPDIR)/catchup.xml]}
+               set fid [open "$::env(TMPDIR)/catchup.xml" w]
+               puts  $fid "<?xml version=\"1.0\"?>"
+               puts  $fid "<CATCHUP value=\"$value\"/>"
+               close $fid
+               catch {[exec cp $::env(TMPDIR)/catchup.xml  $exp/catchup.xml]}
+      } else {
+               Dialogs::show_msgdlg $Dialogs::Dlg_NumCarCatchup  ok warning "" .
+               return
+      }
 }
+
 
 proc XpBrowser::ExpSelected { source_w } {
-   global _XpBrSelected
-   ExpModTreeControl_init ${source_w} $::_XpBrSelected
+       global _XpBrSelected
+       ExpModTreeControl_init ${source_w} $::_XpBrSelected
 }
+
+
+

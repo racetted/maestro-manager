@@ -11,8 +11,9 @@ set SEQ_MANAGER_BIN [lindex $argv 0]
 # -- get user
 set MUSER [exec id -nu]
 
+# ---------- NOT used for Now -----------------
 # -- Global Code for Error Trapping
-# --set the proc
+# -- set the proc
 proc bug_Report {error} {
 
      global errorInfo env argv argv0
@@ -26,7 +27,7 @@ proc bug_Report {error} {
 #proc bgerror {error} {
 #           bug_Report $error
 #}
-
+#----------------------------------------------
 
 namespace eval XPManager {
 
@@ -79,7 +80,7 @@ namespace eval XPManager {
     }
 
     foreach script { Preferences.tcl XpOptions.tcl } {
-       namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/common/$script
+	namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/common/$script
     }
     
 }
@@ -321,7 +322,7 @@ proc XPManager::ListExperiments {} {
 
     # -- Add user stuf now all
     set buf3 {}
-    set user_list [Preferences::GetTabListDepots "none"]
+    set user_list [Preferences::GetTabListDepots "none" "r"]
     foreach lusrd $user_list {
            lappend buf3 {*}[XTree::FindExps $lusrd]
     }
@@ -405,7 +406,6 @@ proc sleep {N} {
 Dialogs::setDlg
 #Preferences::Config_table
 
-# -- load tk options
 XpOptions::globalOptions
 XpOptions::tablelistOptions
 
@@ -417,7 +417,7 @@ if { $Preferences::ERROR_PARSING_USER_CONFIG == 1 } {
                      Dialogs::show_msgdlg $Dialogs::Dlg_Error_parsing_user_file  ok warning "" .
 }
 
-if { $Preferences::ERROR_NON_RECOGNIZED_PREF == 1 } {
+if { $Preferences::ERROR_NOT_RECOGNIZED_PREF == 1 } {
                      Dialogs::show_msgdlg $Dialogs::Dlg_NonRecognizedPref  ok warning "" .
 }
 

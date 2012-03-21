@@ -1,5 +1,4 @@
-set auto_path [linsert $auto_path end /home/binops/afsi/ssm/domain2/tcl-tk_8.5.11_linux26-i686/lib/tablelist5.5]
-#package require tablelist 5.5
+package require tablelist 5.5
 
 global notebook 
 global array TabFrames1
@@ -248,8 +247,11 @@ proc Audit::AuditExp { exp1 } {
       set Audit::_selected1 $exp1 
       set Audit::_selected2 ""
 
-      # -- at startup disable audit button
+      # -- At startup disable audit button
       $BAudit configure -state disabled
+
+      # -- For now disable exphome
+      $notebook itemconfigure exphome -state disabled
 }
 
 proc Audit::EnableAuditBut { sentry } {
