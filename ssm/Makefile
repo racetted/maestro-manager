@@ -27,7 +27,7 @@ ssm: profile.sh
 	tar cvf - $(SSMPACKAGE) | gzip -> $(SSMPACKAGE).ssm
 
 profile.sh: Makefile config.mk
-	echo "export MAESTRO_MANAGER_VERSION=${VERSION}" >$@
+	echo "export SEQ_MANAGER_VERSION=${VERSION}" >$@
 
 clean:
 	rm -fr profile.sh $(SSMPACKAGE).ssm $(SSMPACKAGE)
