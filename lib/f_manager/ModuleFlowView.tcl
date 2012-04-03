@@ -300,9 +300,11 @@ proc ModuleFlowView_clearStatusMsg { _topWidget } {
    global ${_topWidget}_status_afterid
    set ${_topWidget}_status_afterid ""
    set statusBarW ${_topWidget}.statusbar
-   set statusFrame [${statusBarW} getframe]
-   set statusLabel ${statusFrame}.msg_label
-   ${statusLabel} configure -text ""
+   if { [winfo exists ${statusBarW}] } {
+      set statusFrame [${statusBarW} getframe]
+      set statusLabel ${statusFrame}.msg_label
+      ${statusLabel} configure -text ""
+   }
 }
 
 proc ModuleFlowView_getModNode { _sourceWidget } {
@@ -399,6 +401,7 @@ proc ModuleFlowView_draw { _expPath _moduleNode } {
    set allElementsBox [${flowCanvas} bbox all]
    set scrolledRegion [list 0 0 [lindex ${allElementsBox} 2] [lindex ${allElementsBox} 3]]
    ${flowCanvas} configure -scrollregion ${scrolledRegion}
+   ::log::log debug "ModuleFlowView_draw _moduleNode:${_moduleNode} done"
 }
 
 proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode false } } {
@@ -1256,11 +1259,17 @@ proc ModuleFlowView_toFront { _expPath _moduleNode } {
 }
 
 proc ModuleFlowView_goEditor { _file } {
+   set textViewer gvim
    if { [info exists Preferences::text_viewer] } {
       set textViewer "$Preferences::text_viewer $Preferences::text_viewer_args"
-   } else {
-      set textViewer gvim
+      ::log::log debug "ModuleFlowView_goEditor textViewer=${textViewer}..."
+      if { ${textViewer} == "default" } {
+         set textViewer gvim
+         ::log::log debug "ModuleFlowView_goEditor set textViewer gvim"
+      }
    }
+
+   ::log::log debug "ModuleFlowView_goEditor eval exec ${textViewer} ${_file}"
    eval exec ${textViewer} ${_file} &
 }
 

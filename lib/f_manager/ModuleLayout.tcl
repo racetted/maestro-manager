@@ -413,7 +413,9 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
       }
       FamilyNode -
       LoopNode {
+         set configFile ${nodeFullPath}/container.cfg;
          set resourceDir ${resourceWorkDir}${relativePath}
+         set resourceFile ${resourceWorkDir}${relativePath}/container.xml
          if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true } {
             if { ${_keepChildren} == true } {
                # delete only container directory... move children files to
@@ -421,14 +423,22 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                # we move everything to the parent directory... except container.cfg
                # ::log::log debug "ModuleLayout_deleteNode rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
                if { ${_resOnly} == false } {
-                  MaestroConsole_addMsg "synchonize module...rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
-                  exec rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
+                  MaestroConsole_addMsg "delete file ${configFile}"
+                  file delete ${configFile}
+                  #MaestroConsole_addMsg "synchonize module...rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
+                  #exec rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
+                  MaestroConsole_addMsg "synchonize module...rsync -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
+                  exec rsync -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
                }
 
                # do the same with the resources files
                # ::log::log debug "ModuleLayout_deleteNode rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
-               MaestroConsole_addMsg "synchonize resources rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
-               exec rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]
+               MaestroConsole_addMsg "delete file ${resourceFile}"
+               file delete ${resourceFile}
+               # MaestroConsole_addMsg "synchonize resources rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
+               # exec rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]
+               MaestroConsole_addMsg "synchonize resources rsync -r ${resourceDir}/ [file dirname ${resourceDir}]"
+               exec rsync -r ${resourceDir}/ [file dirname ${resourceDir}]
             }
 
             if { ${_resOnly} == false } {
@@ -493,7 +503,7 @@ proc ModuleLayout_createDummyResource { _expPath _moduleNode _node } {
    ::log::log debug "ModuleLayout_createDummyResource writing xml file: ${resourceFile}"
    MaestroConsole_addMsg "create resource file ${resourceFile}."
    set fileId [open ${resourceFile} w 0664]
-   ::log::log debug ${fileId} ${xmlData}
+   puts ${fileId} ${xmlData}
    close ${fileId}
    
    ${xmlDoc} delete
