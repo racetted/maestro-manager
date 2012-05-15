@@ -300,9 +300,11 @@ proc ModuleFlowView_clearStatusMsg { _topWidget } {
    global ${_topWidget}_status_afterid
    set ${_topWidget}_status_afterid ""
    set statusBarW ${_topWidget}.statusbar
-   set statusFrame [${statusBarW} getframe]
-   set statusLabel ${statusFrame}.msg_label
-   ${statusLabel} configure -text ""
+   if { [winfo exists ${statusBarW}] } {
+      set statusFrame [${statusBarW} getframe]
+      set statusLabel ${statusFrame}.msg_label
+      ${statusLabel} configure -text ""
+   }
 }
 
 proc ModuleFlowView_getModNode { _sourceWidget } {

@@ -493,7 +493,7 @@ proc ModuleLayout_createDummyResource { _expPath _moduleNode _node } {
    ::log::log debug "ModuleLayout_createDummyResource writing xml file: ${resourceFile}"
    MaestroConsole_addMsg "create resource file ${resourceFile}."
    set fileId [open ${resourceFile} w 0664]
-   ::log::log debug ${fileId} ${xmlData}
+   puts ${fileId} ${xmlData}
    close ${fileId}
    
    ${xmlDoc} delete

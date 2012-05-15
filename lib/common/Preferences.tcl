@@ -618,7 +618,7 @@ proc Preferences::SavePref {compname sbuton cancelb okb utility args} {
 	      catch {file delete $::env(TMPDIR)/.maestrorc}
 
 	      # -- Need this for paths
-	      regsub -all {/} $utility {\/} utility
+	      #regsub -all {/} $utility {\/} utility
 
               # -- What if the pref. doe not exist e in config file? existe but empty ie pref= ?
 	      # -- Have to add code
