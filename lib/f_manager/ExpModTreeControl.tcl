@@ -88,6 +88,7 @@ proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
 }
 
 proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
+   ::log::log debug "ExpModTreeControl_closeWindow: _expPath=${_expPath} _topWidget=${_topWidget}"
    set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
 
    if { [ExpModTree_isTreeChanged ${_expPath}] == true } {
@@ -133,6 +134,7 @@ proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
          unset [set globalVar]
       }
    }
+   ::log::log debug "ExpModTreeControl_closeWindow: _expPath=${_expPath} _topWidget=${_topWidget} done"
 }
 
 # this proc is used as a callback when a module node is being deleted from
