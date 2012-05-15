@@ -443,6 +443,7 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
 
             if { ${_resOnly} == false } {
                # delete everything
+               MaestroConsole_addMsg "synchonize delete -force ${nodeFullPath}"
                file delete -force ${nodeFullPath}
             }
          }
