@@ -2,7 +2,6 @@
 
 #eval `ssmuse sh -d ~afsissm/domain2 -p xflow_1.0.9_all` 
 
-puts "sua new... xflow"
 export SEQ_EXP_HOME=$1
 if [[ "${SEQ_XFLOW_BIN}" == "" ]]; then 
    echo "SEQ_XFLOW_BIN not defined..."
