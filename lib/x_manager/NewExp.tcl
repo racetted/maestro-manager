@@ -589,7 +589,7 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        if [catch { 
                catch {[exec mkdir -p $path/$name]}
-               catch {[exec echo -n "${dateExp}0000" > $path/$name/ExpDate]} 
+               catch {[exec echo -n "${dateExp}" > $path/$name/ExpDate]} 
                catch {[exec touch $path/$name/ExpTimings]} 
        } message ] {
              Dialogs::show_msgdlg "Unable to create Experiment Directory"  ok warning "" $parent 
