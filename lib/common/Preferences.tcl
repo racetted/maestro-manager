@@ -29,6 +29,8 @@ namespace eval Preferences {
 	   variable background_image
 	   variable exp_icon
 	   variable exp_icon_img
+	   variable xflow_scale
+	   variable use_bell
 	   variable user_tmp_dir
 	   variable ChosenIcon
 	   variable ListWallPapers
@@ -1502,11 +1504,11 @@ proc Preferences::ParseUserMaestrorc { } {
 
    set Preferences::ERROR_NOT_RECOGNIZED_PREF  0
 
-   if [catch [exec grep -v "^#"  $::env(HOME)/.maestrorc | tr -s "=" " " > $::env(TMPDIR)/kaka]] {
-                 puts "PROBLEME COPYING CONFIG FILE:.MAESTRORC TO TMPDIR"
+   if [catch {exec cp $::env(HOME)/.maestrorc  $::env(TMPDIR)/maestrorc.tmp} message] {
+                 puts "PROBLEME COPYING CONFIG FILE:.MAESTRORC TO TMPDIR: $message"
    }
 
-   set fid    [open "$::env(TMPDIR)/kaka" r]
+   set fid    [open "$::env(TMPDIR)/maestrorc.tmp" r]
    set dfile  [read $fid]
    close $fid
 
@@ -1514,7 +1516,7 @@ proc Preferences::ParseUserMaestrorc { } {
 
    # -- Get the navtabs names
    foreach line $data {
-            regexp "\^\[ \\t\]\*navtabs\(\.\*\)" $line  matched tabs
+            regexp "\^\[ \\t\]\*navtabs\[ \\t=\]\(\.\*\)" $line  matched tabs
    }
 
 
@@ -1532,42 +1534,46 @@ proc Preferences::ParseUserMaestrorc { } {
                                    } else {
                                               set Preferences::ListUsrTabs {"My_experiments"}
 					      # --Put in .maestrorc file
-					      catch {[exec echo "# User can configure his tabs" >> $::env(HOME)/.maestrorc]}
-					      catch {[exec echo "navtabs=My_experiments" >> $::env(HOME)/.maestrorc]}
+					      catch { [exec echo "# User can configure his tabs" >> $::env(HOME)/.maestrorc] }
+					      catch { [exec echo "navtabs=My_experiments" >> $::env(HOME)/.maestrorc] }
                                    }
                                }
    }
 
    # -- Operational tabs will alws be put by default
    foreach line $data {
-          
+         
+	  regsub -all {=} $line { } line
+
 	  set lname    [split [string trim $line " "] " "]
-          set PerfName [lindex $lname 0]
-	  set PerfName [string trim $PerfName " "]
+          set PerfName [string trim [lindex $lname 0] " "]
 	  set UtilName [lindex $lname 1]
           set lerest   [join [lrange $lname 2 end] " "]
 
-           switch -regexp $line {
-	            {^[ \t#]*$}                  { }
-                    "^\[ \t]*UsrExpRepository "  { }
-		    "^\[ \t]*auto_msg_display "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*auto_launch "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*show_abort_type "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*show_event_type "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*show_info_type "    { Preferences::setPrefValues $PerfName $UtilName $lerest }
-                    "^\[ \t]*node_display_pref " { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*default_console "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*text_viewer "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
-                    "^\[ \t]*browser "           { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*flow_geometry "     { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*background_image "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
-                    "^\[ \t]*exp_icon "          { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*user_tmp_dir "      { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*mc_show_console "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
-                    "^\[ \t]*suites_file "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*vcs_app_name "      { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*vcs_path "          { Preferences::setPrefValues $PerfName $UtilName $lerest }
-		    "^\[ \t]*navtabs "           { }
+          switch -regexp $line {
+	            "^\[ \t]*$"                     { }
+	            "^\[ \t]\*#\+"                  { }
+                    "^\[ \\t\]\*UsrExpRepository "  { }
+		    "^\[ \\t\]\*auto_msg_display "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*auto_launch "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*show_abort_type "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*show_event_type "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*show_info_type "    { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*node_display_pref " { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*default_console "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*text_viewer "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*browser "           { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*flow_geometry "     { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*background_image "  { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*exp_icon "          { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*use_bell "          { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*xflow_scale "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*user_tmp_dir "      { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*mc_show_console "   { Preferences::setPrefValues $PerfName $UtilName $lerest }
+                    "^\[ \\t\]\*suites_file "       { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*vcs_app_name "      { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*vcs_path "          { Preferences::setPrefValues $PerfName $UtilName $lerest }
+		    "^\[ \\t\]\*navtabs "           { }
                    default {
 		               set err 1
 		               foreach ltb $Preferences::ListUsrTabs {
@@ -1590,7 +1596,7 @@ proc Preferences::ParseUserMaestrorc { } {
 proc Preferences::setPrefValues { PName name args } {
           
           global SEQ_MANAGER_BIN
-	 
+	
           set word [join $args " "]
 	  switch $PName {
                  "UsrExpRepository"  { }
@@ -1615,7 +1621,7 @@ proc Preferences::setPrefValues { PName name args } {
 		 "flow_geometry"     { set  Preferences::flow_geometry $name }
 		 "background_image"  { 
                                        regsub -all {[ \r\n\t]+} $name {} name
-                                       set Preferences::background_image $name 
+                                       set  Preferences::background_image $name 
 		                     }
 		 "exp_icon"          { 
                                        switch $name {
@@ -1646,6 +1652,8 @@ proc Preferences::setPrefValues { PName name args } {
                                       }
 			            }
 		 "user_tmp_dir"     { set  Preferences::user_tmp_dir $name }
+		 "use_bell"         { set  Preferences::use_bell     $name }
+		 "xflow_scale"      { set  Preferences::xflow_scale  $name }
 		 "mc_show_console"  { }
 		 "suites_file"      { }
 		 "vcs_app_name"     { }
@@ -1741,19 +1749,22 @@ proc Preferences::set_prefs_default {} {
 	              lappend listPref "node_display_pref=normal"
 	      }
 	      if {[info exists Preferences::default_console] == 0} {
-	              lappend listPref "default_console=xterm"
+	              lappend listPref "default_console=konsole -e"
+		      set Preferences::default_console_args "-e"
 	      }
 	      if {[info exists Preferences::text_viewer] == 0} {
 	              lappend listPref "text_viewer=gvim"
+		      set Preferences::text_viewer_args ""
 	      }
 	      if {[info exists Preferences::browser] == 0} {
 	              lappend listPref "browser=firefox"
+		      set Preferences::browser_args ""
 	      }
 	      if {[info exists Preferences::flow_geometry] == 0} {
 	              lappend listPref "flow_geometry=800x600"
 	      }
 	      if {[info exists Preferences::background_image] == 0} {
-	              lappend listPref "background_image=artist_canvas_darkblue.gif"
+	              lappend listPref "background_image=/home/binops/afsi/sio/datafiles/images/MaestroExpManager/artist_canvas_darkblue.gif"
 	      }
 	      if {[info exists Preferences::exp_icon] == 0} {
 	              set  Preferences::exp_icon_img [image create photo -file ${SEQ_MANAGER_BIN}/../etc/images/xp.gif]
@@ -1764,6 +1775,12 @@ proc Preferences::set_prefs_default {} {
 	      if {[info exists Preferences::user_tmp_dir] == 0} {
 	              lappend listPref "user_tmp_dir=default"
 	      }
+	      if {[info exists Preferences::use_bell] == 0} {
+	              lappend listPref "use_bell=true"
+	      }
+	      if {[info exists Preferences::xflow_scale] == 0} {
+	              lappend listPref "xflow_scale=1"
+	      }
 
 	      # -- Remove any previous file
 	      catch {[exec rm -f $::env(TMPDIR)/prefs.default]} 
@@ -1771,6 +1788,12 @@ proc Preferences::set_prefs_default {} {
 	      if {[llength $listPref] != 0 } {
                   foreach item $listPref {
 		       puts "Setting default for $item"
+                       set lit   [split $item "="]
+		       set util  [lindex $lit 0] 
+		       set name_args [lindex $lit 1]
+		       set lnargs [split $name_args " "]
+		       set Preferences::$util [lindex $lnargs 0]
+
 		       catch {[exec echo "$item" >> $::env(TMPDIR)/prefs.default]} 
 		  }
 		  if {[file exist $::env(TMPDIR)/prefs.default]} {
@@ -1796,13 +1819,13 @@ proc Preferences::OpenConfigAndSetPrefs {token value args} {
 	  set first_time 0
 	  #  Process data file
 	  set data [split $file_pref "\n"]
-          set fid [open "$::env(TMPDIR)/.maestrorc.tmp" w]
+          set fid  [open "$::env(TMPDIR)/.maestrorc.tmp" w]
 
 	  foreach line $data {
 	         if {[regexp  "\^\[ \\t\]\*$token" $line]} {
 		     if { $first_time == 0 } {
 		        eval regsub -all \{\=\.*\} \$line \{\=$value $word\} line
-			puts $fid $line 
+			puts $fid [string trim $line " "] 
 	               set first_time 1
                      }
 		 } else {
