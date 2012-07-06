@@ -86,7 +86,7 @@ proc TreeUtil::MpopNode {frm tree} {
 			                 Import::ImportExp $TreeUtil::_PopUpSelection 
 			            }
 
-    $frm.stpopup add command -label {Create New Exp at this level} -command "NewExp::New_xp $TreeUtil::_PopUpSelection [$XpBrowser::notebook raise]"
+    $frm.stpopup add command -label {Create New Exp at this level} -command {NewExp::New_xp $TreeUtil::_PopUpSelection [$XpBrowser::notebook raise]}
     
     $frm.stpopup add command -label {View git}     -command "TreeUtil::RunGit $frm $tree" 
     $frm.stpopup add command -label {Download git} -command "TreeUtil::DownloadGit $frm $tree" 
