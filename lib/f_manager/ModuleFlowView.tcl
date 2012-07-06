@@ -835,7 +835,10 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    Label ${nameLabel} -text "Name:"
    Entry ${nameEntry} -validate all \
       -vcmd {
-         if { [string is wordchar %P] } {
+         # allow wordchar and dot characters only
+         # replace dot by _ so we can test
+         regsub -all . %P _ tmpentry
+         if { [string is wordchar ${tmpentry}] } {
             return 1
          }
          return 0
@@ -1074,7 +1077,10 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
    Label ${newNameLabel} -text "New name:"
    Entry ${newNameEntry} -validate all \
       -vcmd {
-         if { [string is wordchar %P] } {
+         # allow wordchar and dot characters only
+         # replace dot by _ so we can test
+         regsub -all . %P _ tmpentry
+         if { [string is wordchar ${tmpentry}] } {
             return 1
          }
          return 0
