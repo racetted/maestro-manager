@@ -37,6 +37,8 @@ namespace import ::struct::record::*
 #
 # status - i'm using this to know whether a node has just been created by the user
 #          or not; current possible values "normal" | "new"
+# is_work_unit - true means the container is a work_unit, all child nodes will be submitted
+#                as single reservation i.e. supertask
 
 record define FlowNode {
    name
@@ -45,6 +47,7 @@ record define FlowNode {
    submits
    submitter
    { status normal }
+   { work_unit false }
 }
 
 #record define FamilyNode {
@@ -113,6 +116,9 @@ proc ModuleFlow_saveXml { _moduleXmlFile _modRootFlowNode } {
    set date [clock format [clock seconds] -format "%d %b %Y"]
 
    ${xmlRootNode} setAttribute name [${_modRootFlowNode} cget -name]
+   if { [${_modRootFlowNode} cget -work_unit] == true } {
+      ${xmlRootNode} setAttribute work_unit 1
+   }
 
    # create the first node
    foreach submitNode [ModuleFlow_getSubmitRecords ${_modRootFlowNode}] {
@@ -170,6 +176,9 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
    ::log::log debug "ModuleFlow_flowNodeRecord2Xml xmlNodeName:${xmlNodeName}"
    set xmlDomNode [${_xmlDoc} createElement ${xmlNodeName}]
    ${xmlDomNode} setAttribute name [${_flowNodeRecord} cget -name]
+   if { [${_flowNodeRecord} cget -work_unit] == true } {
+      ${xmlDomNode} setAttribute work_unit 1
+   }
    ${_xmlParentNode} appendChild ${xmlDomNode}
 
    # we stop here for module nodes
@@ -336,8 +345,8 @@ proc ModuleFlow_refresh { _expPath _moduleNode } {
 # _modPath only used for _nodeType == ModuleNode, refers to the path of the module i.e. /home/binops/afsi/sio/components/modules/gem_mod
 # _useModLink only used for _nodeType == ModuleNode, indicates whether or not to use a link to
 #       create the module instead of creating  a local module
-proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _insertPosition { _modPath "" } {_useModLink true} } {
-   ::log::log debug "ModuleFlow_createNewNode _currentNodeRecord:${_currentNodeRecord} _newName:${_newName} _nodeType:${_nodeType} _insertPosition:${_insertPosition} _modPath:${_modPath} _useModLink:${_useModLink}"
+proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _insertPosition _isWorkUnit { _modPath "" } {_useModLink true} } {
+   ::log::log debug "ModuleFlow_createNewNode _currentNodeRecord:${_currentNodeRecord} _newName:${_newName} _nodeType:${_nodeType} _insertPosition:${_insertPosition} _isWorkUnit:${_isWorkUnit} _modPath:${_modPath} _useModLink:${_useModLink}"
    
    # if parent is not container, get the container
    if { ${_insertPosition} == "parent" } {
@@ -359,7 +368,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 
    # create new node
    ::log::log debug "ModuleFlow_createNewNode FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -submitter ${_currentNodeRecord}"
-   FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -status new
+   FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -status new -work_unit ${_isWorkUnit}
    
    set parentModRecord [ModuleFlow_getModuleContainer ${newNodeRecord}]
    set moduleNode [ModuleFlow_record2NodeName ${parentModRecord}]

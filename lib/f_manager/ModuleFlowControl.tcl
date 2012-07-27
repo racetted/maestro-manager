@@ -92,7 +92,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
    ::log::log debug "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNode:${_parentFlowNode}"
-   global errorInfo ${moduleId}_Link_Module
+   global errorInfo ${moduleId}_Link_Module ${moduleId}_work_unit
    # get entry values
    set positionSpinW [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_pos_spinbox]
    set insertPosition [${positionSpinW} get]
@@ -103,6 +103,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
 
    set modulePath ""
    set useModuleLink false
+   set isWorkUnit [set ${moduleId}_work_unit]
 
    if { ${nodeName} == "" } {
       MessageDlg .msg_window -icon error -message "The name field must be provided!" \
@@ -116,6 +117,9 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       return
    }
 
+   
+
+   # creating a module node, check if we need to use a link for the module or not
    if { ${nodeType} == "ModuleNode" } {
       set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
       set modulePath [${modPathEntry} cget -text]
@@ -134,7 +138,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       }
    }
 
-   if { [ catch { ModuleFlow_createNewNode ${_expPath} ${_parentFlowNode} ${nodeName} ${nodeType} ${insertPosition} ${modulePath} ${useModuleLink} } errMsg] } {
+   if { [ catch { ModuleFlow_createNewNode ${_expPath} ${_parentFlowNode} ${nodeName} ${nodeType} ${insertPosition} ${isWorkUnit} ${modulePath} ${useModuleLink} } errMsg] } {
       MaestroConsole_addErrorMsg ${errMsg}
       if { ${errMsg} == "NodeDuplicate" } {
          MessageDlg .msg_window -icon error -message "A node with the same name already exists!" \

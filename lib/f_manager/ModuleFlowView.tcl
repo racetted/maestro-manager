@@ -747,6 +747,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    ::log::log debug "ModuleFlowView_createNodeAddWidgets _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord}"
    global  HighLightRestoreCmd
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
+   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
 
    if { [ModuleFlowView_multiEditNotify ${expPath} ${_moduleNode} [winfo toplevel ${_canvas}]] == false } {
       return
@@ -761,7 +762,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
 
    # the type option is used to hold the values of node type selection
-   global ${moduleId}_TypeOption ${moduleId}_Link_Module
+   global ${moduleId}_TypeOption ${moduleId}_Link_Module ${moduleId}_work_unit
 
    # hightlight parent flow node
    set HighLightRestoreCmd ""
@@ -867,9 +868,16 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
       -onvalue true -offvalue false
    set ${moduleId}_Link_Module true
 
-   ::tooltip::tooltip  ${useModLinkCb} "When enabled, module path will be linked instead of being copied locally."
+   # creates checkbox to ask whether the container is a work_unit i.e. supertask
+   set workUnitLabel [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_wunit_label]
+   set workUnitCb [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_wunit_cb]
+   Label ${workUnitLabel} -text "Work Unit:"
+   checkbutton ${workUnitCb} -indicatoron true -variable ${moduleId}_work_unit \
+      -onvalue true -offvalue false
+   set ${moduleId}_work_unit false
 
-   #grid columnconfigure ${entryFrame} {0 1 2} -weight 1
+   ::tooltip::tooltip  ${workUnitCb} "When enabled, child nodes will be executed in the same work unit."
+
    grid columnconfigure ${entryFrame} {0 1 2} -weight 1
    grid columnconfigure ${entryFrame} 1 -weight 2
    grid rowconfigure ${entryFrame} {0 1 2} -weight 1
@@ -943,6 +951,8 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global ${moduleId}_TypeOption
 
+   set nodeType [set ${moduleId}_TypeOption]
+
    # hide or show reference module row depending on selected node type
    set refLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_label]
    set refEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
@@ -962,12 +972,26 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
       grid ${nameEntry} -row 3 -column 1 -sticky we -padx 2 -pady 2
       grid ${useModLinkLabel} -row 4 -column 0 -sticky w -padx 2 -pady 2
       grid ${useModLinkCb} -row 4 -column 1 -sticky w -pady 2
+      set workUnitRow 5
    } else {
       grid remove ${refLabel} ${refEntry} ${refButton}
       grid remove ${useModLinkLabel} ${useModLinkCb}
       grid ${nameLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
       grid ${nameEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
       ${refEntry} configure -text ""
+      set workUnitRow 3
+   }
+
+   # creates checkbox to ask whether the container is a work_unit i.e. supertask
+   set workUnitLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_wunit_label]
+   set workUnitCb [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_wunit_cb]
+   if { ${nodeType} == "TaskNode" ||  ${nodeType} == "NpassTaskNode" } {
+      # no work unit for tasks
+      grid remove ${workUnitLabel} ${workUnitCb}
+   } else {
+      # work unit only for containers
+      grid ${workUnitLabel} -row ${workUnitRow} -column 0 -sticky w -padx 2 -pady 2
+      grid ${workUnitCb} -row ${workUnitRow} -column 1 -sticky w -padx 2 -pady 2
    }
 }
 
@@ -1323,6 +1347,8 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
          addnode_ref_button ${addNodeTopWidget}.entry_frame.reference_button \
          addnode_link_label ${addNodeTopWidget}.entry_frame.link_label \
          addnode_link_cb ${addNodeTopWidget}.entry_frame.link_check \
+         addnode_wunit_label ${addNodeTopWidget}.entry_frame.wunit_label \
+         addnode_wunit_cb ${addNodeTopWidget}.entry_frame.wunit_check \
          addnode_button_frame ${addNodeTopWidget}.button_frame \
          addnode_ok_button ${addNodeTopWidget}.button_frame.ok_button \
          addnode_cancel_button ${addNodeTopWidget}.button_frame.cancel_button \
