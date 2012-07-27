@@ -215,6 +215,12 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
 proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNode false} { _modName "" } } {
    ::log::log debug "ModuleFlow_parseXmlNode _parentFlowRecord:${_parentFlowRecord}"
    set xmlNodeName [${_domNode} nodeName]
+   set isWorkUnit false
+   set workUnitValue [${_domNode} getAttribute work_unit false]
+   if { ${workUnitValue} == 1 } {
+      set isWorkUnit true
+   }
+
    set parentFlowNode ${_parentFlowRecord}
    set flowNode ""
    ::log::log debug "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName}"
@@ -260,7 +266,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
          set recordName [ModuleFlow_getRecordName ${_expPath} ${flowNode}]
          ::log::log debug "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName} flowNode:${flowNode} nodeName:${nodeName} nodeType:${nodeType}"
          # submit parent is relative to parent container node
-         FlowNode ${recordName} -name [file tail ${flowNode}] -type ${nodeType} -submitter [ModuleFlow_searchSubmitter ${_parentFlowRecord} ${recordName}]
+         FlowNode ${recordName} -name [file tail ${flowNode}] -type ${nodeType} -submitter [ModuleFlow_searchSubmitter ${_parentFlowRecord} ${recordName}] -work_unit ${isWorkUnit}
 
          if { ${parentFlowNode}  != "" } {
             ModuleFlow_addChildNode ${parentFlowNode} ${flowNode}

@@ -481,6 +481,9 @@ proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode f
    # now draw the node
    set tx1 [expr $linex2 + $padTx]
    set ty1 $liney2
+
+   foreach { tx1 ty1 } [ModuleFlowView_addWorkUnitIndicator ${_canvas} ${_flowNodeRecord} ${tx1} ${ty1}] {break}
+
    set text [ModuleFlowView_getNodeText ${expPath} ${_flowNodeRecord} ${context}]
 
    ${drawNodeProc} ${_canvas} $tx1 $ty1 $text $text $normalTxtFill $outline $normalFill ${_flowNodeRecord} $drawshadow $shadowColor
@@ -530,6 +533,27 @@ proc ModuleFlowView_getLineDeltaSpace { _flowNodeRecord {_deltaValue 0} } {
       }
    }
    return $value
+}
+
+
+# add a striped circle before the node box to indicate the
+# the start of a single reservation branch
+# returns coords of modified x and y after image creation if exists
+#                    modified x is start_x + width of created img
+#                    y is startY
+# else returns startX and startY
+# 
+proc ModuleFlowView_addWorkUnitIndicator { _canvas _flowNodeRecord _startX _startY } {
+   global SingleReservImg
+   if { [${_flowNodeRecord} cget -work_unit] == true } {
+      if { [info exists SingleReservImg] == 0 } {
+         set SingleReservImg [image create photo -file [SharedData_getMiscData IMAGE_DIR]/round_stripe.png]
+      }
+
+      ${_canvas} create image ${_startX} ${_startY} -image ${SingleReservImg} -tags "FlowItems ${_flowNodeRecord} ${_flowNodeRecord}.work_unit"
+      return [list [expr ${_startX} + [image height $SingleReservImg] + 1] ${_startY}]
+   }
+   return [list ${_startX} ${_startY}]
 }
 
 proc ModuleFlowView_getNodeText { _expPath _flowNodeRecord _context } {
