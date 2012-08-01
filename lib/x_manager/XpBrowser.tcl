@@ -134,7 +134,7 @@ proc XpBrowser::create { frm } {
       label $subf1.lname -text $Dialogs::Gui_ExpName -font "ansi 10"
       set expsel [Entry $subf1.entrysel  -textvariable ::_XpBrSelected \
                 -width 70\
-		-editable false\
+		-editable true\
 		-bg #FFFFFF \
                 -command  {} \
 		-helptext "Selected Experiment"]
@@ -207,7 +207,7 @@ proc XpBrowser::create { frm } {
                 if {[info exists ArrayTabsDepot($panel)]} {
                           set base [split $ArrayTabsDepot($panel) ":"]
 		} else {
-		          puts "PANEL WITH NO BASE:$panel:"
+		          puts "warning ... Tab: $panel with no Experiments"
 			  set base ""
                 }
 
