@@ -215,12 +215,10 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
 proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNode false} { _modName "" } } {
    ::log::log debug "ModuleFlow_parseXmlNode _parentFlowRecord:${_parentFlowRecord}"
    set xmlNodeName [${_domNode} nodeName]
-   set isWorkUnit false
-   set workUnitValue [${_domNode} getAttribute work_unit false]
-   if { ${workUnitValue} == 1 } {
+   set isWorkUnit 0
+   if { [${_domNode} nodeType] == "ELEMENT_NODE" && [${_domNode} getAttribute work_unit 0] == 1 } {
       set isWorkUnit true
    }
-
    set parentFlowNode ${_parentFlowRecord}
    set flowNode ""
    ::log::log debug "ModuleFlow_parseXmlNode xmlNodeName:${xmlNodeName}"
