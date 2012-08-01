@@ -26,6 +26,9 @@ fi
 #export SEQ_MANAGER_BIN=/users/dor/afsi/sul/tmp/maestro/maestro-center.rol/bin
 test "${SEQ_MANAGER_BIN}" == "" && print "\nSEQ_MANAGER_BIN not defined! Exiting...\n" && exit 1
 
+# create default depot if not exist
+[ -d $HOME/.suites ] || mkdir $HOME/.suites
+
 # -- VERY first time user --> dont have .maestro.rc file and no Exp's.
 #    >>Convention : .maestro.rc file should alwys reside in user HOME<<
 #    Note : it could be possible that this user has used the interface
