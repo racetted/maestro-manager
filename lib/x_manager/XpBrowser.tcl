@@ -134,7 +134,7 @@ proc XpBrowser::create { frm } {
       label $subf1.lname -text $Dialogs::Gui_ExpName -font "ansi 10"
       set expsel [Entry $subf1.entrysel  -textvariable ::_XpBrSelected \
                 -width 70\
-		-editable true\
+		-editable false\
 		-bg #FFFFFF \
                 -command  {} \
 		-helptext "Selected Experiment"]
