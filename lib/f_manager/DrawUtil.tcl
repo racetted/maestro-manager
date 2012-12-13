@@ -190,7 +190,6 @@ proc DrawUtil_roundRect { w x0 y0 x3 y3 radius args } {
 
 
 proc DrawUtil_drawOval { canvas tx1 ty1 txt maxtext textfill outline fill binder drawshadow shadowColor } {
-   variable constants
    set newtx1 [expr ${tx1} + 10]
    set newty1 $ty1
    #set newty1 [expr ${ty1} + 5]
@@ -222,6 +221,75 @@ proc DrawUtil_drawOval { canvas tx1 ty1 txt maxtext textfill outline fill binder
                -fill $shadowColor  -tags "FlowItems ${binder} ${binder}.shadow"
        $canvas lower ${binder}.shadow ${binder}.main
    }
+}
+
+proc DrawUtil_drawLosange { canvas tx1 ty1 text maxtext textfill outline fill binder drawshadow shadowColor} {
+   set newtx1 [expr ${tx1} + 30]
+   $canvas create text ${newtx1} [expr ${ty1} + 5] -text ${maxtext} -fill $textfill \
+      -justify center -anchor w -tags "FlowItems $binder ${binder}.text"
+
+   set boxArea [$canvas bbox ${binder}.text]
+   set nx1 [expr [lindex $boxArea 0] -30]
+   set nx2 [lindex $boxArea 0]
+   set nx3 [expr [lindex $boxArea 2] +30]
+   set nx4 [lindex $boxArea 2]
+
+   set ny1 [expr [lindex $boxArea 3] +5]
+   set ny2 [expr [lindex $boxArea 1] -5]
+   set ny3 $ny2
+   set ny4 $ny1
+   set maxY ${ny1}
+   $canvas create polygon ${nx1} ${ny1} ${nx2} ${ny2} ${nx3} ${ny3} ${nx4} ${ny4} \
+         -outline $outline -fill $fill -tags "FlowItems $binder ${binder}.main"
+
+   $canvas lower ${binder}.main ${binder}.text
+
+   if { $drawshadow == "on" } {
+      # draw a shadow
+      set sx1 [expr $nx1 + 5]
+      set sx2 [expr $nx2 + 5]
+      set sx3 [expr $nx3 + 5]
+      set sx4 [expr $nx4 + 5]
+      set sy1 [expr $ny1 + 5]
+      set sy2 [expr $ny2 + 5]
+      set sy3 [expr $ny3 + 5]
+      set sy4 [expr $ny4 + 5]
+      $canvas create polygon ${sx1} ${sy1} ${sx2} ${sy2} ${sx3} ${sy3} ${sx4} ${sy4} -width 0 \
+            -fill $shadowColor  -tags "FlowItems $binder ${binder}.shadow"
+      set maxY ${sy1}
+      $canvas lower ${binder}.shadow ${binder}.main
+   }
+
+   set indexListW [DrawUtils_getIndexWidgetName ${binder} ${canvas}]
+   if { ! [winfo exists ${indexListW}] } {
+      ComboBox ${indexListW} -bwlistbox 1 -hottrack 1 -width 7
+   }
+   ${indexListW} clearvalue
+   pack ${indexListW} -fill both
+   # puts "DrawUtil_drawLosange ${binder} cget -switch_items [${binder} cget -switch_items]"
+   ${indexListW} configure -values ""
+   set switchItems [${binder} cget -switch_items]
+   if { ${switchItems} != "" } {
+      ${indexListW} configure -values ${switchItems}
+      set initialIndex first
+      set curSelection [${binder} cget -curselection]
+      set foundIndex [lsearch ${switchItems} ${curSelection}]
+      if { ${curSelection} != "" && ${foundIndex} != -1 } {
+         set initialIndex @${foundIndex}
+      }
+
+      ${indexListW} setvalue ${initialIndex}
+   }
+
+   set barY [expr ${maxY} + 15]
+   set barX [expr ($nx1 + $nx3)/2]
+   ${canvas} create window ${barX} ${barY} -window ${indexListW} -tags "FlowItems ${binder} ${binder}.index_widget"
+}
+
+proc DrawUtils_getIndexWidgetName { _binder _canvas } {
+   set newNode [regsub -all "/" ${_binder} _]   
+   set newNode [regsub -all {[\.]} ${newNode} _]
+   set indexListW "${_canvas}.[string tolower ${newNode}]"
 }
 
 proc DrawUtil_highLightNode { _binder _canvas _restoreCmd } {

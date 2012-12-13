@@ -158,13 +158,15 @@ proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
 # _nodeType is type of node to be created
 # _refModPath is module reference path for _nodeType module... empty string if new local module
 # _useModLink is true if a link is to be created to the reference module
-#
-proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType { _refModPath ""} { _useModLink true } } {
-    ::log::log debug "ModuleLayout_createNode _expPath:${_expPath} _moduleNode:${_moduleNode} _newNode:${_newNode} _nodeType:${_nodeType} _refModPath:${_refModPath} _useModLink:${_useModLink}"
+# extraArgList _refModPath _useModLink
+proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType {_extraArgList ""} } {
+    ::log::log debug "ModuleLayout_createNode _expPath:${_expPath} _moduleNode:${_moduleNode} _newNode:${_newNode} _nodeType:${_nodeType}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
+
+   array set extraArgs ${_extraArgList}
 
    ::log::log debug "ModuleLayout_createNode modWorkDir:${modWorkDir}"
 
@@ -203,16 +205,26 @@ proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType { _refMod
          file mkdir [file dirname "${resourceFile}"]
          ModuleLayout_createDummyResource ${_expPath} ${_moduleNode} ${_newNode}
       }
+      SwitchNode {
+         # create container dir
+         file mkdir ${nodeFullPath}
+         MaestroConsole_addMsg "create ${nodeFullPath}."
+         set resourceFile ${resourceWorkDir}${relativePath}/container.xml
+         MaestroConsole_addMsg "create [file dirname ${resourceFile}]."
+         file mkdir [file dirname "${resourceFile}"]
+      }
       ModuleNode {
          set resourceFile ${resourceWorkDir}${relativePath}/container.xml
-         if { ${_refModPath} != "" } {
-            if { ${_useModLink} == true } {
+         set useModLink $extraArgs(use_mod_link)
+         set refModPath $extraArgs(mod_path)
+         if { ${refModPath} != "" } {
+            if { ${useModLink} == true } {
                # user wants to link to a module
                # create a link to the reference module from $SEQ_EXP_HOME/modules/ if not exists
-               ExpLayout_createModuleLink ${_expPath} ${_newNode} ${_refModPath}
+               ExpLayout_createModuleLink ${_expPath} ${_newNode} ${refModPath}
             } else {
                # copy the reference module locally
-               ExpLayout_importModule ${_expPath} ${_newNode} ${_refModPath}
+               ExpLayout_importModule ${_expPath} ${_newNode} ${refModPath}
             }
          } else {
             # create new module locally
@@ -234,15 +246,15 @@ proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType { _refMod
 # _renameNode is experiment tree node to be renamed i.e /enkf_mod/anal_mod/Analysis/gem_mod/runmod
 # _newName is name of modified node  i.e my_new_runmod
 # _nodeType is type of node to be created
-proc ModuleLayout_renameNode { _expPath _moduleNode _renameNode _newName _nodeType } {
-    ::log::log debug "ModuleLayout_renameNode _expPath:${_expPath} _moduleNode:${_moduleNode} _renameNode:${_renameNode} _newName:${_newName} _nodeType:${_nodeType}"
+proc ModuleLayout_renameNode { _expPath _moduleNode _renameNode _newName _nodeType {_rename_mode "copy"} } {
+    ::log::log debug "ModuleLayout_renameNode() _expPath:${_expPath} _moduleNode:${_moduleNode} _renameNode:${_renameNode} _newName:${_newName} _nodeType:${_nodeType} _rename_mode:${_rename_mode}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
    set newNode [file dirname ${_renameNode}]/${_newName}
 
-   ::log::log debug "ModuleLayout_renameNode modWorkDir:${modWorkDir}"
+   ::log::log debug "ModuleLayout_renameNode() modWorkDir:${modWorkDir}"
 
    # get relative path vs module node
    # /enkf_mod/postproc_mod & /enkf_mod/postproc_mod/task will result in "/task"
@@ -257,41 +269,51 @@ proc ModuleLayout_renameNode { _expPath _moduleNode _renameNode _newName _nodeTy
       TaskNode -
       NpassTaskNode {
          if { [file exists ${nodeFullPath}.tsk] } {
-            MaestroConsole_addMsg "rename ${nodeFullPath}.tsk to ${containerFullPath}/${_newName}.tsk"
-            file rename ${nodeFullPath}.tsk ${containerFullPath}/${_newName}.tsk
+            # MaestroConsole_addMsg "rename ${nodeFullPath}.tsk to ${containerFullPath}/${_newName}.tsk"
+            # file rename ${nodeFullPath}.tsk ${containerFullPath}/${_newName}.tsk
+            ::log::log debug "ModuleLayout_renameNode() ModuleLayout_moveOrCopy ${nodeFullPath}.tsk ${containerFullPath}/${_newName}.tsk ${_rename_mode}"
+            ModuleLayout_moveOrCopy ${nodeFullPath}.tsk ${containerFullPath}/${_newName}.tsk ${_rename_mode}
          }
 
          if { [file exists ${nodeFullPath}.cfg] } {
-            MaestroConsole_addMsg "rename ${nodeFullPath}.cfg to ${containerFullPath}/${_newName}.cfg"
-            file rename ${nodeFullPath}.cfg ${containerFullPath}/${_newName}.cfg
+            # MaestroConsole_addMsg "rename ${nodeFullPath}.cfg to ${containerFullPath}/${_newName}.cfg"
+            # file rename ${nodeFullPath}.cfg ${containerFullPath}/${_newName}.cfg
+            ::log::log debug "ModuleLayout_renameNode() ModuleLayout_moveOrCopy ${nodeFullPath}.cfg ${containerFullPath}/${_newName}.cfg ${_rename_mode}"
+            ModuleLayout_moveOrCopy ${nodeFullPath}.cfg ${containerFullPath}/${_newName}.cfg ${_rename_mode}
          }
 
          if { [file exists ${resourceWorkDir}${relativePath}.xml] } {
             set resourceFile ${resourceWorkDir}${relativePath}.xml
-            MaestroConsole_addMsg "rename ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml."
-            file rename ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml
+            # MaestroConsole_addMsg "rename ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml."
+            # file rename ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml
+            ::log::log debug "ModuleLayout_renameNode() ModuleLayout_moveOrCopy ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml ${_rename_mode}"
+            ModuleLayout_moveOrCopy ${resourceFile} ${resourceContainerFullPath}/${_newName}.xml ${_rename_mode}
          }
       }
       FamilyNode -
+      SwitchNode -
       LoopNode {
          set resourceDir ${resourceWorkDir}${relativePath}
          if { [file exists ${nodeFullPath}] } {
             # rename the current container dir
-            MaestroConsole_addMsg "rename ${nodeFullPath} to ${containerFullPath}/${_newName}"
-            file rename ${nodeFullPath} ${containerFullPath}/${_newName}
+            # MaestroConsole_addMsg "rename ${nodeFullPath} to ${containerFullPath}/${_newName}"
+            # file rename ${nodeFullPath} ${containerFullPath}/${_newName}
+            ModuleLayout_moveOrCopy ${nodeFullPath} ${containerFullPath}/${_newName} ${_rename_mode}
          }
 
          if { [file exists ${resourceWorkDir}/${relativePath}] } {
             # rename the current resource container dir
-            MaestroConsole_addMsg "rename ${resourceWorkDir}/${relativePath} to ${containerFullPath}/${_newName}"
-            file rename ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName}
+            # MaestroConsole_addMsg "rename ${resourceWorkDir}/${relativePath} to ${containerFullPath}/${_newName}"
+            # file rename ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName}
+            ModuleLayout_moveOrCopy ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName} ${_rename_mode}
          }
       }
       ModuleNode {
          if { [file exists ${resourceWorkDir}/${relativePath}] } {
             # rename the current resource container dir
-            MaestroConsole_addMsg "rename ${resourceWorkDir}/${relativePath} to ${containerFullPath}/${_newName}"
-            file rename ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName}
+            # MaestroConsole_addMsg "rename ${resourceWorkDir}/${relativePath} to ${containerFullPath}/${_newName}"
+            # file rename ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName}
+            ModuleLayout_moveOrCopy ${resourceWorkDir}/${relativePath} ${resourceContainerFullPath}/${_newName} ${_rename_mode}
          }
       }
    }
@@ -321,8 +343,8 @@ proc ModuleLayout_renameModule { _expPath _moduleNode _newName {_useCopy false} 
 # _newContainerNode is experiment tree of new container node i.e. /enkf_mod/anal_mod/my_new_family
 # _affectedNode is experiment tree of node that will be moved i.e. /enkf_mod/anal_mod/Analysis/gem_mod/Upload
 # _nodeType is node type
-proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _affectedNode _nodeType } {
-   ::log::log debug "ModuleLayout_assignNewContainer _expPath:${_expPath} _moduleNode:${_moduleNode} _newContainerNode:${_newContainerNode} _affectedNode:${_affectedNode} _nodeType:${_nodeType}"
+proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _affectedNode _nodeType {_assign_mode "copy"} } {
+   ::log::log debug "ModuleLayout_assignNewContainer _expPath:${_expPath} _moduleNode:${_moduleNode} _newContainerNode:${_newContainerNode} _affectedNode:${_affectedNode} _nodeType:${_nodeType} _assign_mode:${_assign_mode}"
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
@@ -344,22 +366,20 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
       NpassTaskNode {
          if { [file exists ${affectedNodeFullPath}.tsk] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.tsk to ${newContNodeFullPath}/"
-            MaestroConsole_addMsg "move ${affectedNodeFullPath}.tsk to ${newContNodeFullPath}/"
-            file rename ${affectedNodeFullPath}.tsk ${newContNodeFullPath}/
+            ModuleLayout_moveOrCopy ${affectedNodeFullPath}.tsk ${newContNodeFullPath}/ ${_assign_mode}
          }
 
          if { [file exists ${affectedNodeFullPath}.cfg] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${affectedNodeFullPath}.cfg to ${newContNodeFullPath}/"
-            MaestroConsole_addMsg "move ${affectedNodeFullPath}.cfg to ${newContNodeFullPath}/"
-            file rename ${affectedNodeFullPath}.cfg ${newContNodeFullPath}/
+            ModuleLayout_moveOrCopy ${affectedNodeFullPath}.cfg ${newContNodeFullPath}/ ${_assign_mode}
          }
 
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}.xml] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode}.xml to ${resourceWorkDir}${relativeNewContNode}/"
-            MaestroConsole_addMsg "move ${resourceWorkDir}${relativeAffectedNode}.xml to ${resourceWorkDir}${relativeNewContNode}/"
-            file rename ${resourceWorkDir}${relativeAffectedNode}.xml ${resourceWorkDir}${relativeNewContNode}/
+            ModuleLayout_moveOrCopy ${resourceWorkDir}${relativeAffectedNode}.xml ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
          }
       }
+      SwitchNode -
       FamilyNode -
       LoopNode {
          # move whole container directory to new container parent
@@ -368,8 +388,7 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
          file rename ${affectedNodeFullPath} ${newContNodeFullPath}/
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
-            MaestroConsole_addMsg "move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
-            file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/
+            ModuleLayout_moveOrCopy ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
          }
       }
       ModuleNode {
@@ -377,7 +396,7 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "Move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
-            file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/
+            file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
          }
       }
       default {
@@ -412,6 +431,7 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
          file delete ${resourceFile}
       }
       FamilyNode -
+      SwitchNode -
       LoopNode {
          set configFile ${nodeFullPath}/container.cfg;
          set resourceDir ${resourceWorkDir}${relativePath}
@@ -544,6 +564,7 @@ proc ModuleLayout_getNodeConfigPath { _expPath _moduleNode _node _nodeType {_isN
       NpassTaskNode {
          set configFile ${nodeFullPath}.cfg
       }
+      SwitchNode -
       FamilyNode -
       LoopNode -
       ModuleNode {
@@ -616,6 +637,7 @@ proc ModuleLayout_getNodeResourcePath { _expPath _moduleNode _node _nodeType {_i
       NpassTaskNode {
          set resourceFile ${nodeFullPath}.xml
       }
+      SwitchNode -
       FamilyNode -
       LoopNode -
       ModuleNode {
@@ -628,3 +650,12 @@ proc ModuleLayout_getNodeResourcePath { _expPath _moduleNode _node _nodeType {_i
    return ${resourceFile}
 }
 
+proc ModuleLayout_moveOrCopy { _source _target _mode } {
+   if { ${_mode} == "move" } {
+     MaestroConsole_addMsg "move ${_source} to ${_target}"
+     file rename -force ${_source} ${_target}
+   } else {
+     MaestroConsole_addMsg "copy ${_source} to ${_target}"
+      file copy -force ${_source} ${_target}
+   }
+}

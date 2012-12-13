@@ -9,7 +9,7 @@ proc ModuleFlowControl_configSelected { _expPath _flowNodeRecord } {
    # within the whole experiment
    # but for now, we need to get the relative path since we use
    # flat modules instead of exp tree
-   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+   set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
    if { [${_flowNodeRecord} cget -type] == "ModuleNode" } {
       #set moduleNode ${_expPath}/modules/[${_flowNodeRecord} cget -name]
       set moduleNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
@@ -37,13 +37,14 @@ proc ModuleFlowControl_configSelected { _expPath _flowNodeRecord } {
 }
 
 proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
+   ::log::log debug "ModuleFlowControl_sourceSelected _expPath:${_expPath} _flowNodeRecord:${_flowNodeRecord}"
 
    # for now use flat modules
    # the naming of the _flowNodeRecord contains the path of the node
    # within the whole experiment
    # but for now, we need to get the relative path since we use
    # flat modules instead of exp tree
-   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+   set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
 
    # get the container module
@@ -67,7 +68,7 @@ proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
 }
 
 proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
-   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+   set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
 
    # get the container module
@@ -88,11 +89,11 @@ proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
    ModuleFlowView_goEditor ${resourceFile}
 }
 
-proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNode } {
+proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNodeRecord } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
-   ::log::log debug "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNode:${_parentFlowNode}"
-   global errorInfo ${moduleId}_Link_Module ${moduleId}_work_unit
+   ::log::log debug "ModuleFlowControl_addNodeOk ${_expPath} _moduleNode:${_moduleNode} _parentFlowNodeRecord:${_parentFlowNodeRecord}"
+   global errorInfo ${moduleId}_Link_Module ${moduleId}_work_unit ${moduleId}_SwitchModeOption
    # get entry values
    set positionSpinW [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_pos_spinbox]
    set insertPosition [${positionSpinW} get]
@@ -100,10 +101,6 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    set nodeType [${typeOption} cget -text]
    set nameEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_name_entry]
    set nodeName [${nameEntry} get]
-
-   set modulePath ""
-   set useModuleLink false
-   set isWorkUnit [set ${moduleId}_work_unit]
 
    if { ${nodeName} == "" } {
       MessageDlg .msg_window -icon error -message "The name field must be provided!" \
@@ -117,34 +114,45 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       return
    }
 
-   
+   set isWorkUnit [set ${moduleId}_work_unit]
+   set extraArgList [list is_work_unit ${isWorkUnit}]
 
    # creating a module node, check if we need to use a link for the module or not
-   if { ${nodeType} == "ModuleNode" } {
-      set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
-      set modulePath [${modPathEntry} cget -text]
-      if { ${modulePath} != "" && ! [file exists ${modulePath}/flow.xml] } {
-         MessageDlg .msg_window -icon error -message "Invalid module path: ${modulePath}. Module flow.xml not found." \
-            -aspect 400 -title "Module selection error" -type ok -justify center -parent ${_topWidget}
-         return
-      }
-
-      catch { set useModuleLink [set ${moduleId}_Link_Module] }
-
-      if { [ catch { ExpLayout_checkModPathExists ${_expPath} ${_parentFlowNode}/${nodeName} ${modulePath} ${useModuleLink} } errMsg] } {
-            MessageDlg .msg_window -icon error -message "The new module path already exists!" \
-               -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
+   switch ${nodeType} {
+      ModuleNode {
+         set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
+         set modulePath [${modPathEntry} cget -text]
+         if { ${modulePath} != "" && ! [file exists ${modulePath}/flow.xml] } {
+            MessageDlg .msg_window -icon error -message "Invalid module path: ${modulePath}. Module flow.xml not found." \
+               -aspect 400 -title "Module selection error" -type ok -justify center -parent ${_topWidget}
             return
+         }
+
+         catch { set useModuleLink [set ${moduleId}_Link_Module] }
+
+         if { [ catch { ExpLayout_checkModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${modulePath} ${useModuleLink} } errMsg] } {
+               MessageDlg .msg_window -icon error -message "The new module path already exists!" \
+                  -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
+               return
+         }
+         lappend extraArgList use_mod_link ${useModuleLink} mod_path ${modulePath}
+      }
+      SwitchNode {
+         set switchModeOption [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_option] 
+         set switchMode [${switchModeOption} cget -text]
+         set switchItems [ModuleFlowView_getSwitchNodeItems ${_expPath} ${_moduleNode}]
+         lappend extraArgList switch_mode ${switchMode}
+         lappend extraArgList switch_items ${switchItems}
       }
    }
-
-   if { [ catch { ModuleFlow_createNewNode ${_expPath} ${_parentFlowNode} ${nodeName} ${nodeType} ${insertPosition} ${isWorkUnit} ${modulePath} ${useModuleLink} } errMsg] } {
-      MaestroConsole_addErrorMsg ${errMsg}
+ 
+   if { [ catch { ModuleFlow_createNewNode ${_expPath} ${_parentFlowNodeRecord} ${nodeName} ${nodeType} ${insertPosition} ${extraArgList} } errMsg] } {
+      MaestroConsole_addErrorMsg ${errorInfo}
       if { ${errMsg} == "NodeDuplicate" } {
          MessageDlg .msg_window -icon error -message "A node with the same name already exists!" \
             -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
       } else {
-         MessageDlg .msg_window -icon error -message $errMsg \
+         MessageDlg .msg_window -icon error -message "${errMsg}. See Console Window fore more details." \
             -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
       }
       return
@@ -153,7 +161,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    set modFlowTopWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
    # notify module tree of new module being added
    if { ${nodeType} == "ModuleNode" } {
-      set newModuleNode [ModuleFlow_getNewNode ${_parentFlowNode} ${nodeName}]
+      set newModuleNode [ModuleFlow_getNewNode ${_parentFlowNodeRecord} ${nodeName}]
       ExpModTreeControl_moduleAdded ${_expPath} ${_moduleNode} ${newModuleNode}
    }
 
@@ -162,6 +170,42 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    
    # send msg in status bar
    ModuleFlowView_setStatusMsg ${modFlowTopWidget} "New ${nodeType} ${nodeName} added."
+
+   # enable save
+   ModuleFlowView_saveStatus ${_expPath} ${_moduleNode} normal
+
+   # destroy source window
+   after idle destroy ${_topWidget}
+}
+
+proc ModuleFlowControl_editNodeOk { _topWidget _expPath _moduleNode _flowNodeRecord } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+
+   ::log::log debug "ModuleFlowControl_editNodeOk ${_expPath} _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord}"
+   global errorInfo
+   set nodeType [${_flowNodeRecord} cget -type]
+   switch ${nodeType} {
+      "SwitchNode" {
+         set switchItems [ModuleFlowView_getSwitchNodeItems ${_expPath} ${_moduleNode}]
+         ${_flowNodeRecord} configure -switch_items ${switchItems}
+         foreach switchItem ${switchItems} {
+            ModuleFlow_addNewSwitchItem ${_flowNodeRecord} ${switchItem}
+         }
+         if { [${_flowNodeRecord} cget -curselection] == "" && ${switchItems} != "" } {
+            ${_flowNodeRecord} configure -curselection [lindex ${switchItems} 0]
+         }
+      }
+      default {
+      }
+   }
+ 
+   # refresh module flow
+   ModuleFlowView_draw ${_expPath} ${_moduleNode}
+   
+   set modFlowTopWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
+
+   # send msg in status bar
+   ModuleFlowView_setStatusMsg ${modFlowTopWidget} "Edit ${nodeType} [file tail ${_flowNodeRecord}] done."
 
    # enable save
    ModuleFlowView_saveStatus ${_expPath} ${_moduleNode} normal
@@ -251,18 +295,35 @@ proc ModuleFlowControl_renameNodeOk { _topWidget _expPath _moduleNode _flowNodeR
    after idle destroy ${_topWidget}
 }
 
+# _deleteBranch can have the following values:
+#               - true: for a non-switching node, deletes the whole branch to the right of the node
+#               - false: only delete current node
+#               - ${switch_item_branch}: for switching node, deletes the selected branch
 proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNodeRecord {_deleteBranch false} }  {
+   ::log::log debug "ModuleFlowControl_deleteNodeSelected _flowNodeRecord:${_flowNodeRecord} _deleteBranch:${_deleteBranch}"
    global HighLightRestoreCmd
    # hightlight parent flow node
    set HighLightRestoreCmd ""
-   if { ${_deleteBranch} == true } {
+   if { ${_deleteBranch} != false } {
       ModuleFlowView_highLightBranch ${_flowNodeRecord} ${_canvas} HighLightRestoreCmd
    } else {
       DrawUtil_highLightNode ${_flowNodeRecord} ${_canvas} HighLightRestoreCmd
    }
 
+   switch ${_deleteBranch} {
+      true {
+         set titleValue "Delete Branch Confirmation"
+      }
+      false {
+         set titleValue "Delete Node Confirmation"
+      }
+      default {
+         set titleValue "Delete Switch Branch Confirmation"
+      }
+   }
+
    set answer [MessageDlg .delete_window -icon question -message "Are you sure you want to delete selected node(s)?" \
-      -title "Delete Node Confirmation" -type okcancel -justify center -parent ${_canvas} ]
+      -title ${titleValue} -type okcancel -justify center -parent ${_canvas} ]
 
    ::log::log debug "ModuleFlowControl_deleteNodeSelected answer:${answer}"
 
@@ -271,9 +332,10 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
    # clears the highlighted node
    DrawUtil_resetHighLightNode ${HighLightRestoreCmd}
 
+   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+
    if { ${answer} == 0 } {
       if { [${_flowNodeRecord} cget -type] == "ModuleNode" } {
-         set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
          # if the node to be deleted is a module, we delete everything to the right
          ModuleFlow_deleteNode ${_expPath} ${_flowNodeRecord} ${_flowNodeRecord} true
 
@@ -309,7 +371,7 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
       # enable save
       ModuleFlowView_saveStatus ${_expPath} ${_moduleNode} normal
 
-      ModuleFlowView_setStatusMsg [winfo toplevel ${_canvas}] "[ModuleFlow_record2NodeName ${_flowNodeRecord}] node deleted."
+      ModuleFlowView_setStatusMsg [winfo toplevel ${_canvas}] "${flowNode} node deleted."
    }
 }
 

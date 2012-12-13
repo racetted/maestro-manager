@@ -28,6 +28,7 @@ proc ModuleFlowView_initModule { _expPath _moduleNode {_sourceWidget .} } {
          # we force the reading of the module flow.xml everytime the module
          # is opened
          ModuleFlow_refresh ${_expPath} ${_moduleNode}
+
          ModuleFlowView_createWidgets ${_expPath} ${_moduleNode}
          MiscTkUtils_positionWindow ${_sourceWidget} ${topWidget}
          ModuleFlowView_draw ${_expPath} ${_moduleNode}
@@ -405,7 +406,7 @@ proc ModuleFlowView_draw { _expPath _moduleNode } {
 }
 
 proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode false } } {
-   ::log::log debug "ModuleFlowView_drawNode _flowNodeRecord:${_flowNodeRecord} _position:${_position}"
+   ::log::log debug "ModuleFlowView_drawNode _flowNodeRecord:${_flowNodeRecord} canvas:${_canvas} _position:${_position}"
 
    # mapping of draw procedures for each node type
    # first is proc to draw the node icon
@@ -417,6 +418,7 @@ proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode f
                            FamilyNode "DrawUtil_drawBox DrawUtil_drawline"
                            LoopNode "DrawUtil_drawOval DrawUtil_drawline"
                            ModuleNode "DrawUtil_drawBox DrawUtil_drawdashline"
+                           SwitchNode "DrawUtil_drawLosange DrawUtil_drawline"
                        }
    set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
@@ -487,8 +489,20 @@ proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode f
    set text [ModuleFlowView_getNodeText ${expPath} ${_flowNodeRecord} ${context}]
 
    ${drawNodeProc} ${_canvas} $tx1 $ty1 $text $text $normalTxtFill $outline $normalFill ${_flowNodeRecord} $drawshadow $shadowColor
+   
    eval ModuleFlowView_setNodeCoord ${_flowNodeRecord} ${context} [split [${_canvas} bbox ${_flowNodeRecord}.main]]
    ${_canvas} bind ${_flowNodeRecord} <Button-3> [ list ModuleFlowView_nodeMenu ${_canvas} ${_flowNodeRecord} %X %Y]
+
+   if { ${nodeType} == "SwitchNode" } {
+      set indexListW [DrawUtils_getIndexWidgetName ${_flowNodeRecord} ${_canvas}]
+      # ModuleFlowView_indexedNodeSelection ${_flowNodeRecord}  ${_canvas} ${indexListW}
+      ${indexListW} configure -modifycmd [list ModuleFlowView_indexedNodeSelection ${_flowNodeRecord} ${_canvas} ${indexListW}]
+      # bypass the switch item 
+      if { [${_flowNodeRecord} cget -type] == "SwitchNode" && [${_flowNodeRecord} cget -switch_items] != "" } {
+         set _flowNodeRecord [ModuleFlow_getSwitchItemFlowNodeRecord ${_flowNodeRecord}]
+         ::log::log debug "ModuleFlowView_drawNode SwitchNode _flowNodeRecord:${_flowNodeRecord}"
+      }
+   }
 
    # if it is a reference module, stop
    # else draw the children nodes
@@ -503,6 +517,18 @@ proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode f
          ModuleFlowView_drawNode ${_canvas} ${child} ${childPosition}
          incr childPosition
       }
+   }
+}
+
+proc ModuleFlowView_indexedNodeSelection { _flowNodeRecord _canvas _indexWidget } {
+   puts "ModuleFlowView_indexedNodeSelection _flowNodeRecord:${_flowNodeRecord}"
+   set expPath [ModuleFlowView_getExpPath ${_canvas}] 
+   set moduleNode [ModuleFlowView_getModNode ${_canvas}]
+   if { [${_indexWidget} getvalue] != -1 } {
+      set selected [${_indexWidget} get]
+      ${_flowNodeRecord} configure -curselection ${selected}
+      # refresh module flow
+      ModuleFlowView_draw ${expPath} ${moduleNode}
    }
 }
 
@@ -574,6 +600,10 @@ proc ModuleFlowView_getNodeText { _expPath _flowNodeRecord _context } {
          set value /${value}
       }
    }
+   if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
+      set value "${value}\n\[[${_flowNodeRecord} cget -switch_mode]\]"
+   }
+
    return ${value}
 }
 
@@ -616,6 +646,7 @@ proc ModuleFlowView_nodeMenu { _canvas _flowNodeRecord x y } {
    ${popMenu} add separator
    ModuleFlowView_addMenuAdd ${popMenu} ${_canvas} ${_flowNodeRecord}
    ModuleFlowView_addMenuDelete ${popMenu} ${_canvas} ${_flowNodeRecord}
+   ModuleFlowView_addMenuEdit ${popMenu} ${_canvas} ${_flowNodeRecord}
    ModuleFlowView_addMenuRename ${popMenu} ${_canvas} ${_flowNodeRecord}
    # ${popMenu} add command -label "Edit" -underline 0 -state disabled
    ${popMenu} add separator
@@ -695,17 +726,38 @@ proc ModuleFlowView_addMenuResource { _menu _canvas _flowNodeRecord } {
       [list ModuleFlowControl_resourceSelected [ModuleFlowView_getExpPath ${_canvas}] ${_flowNodeRecord}]
 }
 
+proc ModuleFlowView_addMenuEdit { _menu _canvas _flowNodeRecord } {
+   set state disabled
+   set nodeType [${_flowNodeRecord} cget -type]
+   set addLabel Edit
+   if { ${nodeType} == "SwitchNode" } {
+         set state normal
+   }
+   ${_menu} add command -label ${addLabel} -underline 0 -state ${state}  -command \
+      [list ModuleFlowView_createNodeEditWidgets [ModuleFlowView_getModNode ${_canvas}] ${_canvas} ${_flowNodeRecord}]
+}
+
 proc ModuleFlowView_addMenuAdd { _menu _canvas _flowNodeRecord } {
    set state normal
-   if { [${_flowNodeRecord} cget -type] == "ModuleNode" } {
+   set nodeType [${_flowNodeRecord} cget -type]
+   set addLabel Add
+   if { ${nodeType} == "ModuleNode" } {
       set currentModule [file tail [ModuleFlowView_getModNode ${_canvas}]]
       if { [file tail ${_flowNodeRecord}] != ${currentModule} } {
          # it's a module but not current one, add not allowed within
          # current module
          set state disabled
       }
+   } elseif { ${nodeType} == "SwitchNode" } {
+      set currentSwitchItem [ModuleFlowView_getCurrentSwitchItem [ModuleFlowView_getExpPath ${_canvas}] ${_flowNodeRecord} ${_canvas}]
+      if { ${currentSwitchItem} != "" } {
+         set addLabel "Add to branch ${currentSwitchItem}"
+      } else {
+         # no valid switch item selected... no add possible
+         set state disabled
+      }
    }
-   ${_menu} add command -label "Add" -underline 0 -state ${state} -command \
+   ${_menu} add command -label ${addLabel} -underline 0 -state ${state} -command \
       [list ModuleFlowView_createNodeAddWidgets [ModuleFlowView_getModNode ${_canvas}] ${_canvas} ${_flowNodeRecord}]
 }
 
@@ -713,13 +765,23 @@ proc ModuleFlowView_addMenuDelete { _menu _canvas _flowNodeRecord } {
    set moduleNode [ModuleFlowView_getModNode ${_canvas}]
    set moduleTailName [file tail ${moduleNode}]
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
+   set nodeType [${_flowNodeRecord} cget -type]
    if { [ModuleFlow_record2NodeName ${_flowNodeRecord}] ==  ${moduleNode} } {
       # delete is not allowed on the root module node of a module flow
       ${_menu} add command -label "Delete" -underline 0 -state disabled
    } else {
-      if { ( [${_flowNodeRecord} cget -type] == "ModuleNode" && [file tail ${_flowNodeRecord}] != ${moduleTailName} ) ||
-       [${_flowNodeRecord} cget -submits] == "" } {
+      if { ${nodeType} == "SwitchNode" } {
+         set currentSwitchItem [ModuleFlowView_getCurrentSwitchItem [ModuleFlowView_getExpPath ${_canvas}] ${_flowNodeRecord} ${_canvas}]
+         if { ${currentSwitchItem} != "" } {
+            set deleteLabel "Delete branch ${currentSwitchItem}"
+            ${_menu} add command -label ${deleteLabel} -underline 0 \
+               -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord} ${currentSwitchItem}]
+         }
+      }
+      if { ( ${nodeType} == "ModuleNode" && [file tail ${_flowNodeRecord}] != ${moduleTailName} ) ||
+         [${_flowNodeRecord} cget -submits] == "" } {
 
+         # leaf node
          ${_menu} add command -label "Delete" -underline 0 \
             -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord}]
       } else {
@@ -786,7 +848,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
 
    # the type option is used to hold the values of node type selection
-   global ${moduleId}_TypeOption ${moduleId}_Link_Module ${moduleId}_work_unit
+   global ${moduleId}_TypeOption ${moduleId}_Link_Module ${moduleId}_work_unit ${moduleId}_SwitchModeOption
 
    # hightlight parent flow node
    set HighLightRestoreCmd ""
@@ -849,7 +911,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    Label ${typeLabel} -text "Type:"
 
    catch { unset ${moduleId}_TypeOption }
-   tk_optionMenu ${typeOption} ${moduleId}_TypeOption TaskNode NpassTaskNode FamilyNode ModuleNode LoopNode
+   tk_optionMenu ${typeOption} ${moduleId}_TypeOption TaskNode NpassTaskNode FamilyNode ModuleNode LoopNode SwitchNode
 
    # check if we shoud disable some node type items
    ModuleFlowView_addPositionChanged ${positionSpinW} ${typeOption}
@@ -942,6 +1004,77 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    trace add variable ${moduleId}_TypeOption write "ModuleFlowView_newNodeTypeCallback ${expPath} ${_moduleNode}"
 }
 
+proc ModuleFlowView_createNodeEditWidgets { _moduleNode _canvas _flowNodeRecord } {
+   ::log::log debug "ModuleFlowView_createNodeEditWidgets _moduleNode:${_moduleNode} _flowNodeRecord:${_flowNodeRecord}"
+   global  HighLightRestoreCmd
+   set expPath [ModuleFlowView_getExpPath ${_canvas}]
+   set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+
+   if { [ModuleFlowView_multiEditNotify ${expPath} ${_moduleNode} [winfo toplevel ${_canvas}]] == false } {
+      return
+   }
+
+   if { [ExpLayout_isModuleWritable ${expPath} ${_moduleNode}] == false } {
+      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode}]
+      if { ${isCopied} == false } {
+         ModuleFlowView_checkReadOnlyNotify ${expPath} ${_moduleNode}
+      }
+   }
+   set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
+
+   # hightlight parent flow node
+   set HighLightRestoreCmd ""
+   DrawUtil_highLightNode ${_flowNodeRecord} ${_canvas} HighLightRestoreCmd
+
+   set modeNodeName ${_moduleNode}
+
+   # create add new node toplevel
+   set topWidget [ModuleFlowView_getWidgetName  ${expPath} ${_moduleNode} addnode_top_widget]
+   if { [winfo exists ${topWidget}] } {
+      destroy ${topWidget}
+   }
+
+   toplevel ${topWidget}
+
+   MiscTkUtils_positionWindow ${_canvas} ${topWidget}
+   # when window is destroyed, clears the highlighted node
+   bind ${topWidget} <Destroy> [list DrawUtil_resetHighLightNode ${HighLightRestoreCmd}]
+
+   # create frame to hold all needed fields
+   set entryFrame [ModuleFlowView_getWidgetName  ${expPath} ${_moduleNode} addnode_entry_frame]
+   frame ${entryFrame} -relief sunken -bd 1
+
+   set switchValuesFrame [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_switchvalues_frame]
+   set switchModeValue [${_flowNodeRecord} cget -switch_mode]
+   ModuleFlowViwe_addSwitchItemWidgets  ${switchValuesFrame} ${switchModeValue} ${_flowNodeRecord}
+
+   # create frame for ok/cancel buttons
+   # add ok/cancel button
+   set buttonFrame [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_button_frame]
+   set okButton [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_ok_button]
+   set cancelButton [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_cancel_button]
+
+   frame ${buttonFrame} -relief raised
+   button ${okButton} -text Ok
+   button ${cancelButton} -text Cancel
+   grid ${okButton} ${cancelButton} -padx 2
+
+   grid ${switchValuesFrame} -row 0 -column 0 -sticky we -padx 2 -pady 2 -columnspan 2
+   grid ${entryFrame} -row 0 -padx 5 -pady {5 2} -sticky nsew
+   grid ${buttonFrame} -row 1 -padx 5 -pady {5} -sticky e
+
+   grid columnconfigure ${topWidget} 0 -weight 1
+   grid rowconfigure ${topWidget} 0 -weight 1
+   grid rowconfigure ${topWidget} 1 -weight 1
+
+   wm title ${topWidget} "Edit Node [file tail ${_flowNodeRecord}] ([ModuleFlow_record2NodeName ${_flowNodeRecord}])"
+
+   # bind events to the widgets
+   bind ${cancelButton} <ButtonRelease> [list ModuleFlowView_editNodeCancel %W ${expPath} ${_moduleNode}]
+   bind ${okButton} <ButtonRelease> [list ModuleFlowControl_editNodeOk ${topWidget} ${expPath} ${_moduleNode} ${_flowNodeRecord}]
+
+}
+
 proc ModuleFlowView_addPositionChanged { _posSpinbox _nodeTypeOption } {
    set insertPosition [${_posSpinbox} get]
 
@@ -970,12 +1103,19 @@ proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
    after idle destroy ${topWidget}
 }
 
+proc ModuleFlowView_editNodeCancel { _sourceWidget _expPath _moduleNode } {
+   set topWidget [winfo toplevel ${_sourceWidget}]
+   # destroy window
+   after idle destroy ${topWidget}
+}
+
 proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    ::log::log debug "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-   global ${moduleId}_TypeOption
+   global ${moduleId}_TypeOption ${moduleId}_PreviousTypeOption ${moduleId}_SwitchModeOption
 
    set nodeType [set ${moduleId}_TypeOption]
+   ::log::log debug "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode} nodeType:${nodeType}"
 
    # hide or show reference module row depending on selected node type
    set refLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_label]
@@ -988,22 +1128,31 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    set useModLinkLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_label]
    set useModLinkCb [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_cb]
 
-   if { [set ${moduleId}_TypeOption] == "ModuleNode" } {
-      grid ${refLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
-      grid ${refEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
-      grid ${refButton} -row 2 -column 2 -sticky w -padx 2 -pady 2
-      grid ${nameLabel} -row 3 -column 0 -sticky w -padx 2 -pady 2
-      grid ${nameEntry} -row 3 -column 1 -sticky we -padx 2 -pady 2
-      grid ${useModLinkLabel} -row 4 -column 0 -sticky w -padx 2 -pady 2
-      grid ${useModLinkCb} -row 4 -column 1 -sticky w -pady 2
-      set workUnitRow 5
-   } else {
-      grid remove ${refLabel} ${refEntry} ${refButton}
-      grid remove ${useModLinkLabel} ${useModLinkCb}
-      grid ${nameLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
-      grid ${nameEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
-      ${refEntry} configure -text ""
-      set workUnitRow 3
+   ModuleFlowView_cleanPreviousWidgets ${_expPath} ${_moduleNode}
+   switch ${nodeType} {
+      case ModuleNode {
+         grid ${refLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
+         grid ${refEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
+         grid ${refButton} -row 2 -column 2 -sticky w -padx 2 -pady 2
+         grid ${nameLabel} -row 3 -column 0 -sticky w -padx 2 -pady 2
+         grid ${nameEntry} -row 3 -column 1 -sticky we -padx 2 -pady 2
+         grid ${useModLinkLabel} -row 4 -column 0 -sticky w -padx 2 -pady 2
+         grid ${useModLinkCb} -row 4 -column 1 -sticky w -pady 2
+         set workUnitRow 5
+      }
+      case SwitchNode {
+         grid ${nameLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
+         grid ${nameEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
+         ${refEntry} configure -text ""
+         set workUnitRow 3
+         ModuleFlowView_addSwitchNodeExtraWidget ${_expPath} ${_moduleNode}
+      }
+      default {
+         grid ${nameLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
+         grid ${nameEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
+         ${refEntry} configure -text ""
+         set workUnitRow 3
+      }
    }
 
    # creates checkbox to ask whether the container is a work_unit i.e. supertask
@@ -1017,6 +1166,182 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
       grid ${workUnitLabel} -row ${workUnitRow} -column 0 -sticky w -padx 2 -pady 2
       grid ${workUnitCb} -row ${workUnitRow} -column 1 -sticky w -padx 2 -pady 2
    }
+   set ${moduleId}_PreviousTypeOption ${nodeType}
+}
+
+proc ModuleFlowView_cleanPreviousWidgets { _expPath _moduleNode } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_PreviousTypeOption
+   if { ! [info exists ${moduleId}_PreviousTypeOption] } {
+      return
+   }
+
+   set nodeType [set ${moduleId}_PreviousTypeOption]
+
+   set refLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_label]
+   set refEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
+   set refButton [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_button]
+
+   set useModLinkLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_label]
+   set useModLinkCb [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_link_cb]
+
+   grid remove ${refLabel} ${refEntry} ${refButton}
+   grid remove ${useModLinkLabel} ${useModLinkCb}
+   puts "nodeType: ${nodeType}"
+   if { ${nodeType} == "SwitchNode" } {
+      ModuleFlowView_removeSwitchNodeExtraWidget ${_expPath} ${_moduleNode}
+   }
+}
+
+proc ModuleFlowView_removeSwitchNodeExtraWidget { _expPath _moduleNode } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_SwitchModeOption
+   set entryFrame [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_entry_frame]
+   set switchModeLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_label]
+   set switchModeOption [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_option] 
+   set switchValuesFrame [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchvalues_frame]
+   destroy ${switchModeLabel} ${switchModeOption} ${switchValuesFrame}
+   # grid remove ${switchModeLabel} ${switchModeOption} ${switchValuesFrame}
+}
+
+proc ModuleFlowView_addSwitchNodeExtraWidget { _expPath _moduleNode } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_SwitchModeOption
+
+   set entryFrame [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} addnode_entry_frame]
+   set switchModeLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_label]
+   set switchModeOption [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_option] 
+
+   Label ${switchModeLabel} -text "Switch Mode:"
+   catch { unset ${moduleId}_SwichModeOption }
+   tk_optionMenu ${switchModeOption} ${moduleId}_SwitchModeOption DatestampHour DayOfWeek DayOfMonth
+
+   set switchModeValue [set ${moduleId}_SwitchModeOption]
+   puts "ModuleFlowView_addSwitchNodeExtraWidget switchModeValue:${switchModeValue}"
+   
+   set switchValuesFrame [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchvalues_frame]
+   ModuleFlowViwe_addSwitchItemWidgets ${switchValuesFrame} ${switchModeValue}
+
+   grid ${switchModeLabel} -row 4 -column 0 -sticky w -padx 2 -pady 2
+   grid ${switchModeOption} -row 4 -column 1 -sticky we -padx 2 -pady 2
+   grid ${switchValuesFrame} -row 5 -column 0 -sticky we -padx 2 -pady 2 -columnspan 2
+   grid rowconfigure ${entryFrame} 5 -weight 1
+}
+
+proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flowNodeRecord ""} } {
+   switch ${_switchMode} {
+      DatestampHour {
+         set labelText "Default Hours"
+      }
+      default {
+         set labelText ""
+      }
+   }
+
+   LabelFrame ${_switchValuesFrame} -side top -text ${labelText} -bd 1 -relief raised
+   set frameWidget [${_switchValuesFrame} getframe]
+   set valueListWidget [listbox ${frameWidget}.values_list]
+   set buttonFrame [frame ${frameWidget}.button_Frame]
+   set itemEntry [entry ${buttonFrame}.item_entry -width 8 ]
+   set addButton [button ${buttonFrame}.add_button -text Add]
+
+   if { ${_flowNodeRecord} != "" } {
+      set switchItems [${_flowNodeRecord} cget -switch_items]
+      foreach switchItem ${switchItems} {
+         ${valueListWidget} insert end ${switchItem}
+      }
+   }
+
+   ${addButton} configure -command [list ModuleFlowView_addSwitchNodeAddItem ${valueListWidget} ${itemEntry} ${_flowNodeRecord}]
+   set remButton [button ${buttonFrame}.rem_button -text Remove]
+   ${remButton} configure -command [list ModuleFlowView_removeSwitchNodeAddItem ${valueListWidget} ${itemEntry} ${_flowNodeRecord}]
+   bind ${valueListWidget} <<ListboxSelect>> [list ModuleFlowView_selectSwitchNodeAddItem ${valueListWidget} ${itemEntry}]
+
+   grid ${valueListWidget} -row 0 -column 0 -sticky w
+   grid ${buttonFrame} -row 0 -column 1
+   grid ${itemEntry} -padx 2 -pady 2 -sticky w
+   grid ${addButton} -padx 2 -pady 2 -sticky w
+   grid ${remButton}  -padx 2 -pady 2 -sticky w
+   grid rowconfigure ${frameWidget} 0 -weight 1
+}
+
+proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRecord ""} } {
+   # get item to add
+   set newItemValue [${_itemEntryW} get]
+   if { ${newItemValue} != "" } {
+      # validate hour field is 2 digits between 00 and 23
+      if { ! ([string length ${newItemValue}] == 2 && ${newItemValue} >= "00" && ${newItemValue} <= "23") } {
+         MessageDlg .msg_window -icon error -message "Invalid hour value: ${newItemValue}. Must be two digits character between 00 and 23." -aspect 400 \
+            -title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
+         return
+      }
+      # get all existings items
+      set currentItems [${_valueListW} get 0 end]
+      if { [lsearch ${currentItems} ${newItemValue}] == -1 } {
+         if { ${newItemValue} != "" } {
+            lappend currentItems ${newItemValue}
+            set currentItems [lsort ${currentItems}]
+            set newIndex [lsearch ${currentItems} ${newItemValue}]
+            ${_valueListW} insert ${newIndex} ${newItemValue}
+         }
+      }
+   }
+}
+
+proc ModuleFlowView_selectSwitchNodeAddItem { _valueListW _itemEntryW } {
+   set currentSelection [${_valueListW} curselection]
+   # puts "ModuleFlowView_selectSwitchNodeAddItem currentSelection:${currentSelection}"
+   ${_itemEntryW} delete 0 end
+   ${_itemEntryW} insert 0 [${_valueListW} get ${currentSelection}]
+}
+
+proc ModuleFlowView_removeSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRecord ""} } {
+   # get item to remove
+   set remItemValue [${_itemEntryW} get]
+
+   if { ${_flowNodeRecord} != "" } {
+      set currentSavedItems [${_flowNodeRecord} cget -switch_items]
+      if { [lsearch ${currentSavedItems} ${remItemValue}] != -1 } {
+         MessageDlg .msg_window -icon error -message "Cannot remove currently used items." -aspect 400 \
+            -title "Edit Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
+         return
+      }
+   }
+
+   # get all existings items from list widget
+   set currentItems [${_valueListW} get 0 end]
+
+   set remIndex [lsearch ${currentItems} ${remItemValue}]
+   if {  ${remIndex} != -1 } {
+      ${_valueListW} delete ${remIndex}
+   }
+}
+
+proc ModuleFlowView_getSwitchNodeItems {  _expPath _moduleNode } {
+   puts "ModuleFlowView_getSwitchNodeItems _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+
+   set values {}
+   set switchValuesFrame [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchvalues_frame]
+   set frameWidget [${switchValuesFrame} getframe]
+   set valueListWidget ${frameWidget}.values_list
+   set values [${valueListWidget} get 0 end]
+   return ${values}
+}
+
+proc ModuleFlowView_getCurrentSwitchItem {  _expPath _flowNodeRecord _canvas} {
+   puts "ModuleFlowView_getCurrentSwitchItem _expPath:${_expPath} _flowNodeRecord:${_flowNodeRecord}"
+   set value ""
+   set switchModeValue [${_flowNodeRecord} cget -switch_mode]
+   # set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+   if { ${switchModeValue} == "DatestampHour" } {
+      set comboBoxWidget [DrawUtils_getIndexWidgetName ${_flowNodeRecord} ${_canvas}]
+      # check if the current value of the combobox matches a valid entry in the list
+      if { [${comboBoxWidget} getvalue] != -1 } {
+         set value [${comboBoxWidget} get]
+      }
+   }
+   return ${value}
 }
 
 proc ModuleFlowView_newNodeRefEntryCallback { _expPath _moduleNode _refEntry } {
@@ -1373,6 +1698,9 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
          addnode_link_cb ${addNodeTopWidget}.entry_frame.link_check \
          addnode_wunit_label ${addNodeTopWidget}.entry_frame.wunit_label \
          addnode_wunit_cb ${addNodeTopWidget}.entry_frame.wunit_check \
+         addnode_switchmode_label ${addNodeTopWidget}.entry_frame.switchmode_label \
+         addnode_switchmode_option ${addNodeTopWidget}.entry_frame.switchmode_option \
+         addnode_switchvalues_frame ${addNodeTopWidget}.entry_frame.switchvalues_frame \
          addnode_button_frame ${addNodeTopWidget}.button_frame \
          addnode_ok_button ${addNodeTopWidget}.button_frame.ok_button \
          addnode_cancel_button ${addNodeTopWidget}.button_frame.cancel_button \
@@ -1390,6 +1718,7 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
          ]
    }
 }
+
 
 proc ModuleFlowView_clearWidgetNames { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]

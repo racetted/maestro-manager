@@ -108,7 +108,6 @@ proc ExpModTreeView_addHelpMenu { _expPath _parentWidget } {
 
    set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_DebugOn
-   set ${expChecksum}_DebugOn false
 
    ${menuW} add checkbutton -label "Debug" -underline 0 -onvalue true -offvalue false -variable ${expChecksum}_DebugOn \
       -command [list ExpModTreeControl_debugChanged ${_expPath}]

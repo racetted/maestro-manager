@@ -26,6 +26,12 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
          # get exp first module
          set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
 
+
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
+   global ${expChecksum}_DebugOn
+   set ${expChecksum}_DebugOn true
+   ExpModTreeControl_debugChanged ${_expPath}
+
          # recursive read of all module flow.xml
          # the exp module tree is created at the same time
          ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
@@ -42,9 +48,10 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
       }
    } errMsg ] } {
       ::log::log error ${errorInfo}
-      MessageDlg .msg_window -icon error -message "${errMsg}" -aspect 400 \
+      MessageDlg .msg_window -icon error -message "${errMsg} See console log window for more details." -aspect 400 \
          -title "Application Error" -type ok -justify center -parent ${_sourceWidget}
-      MaestroConsole_addErrorMsg ${errMsg}
+      # MaestroConsole_addErrorMsg ${errMsg}
+      MaestroConsole_addErrorMsg ${errorInfo}
    }
 }
 
