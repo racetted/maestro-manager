@@ -4,28 +4,28 @@ package require cksum
 
 
 proc ModuleFlowControl_configSelected { _expPath _flowNodeRecord } {
+   ::log::log debug "ModuleFlowControl_configSelected _expPath:${_expPath} _flowNodeRecord:${_flowNodeRecord}"
    # for now use flat modules
    # the naming of the _flowNodeRecord contains the path of the node
    # within the whole experiment
    # but for now, we need to get the relative path since we use
    # flat modules instead of exp tree
-   set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
+   set flowNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}] 
    if { [${_flowNodeRecord} cget -type] == "ModuleNode" } {
-      #set moduleNode ${_expPath}/modules/[${_flowNodeRecord} cget -name]
-      set moduleNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+      set moduleLayoutNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}] 
    } else {
       # get the parent module
       set moduleNodeRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
-      set moduleNode [ModuleFlow_record2NodeName ${moduleNodeRecord}]
+      set moduleLayoutNode [ModuleFlow_getLayoutNode ${moduleNodeRecord}] 
    }
    set nodeType [${_flowNodeRecord} cget -type]
 
    if { [${_flowNodeRecord} cget -status] == "new" } {
       # it's a new node not saved yet, edit the file from working dir
-      set configFile [ModuleLayout_getNodeConfigPath ${_expPath} ${moduleNode} ${flowNode} ${nodeType} true]
+      set configFile [ModuleLayout_getNodeConfigPath ${_expPath} ${moduleLayoutNode} ${flowNode} ${nodeType} true]
    } else {
       # get the relative path within the module container
-      set configFile [ModuleLayout_getNodeConfigPath ${_expPath} ${moduleNode} ${flowNode} ${nodeType}]
+      set configFile [ModuleLayout_getNodeConfigPath ${_expPath} ${moduleLayoutNode} ${flowNode} ${nodeType}]
    }
 
    ::log::log debug "ModuleFlowControl_configSelected configFile:${configFile}"
@@ -44,19 +44,20 @@ proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
    # within the whole experiment
    # but for now, we need to get the relative path since we use
    # flat modules instead of exp tree
-   set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
+   set flowNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}] 
    set nodeType [${_flowNodeRecord} cget -type]
 
    # get the container module
    set moduleNodeRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
    set moduleNode [ModuleFlow_record2NodeName ${moduleNodeRecord}]
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${moduleNodeRecord}] 
    if { [${_flowNodeRecord} cget -status] == "new" } {
       # it's a new node not saved yet, edit the file from snapshot dir
-      set sourceFile [ModuleLayout_getNodeSourcePath ${_expPath} ${moduleNode} ${flowNode} ${nodeType} true]
+      set sourceFile [ModuleLayout_getNodeSourcePath ${_expPath} ${moduleLayoutNode} ${flowNode} ${nodeType} true]
    } else {
       # get the relative path within the module container
       #set relativePath [::textutil::trim::trimPrefix ${_flowNodeRecord} ${moduleNodeRecord}]
-      set sourceFile [ModuleLayout_getNodeSourcePath ${_expPath} ${moduleNode} ${flowNode} ${nodeType}]
+      set sourceFile [ModuleLayout_getNodeSourcePath ${_expPath} ${moduleLayoutNode} ${flowNode} ${nodeType}]
    }
 
    ::log::log debug "ModuleFlowControl_sourceSelected sourceFile:${sourceFile}"
@@ -386,17 +387,21 @@ proc ModuleFlowControl_cancelWrite { _expPath _moduleNode _failedOp _sourceW } {
 }
 
 proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
+   ::log::log debug "ModuleFlowControl_saveSelected _expPath:${_expPath} _moduleNode:${_moduleNode}"
    if { [ModuleFlowControl_validateModuleNode ${_expPath} ${_moduleNode} ${_topWidget}] == false } {
       return
    }
 
+   set moduleNodeRecord  [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${moduleNodeRecord}] 
+
    # the flow xml must be saved in the module work dir
-   set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
+   set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${moduleLayoutNode}]
    set moduleFlowXml ${modWorkDir}/flow.xml
 
    if { [ catch { 
       # save flow xml file
-      ModuleFlow_saveXml ${moduleFlowXml} [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
+      ModuleFlow_saveXml ${moduleFlowXml} ${moduleNodeRecord}
    } errMsg] } {
       MaestroConsole_addErrorMsg ${errMsg}
       ModuleFlowControl_cancelWrite ${_expPath} ${_moduleNode} "module save flow.xml" ${_topWidget}
@@ -408,7 +413,7 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
       ModuleFlowControl_goPostSaveCmd ${_expPath} ${_moduleNode}
 
       # save module container directory
-      ModuleLayout_saveWorkingDir ${_expPath} ${_moduleNode}
+      ModuleLayout_saveWorkingDir ${_expPath} ${moduleLayoutNode}
    } errMsg] } {
       MaestroConsole_addErrorMsg ${errMsg}
       ModuleFlowControl_cancelWrite ${_expPath} ${_moduleNode} "module directory save" ${_topWidget}
@@ -416,7 +421,7 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
    }
 
    # clear module working dir
-   ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
+   ModuleLayout_clearWorkingDir ${_expPath} ${moduleLayoutNode}
 
    # reset module change status
    ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false

@@ -372,6 +372,9 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
             set parentModTreeName [ExpModTree_getRecordName ${_expPath} ${parentModName}]
             set flowNode [ModuleFlow_record2NodeName ${recordName}]
          }
+         # if the node is within a switch branch, at the module tree level, it doesn't care
+         # so we get the real layout node (i.e. withouth any notion of switching branching)
+         # set layoutNode [ModuleFlow_getLayoutNode ${recordName}]
          ExpModTree_addModule ${_expPath} ${flowNode} ${parentModTreeName} ${nodeName}
       }
       "SWITCH" {
@@ -529,7 +532,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
       foreach switchItem ${switchItems} {
          # I create a node for each switch item
          set switchItemRecord ${newNodeRecord}/${switchItem}
-         ::log::log debug "FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}"
+         ::log::log debug "ModuleFlow_createNewNode FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}"
          FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}
       }
    }
@@ -538,26 +541,25 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    set moduleNode [ModuleFlow_record2NodeName ${parentModRecord}]
 
    # create node in modules directory
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleNode}] == true } {
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
+   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true } {
       set useModLink false
       set modPath ""
-      if { ${_nodeType} == "ModuleNode" } {
-         set useModLink $extraArgs(use_mod_link)
-         set modPath $extraArgs(mod_path)
-         ModuleFlowControl_addPostSaveCmd ${_expPath} ${moduleNode} \
-            [list ModuleLayout_createNode ${_expPath} ${moduleNode} \
-            [ModuleFlow_getLayoutNode ${newNodeRecord}] ${_nodeType} ${_extraArgList}]
-      } else {
-         set matchFlowRecords ""
-         if { [ModuleFlow_getNodeRefCount ${newNodeRecord} matchFlowRecords] == 0 } {
+      if { [ModuleFlow_getNodeRefCount ${newNodeRecord}] == 0 } {
+         if { ${_nodeType} == "ModuleNode" } {
+            # only create the module layout node if not already exists
+            set nodeRefCount [ModuleFlow_getNodeRefCount ${newNodeRecord}]
+            set useModLink $extraArgs(use_mod_link)
+            set modPath $extraArgs(mod_path)
+            ModuleFlowControl_addPostSaveCmd ${_expPath} ${moduleNode} \
+               [list ModuleLayout_createNode ${_expPath} ${moduleLayoutNode} \
+               [ModuleFlow_getLayoutNode ${newNodeRecord}] ${_nodeType} ${_extraArgList}]
+         } else {
             # For switching items, I don't create the layout node if it's already there
-            ModuleLayout_createNode ${_expPath} ${moduleNode} [ModuleFlow_getLayoutNode ${newNodeRecord}] ${_nodeType} ${_extraArgList}
-         } elseif { ${matchFlowRecords} != "" } {
-            # the node already exists, i.e. switching node, copy the submit tree of the reference
-            # puts "ModuleFlow_createNewNode() ModuleFlow_copySubmitTree matchFlowRecord:${matchFlowRecords}"
-            # copy the submit tree of the matching node
-            # ModuleFlow_copySubmitTree [lindex ${matchFlowRecords} 0] ${newNodeRecord}
+            ModuleLayout_createNode ${_expPath} ${moduleLayoutNode} [ModuleFlow_getLayoutNode ${newNodeRecord}] ${_nodeType} ${_extraArgList}
          }
+      } else {
+         ::log::log debug "ModuleFlow_createNewNode not creating layout for node: ${newNodeRecord}"
       }
    }
    # attach to submitter
@@ -717,9 +719,9 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    set nodeType [${_flowNodeRecord} cget -type]
    set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
    set parentModRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
-   set moduleNode [ModuleFlow_record2NodeName ${parentModRecord}]
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
    set origModuleNodeRecord [ModuleFlow_getModuleContainer ${_origFlowNodeRecord}]
-   set origModuleNode [ModuleFlow_record2NodeName ${origModuleNodeRecord}]
+   set origModuleNode [ModuleFlow_getLayoutNode ${origModuleNodeRecord}]
    set keepChildNodes true
 
    if { ${nodeType} == "SwitchNode" && ${_deleteBranch} != true && ${_deleteBranch} != false } {
@@ -786,32 +788,22 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    # delete single node
    record delete instance ${_flowNodeRecord}
 
-   proc out {} {
-   if { [ModuleFlow_getNodeRefCount ${parentContainerRecord} matchFlowRecords] != 0 } {
-      # if container is part of switching node, copy the new created node in other branch
-      foreach matchFlowRecord ${matchFlowRecords} {
-         puts "ModuleFlow_deleteNode() ModuleFlow_copySubmitTree ${parentContainerRecord} ${matchFlowRecord}"
-         ModuleFlow_copySubmitTree ${parentContainerRecord} ${matchFlowRecord}
-      }
-   }
-   }
-
    # delete node from module container directory only if the current node belongs to the original module.
    # Nodes that belong to a reference module will be cleared at another level if the module reference count
    # is 0
    puts "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleNode}] == true && ${nodeRefCount} == 0 } {
+   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true && ${nodeRefCount} == 0 } {
       # need to check if the node is ready to be deleted from the layout.
       # for nodes belonging to a switch branch, it gets deleted only if it is not used in other
       # branches
-      if { ${origModuleNode} == ${moduleNode} } {
+      if { ${origModuleNode} == ${moduleLayoutNode} } {
          # delete node and resource
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
-         ModuleLayout_deleteNode ${_expPath} ${moduleNode} ${layoutNode} ${nodeType} false ${keepChildNodes}
+         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}
       } else {
          # delete resource only
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
-         ModuleLayout_deleteNode ${_expPath} ${moduleNode} ${layoutNode} ${nodeType} true ${keepChildNodes}
+         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} true ${keepChildNodes}
       }
    }
 }
@@ -914,7 +906,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    set submitter [ModuleFlow_getSubmitter ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
    set parentModRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
-   set moduleNode [ModuleFlow_record2NodeName ${parentModRecord}]
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
    set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_flowNodeRecord}]
 
    set containerNodeRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
@@ -987,9 +979,9 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
 
    # rename node from experiment module directory
    if { ${nodeRefCount} > 0 } {
-      ModuleLayout_renameNode ${_expPath} ${moduleNode} ${layoutNode} ${_newName} ${nodeType} copy
+      ModuleLayout_renameNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${_newName} ${nodeType} copy
    } else {
-      ModuleLayout_renameNode ${_expPath} ${moduleNode} ${layoutNode} ${_newName} ${nodeType} move
+      ModuleLayout_renameNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${_newName} ${nodeType} move
    }
 }
 
@@ -1050,11 +1042,13 @@ proc ModuleFlow_assignNewContainerDir { _expPath _moduleNode _flowNodeRecord _ne
    ::log::log debug "ModuleFlow_assignNewContainerDir _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
    set flowNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}]
    set containerNode [ModuleFlow_getLayoutNode ${_newContainerRecord}]
+   set parentModRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
+   set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}]
    set assignMode move
    if { [ModuleFlow_getNodeRefCount ${_flowNodeRecord}] > 0 } {
       set assignMode copy
    }
-   ModuleLayout_assignNewContainer ${_expPath} ${_moduleNode} ${containerNode} ${flowNode} [${_flowNodeRecord} cget -type] ${assignMode}
+   ModuleLayout_assignNewContainer ${_expPath} ${moduleLayoutNode} ${containerNode} ${flowNode} [${_flowNodeRecord} cget -type] ${assignMode}
    if { ! [ModuleFlow_isContainer ${_flowNodeRecord}] } {
       set submits [${_flowNodeRecord} cget -submits]
       foreach submitNode ${submits} {
@@ -1146,12 +1140,18 @@ proc ModuleFlow_getAllSwitchItemFlowNodeRecord { _flowNodeRecord } {
 # _newNodeName is the name of the new node, not the full path
 # returns node as in /enkf_mod/family_1/node1
 proc ModuleFlow_getNewNode { _flowNodeRecord _newNodeName } {
-   if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
-      set newNodeRecord  ${_flowNodeRecord}/${_newNodeName}
+   ::log::log debug "ModuleFlow_getNewNode _flowNodeRecord:${_flowNodeRecord} _newNodeName:${_newNodeName}"
+   if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
+      set currentSwitchItem [${_flowNodeRecord} cget -curselection]
+      # set newNode ${_flowNodeRecord}/${currentSwitchItem}
+      set newNode [${_flowNodeRecord} cget -flow_path]/${_newNodeName}
+   } elseif { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
+      set newNode [${_flowNodeRecord} cget -flow_path]/${_newNodeName}
    } else {
-      set newNodeRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]/${_newNodeName}
+      set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+      set newNode [${parentContainerRecord} cget -flow_path]/${_newNodeName}
    }
-   return [ModuleFlow_record2NodeName ${newNodeRecord}]
+   return ${newNode}
 }
 
 # search upwards the node to find the module contianer

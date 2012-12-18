@@ -1130,7 +1130,7 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
 
    ModuleFlowView_cleanPreviousWidgets ${_expPath} ${_moduleNode}
    switch ${nodeType} {
-      case ModuleNode {
+      ModuleNode {
          grid ${refLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
          grid ${refEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
          grid ${refButton} -row 2 -column 2 -sticky w -padx 2 -pady 2
@@ -1140,7 +1140,7 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
          grid ${useModLinkCb} -row 4 -column 1 -sticky w -pady 2
          set workUnitRow 5
       }
-      case SwitchNode {
+      SwitchNode {
          grid ${nameLabel} -row 2 -column 0 -sticky w -padx 2 -pady 2
          grid ${nameEntry} -row 2 -column 1 -sticky we -padx 2 -pady 2
          ${refEntry} configure -text ""

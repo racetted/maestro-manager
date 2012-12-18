@@ -549,9 +549,9 @@ proc ModuleLayout_getNodeConfigPath { _expPath _moduleNode _node _nodeType {_isN
    set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
    # get relative path vs module node
    set relativePath [::textutil::trim::trimPrefix ${_node} ${_moduleNode}]
-   # get module working dir
-   set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    if { ${_isNew} == true } {
+      # get module working dir
+      set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
       # node is being created, retrieve from work dir
       set nodeFullPath ${modWorkDir}/${relativePath}
    } else {
@@ -588,10 +588,10 @@ proc ModuleLayout_getNodeConfigPath { _expPath _moduleNode _node _nodeType {_isN
 proc ModuleLayout_getNodeSourcePath { _expPath _moduleNode _node _nodeType {_isNew false} } {
    # build the module path in the flat modules tree
    set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
-   # get module working dir
-   set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
    set relativePath [::textutil::trim::trimPrefix ${_node} ${_moduleNode}]
    if { ${_isNew} == true } {
+      # get module working dir
+      set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
       # node is being created, retrieve from work dir
       set nodeFullPath ${modWorkDir}/${relativePath}
    } else {
