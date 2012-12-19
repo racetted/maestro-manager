@@ -292,7 +292,6 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
       set isWorkUnit true
    }
 
-   # set parentFlowNode ${_parentFlowRecord}
    if { ${_parentFlowRecord} == "" } {
       set parentFlowNode ""
    } else {

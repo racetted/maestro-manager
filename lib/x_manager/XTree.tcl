@@ -288,15 +288,14 @@ $fromDir"  ok warning ""  $win
 		 lappend listExp $basedir
 		 set dd [join ${listD}/$basename ""]
 	         set Ftype [file type $basedir]
-		 puts "1: basedir=$basedir Ftype=$Ftype"
+		 
 	         if {[string compare $Ftype "link"] == 0} {
-		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$suffix -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
+		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
                  } else {
-		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$suffix -text $basename -data $dd -image $Preferences::exp_icon_img}"
+		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img}"
 		 }
 		 foreach cmd $CmdList {
 		          eval  $cmd
-		          #DEBUG puts "cmd=$cmd"
 		 }
                  #set XPManager::_progress 0
 
@@ -317,13 +316,12 @@ $fromDir"  ok warning ""  $win
 		      
 		       set dd [join ${listD}/$basename ""]
 	               if {[string compare $Ftype "link"] == 0} {
-		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$suffix -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
+		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
                        } else {
-		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$suffix -text $basename -data $dd -image $Preferences::exp_icon_img}"
+		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img}"
 		       }
 		       foreach cmd $CmdList {
 		             eval  "$cmd"  
-		             #DEBUG puts "cmd=$cmd"
 		       }
 		   } else {
 		      set basename [file tail $dname]

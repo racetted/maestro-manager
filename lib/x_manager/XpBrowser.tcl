@@ -207,7 +207,7 @@ proc XpBrowser::create { frm } {
                 if {[info exists ArrayTabsDepot($panel)]} {
                           set base [split $ArrayTabsDepot($panel) ":"]
 		} else {
-		          puts "PANEL WITH NO BASE:$panel:"
+		          puts "warning ... Tab: $panel with no Experiments"
 			  set base ""
                 }
 

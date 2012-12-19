@@ -1117,6 +1117,8 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
    set nodeType [set ${moduleId}_TypeOption]
    ::log::log debug "ModuleFlowView_newNodeTypeCallback _expPath:${_expPath} _moduleNode:${_moduleNode} nodeType:${nodeType}"
 
+   set nodeType [set ${moduleId}_TypeOption]
+
    # hide or show reference module row depending on selected node type
    set refLabel [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_label]
    set refEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]

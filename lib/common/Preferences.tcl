@@ -218,7 +218,7 @@ proc Preferences::AddExpToDepot { nbk } {
 
     set ExpDir [tk_chooseDirectory -initialdir $::env(HOME)/ -title "Choose Experiment directory" -parent $Preferences::ConfigDepotWin]
 
-    if { "$ExpDir" != "" } {
+    if { "$ExpDir" != "" && [file isdirectory $ExpDir]} {
                  set numslash [regsub -all {\/} $ExpDir "" kiki]
                  if {[string compare $ExpDir [file normalize $::env(HOME)]] == 0 || [string compare $ExpDir "/" ] == 0 } {
                              Dialogs::show_msgdlg $Dialogs::Dlg_PathDeep  ok error "" $Preferences::ConfigDepotWin
@@ -257,7 +257,7 @@ proc Preferences::AddExpToDepot { nbk } {
 					 return
 		                    }
                                   3 {
-		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoValExp       ok error "" $Preferences::ConfigDepotWin
+		                         Dialogs::show_msgdlg $Dialogs::Dlg_NoValExpPath   ok error "" $Preferences::ConfigDepotWin
 					 return
 		                    }
 				  }
@@ -267,6 +267,9 @@ proc Preferences::AddExpToDepot { nbk } {
                     $Preferences::SaveBU         configure -state normal
                     $Preferences::CancelBU       configure -state normal
                     $Preferences::OkBU           configure -state disabled
+   } else {
+		    Dialogs::show_msgdlg $Dialogs::Dlg_NoValExpPath  ok error "" $Preferences::ConfigDepotWin
+		    return
    }
 }
 
