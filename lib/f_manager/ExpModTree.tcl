@@ -46,12 +46,28 @@ proc ExpModTree_getReferenceName { _expPath _moduleNode } {
 proc ExpModTree_getModInstances { _expPath _moduleNode } {
    set count 0
    set moduleName [file tail ${_moduleNode}]
+   set modulePath ${_expPath}/modules/${moduleName}
+   set modTruePath [exec true_path ${modulePath}]
+   foreach modTreeNode [record show instances ExpModTreeNode] {
+      if { [${modTreeNode} cget -ref_name] != "" } {
+         set checkModulePath [${modTreeNode} cget -exp_path]/[${modTreeNode} cget -ref_name] 
+      } else {
+         set checkModulePath [${modTreeNode} cget -exp_path]/[${modTreeNode} cget -name] 
+      }
+      set checkModTruePath [exec true_path ${checkModulePath}]
+      if { ${modTruePath} == ${checkModTruePath} } {
+         incr count
+      }
+   }
+
+   proc out {} {
    set modTreeNodePrefix [ExpModTree_getRecordPrefix ${_expPath}]
    foreach modTreeNode [record show instances ExpModTreeNode] {
       if { [string match ::${modTreeNodePrefix}* ${modTreeNode}] 
            && [file tail ${modTreeNode}] == ${moduleName} } {
          incr count
       }
+   }
    }
    return ${count}
 }

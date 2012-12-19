@@ -113,7 +113,12 @@ proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModu
          } elseif { ${linkTarget} != "" } {
             MaestroConsole_addErrorMsg "The path ${modulePath} already exists (symbolic link)."
             error ModulePathExists
-         }
+         } elseif { ${_refModulePath} == "" } {
+	    # module path exists and reference is null i.e. local module
+	    # but the module already exists
+            MaestroConsole_addErrorMsg "The path ${modulePath} already exists as local module."
+            error ModulePathExists
+	 }
       }
    }
 }
