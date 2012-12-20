@@ -131,11 +131,15 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
 
          catch { set useModuleLink [set ${moduleId}_Link_Module] }
 
-         if { [ catch { ExpLayout_checkModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${modulePath} ${useModuleLink} } errMsg] } {
-               MessageDlg .msg_window -icon error -message "The new module path already exists!" \
-                  -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
+         if { [ExpLayout_isModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${modulePath} ${useModuleLink}] == true } {
+            set answer [MessageDlg .msg_window -icon question -message "Module directory or link already exists. Do you want to reuse?" \
+               -title "Add Module Node" -type okcancel -justify center -parent ${_topWidget} ]
+            if { ${answer} == 1 } {
+               # cancel and return to create window
                return
+            }
          }
+
          lappend extraArgList use_mod_link ${useModuleLink} mod_path ${modulePath}
       }
       SwitchNode {

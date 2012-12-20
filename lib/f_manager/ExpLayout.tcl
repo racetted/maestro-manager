@@ -86,19 +86,21 @@ proc ExpLayout_clearWorkDir { _expPath } {
 #  
 # _expPath is path to the experiment (SEQ_EXP_HOME)
 # _moduleNode is experiment tree of node i.e. /enkf_mod/anal_mod
-proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModuleLink } {
-   ::log::log debug "ExpLayout_checkModPathExists _expPath:${_expPath} _moduleNode:${_moduleNode} _refModulePath:${_refModulePath} _useModuleLink:${_useModuleLink}"
+proc ExpLayout_isModPathExists { _expPath _moduleNode _refModulePath _useModuleLink } {
+   ::log::log debug "ExpLayout_isModPathExists _expPath:${_expPath} _moduleNode:${_moduleNode} _refModulePath:${_refModulePath} _useModuleLink:${_useModuleLink}"
    # for now we still use flat modules
    set modulePath ${_expPath}/modules/[file tail ${_moduleNode}]
    set linkTarget ""
+   set isExists false
    catch { set linkTarget [file readlink ${modulePath}] }
    if { ${_useModuleLink} == true } {
       # user wants a link, verifying if it is a link and if it is the same target
       if { [file exists ${modulePath}] && (${linkTarget} == "" || ${linkTarget} != ${_refModulePath}) } {
          if { [exec true_path ${modulePath}] != [exec true_path ${_refModulePath}] } {
-            ::log::log error "ExpLayout_checkModPathExists linkTarget:${linkTarget}"
-            MaestroConsole_addErrorMsg "The path ${modulePath} already exists. Link target: [exec true_path ${modulePath}]"
-            error ModulePathExists
+            ::log::log error "ExpLayout_isModPathExists linkTarget:${linkTarget}"
+            MaestroConsole_addMsg "The path ${modulePath} already exists. Link target: [exec true_path ${modulePath}]"
+            # error ModulePathExists
+            set isExists true
          }
       }
    } else {
@@ -107,20 +109,24 @@ proc ExpLayout_checkModPathExists { _expPath _moduleNode _refModulePath _useModu
       if { [file exists ${modulePath}] } {
          if { [file exists ${_refModulePath}] &&  ([exec true_path ${modulePath}] != [exec true_path ${_refModulePath}]) } {
             # not a link, validate that directory does not exists
-            ::log::log error "ExpLayout_checkModPathExists ${modulePath} exists"
-            MaestroConsole_addErrorMsg "The path ${modulePath} already exists (symbolic link)."
-            error ModulePathExists
+            ::log::log error "ExpLayout_isModPathExists ${modulePath} exists"
+            MaestroConsole_addMsg "The path ${modulePath} already exists (symbolic link)."
+            # error ModulePathExists
+            set isExists true
          } elseif { ${linkTarget} != "" } {
-            MaestroConsole_addErrorMsg "The path ${modulePath} already exists (symbolic link)."
-            error ModulePathExists
+            MaestroConsole_addMsg "The path ${modulePath} already exists (symbolic link)."
+            # error ModulePathExists
+            set isExists true
          } elseif { ${_refModulePath} == "" } {
-	    # module path exists and reference is null i.e. local module
-	    # but the module already exists
-            MaestroConsole_addErrorMsg "The path ${modulePath} already exists as local module."
-            error ModulePathExists
-	 }
+            # module path exists and reference is null i.e. local module
+            # but the module already exists
+            MaestroConsole_addMsg "The path ${modulePath} already exists as local module."
+            # error ModulePathExists
+            set isExists true
+         }
       }
    }
+   return ${isExists}
 }
 
 # creates a link from $SEQ_EXP_HOME/modules/module_name --> _refModulePath

@@ -50,9 +50,9 @@ proc ExpModTree_getModInstances { _expPath _moduleNode } {
    set modTruePath [exec true_path ${modulePath}]
    foreach modTreeNode [record show instances ExpModTreeNode] {
       if { [${modTreeNode} cget -ref_name] != "" } {
-         set checkModulePath [${modTreeNode} cget -exp_path]/[${modTreeNode} cget -ref_name] 
+         set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -ref_name] 
       } else {
-         set checkModulePath [${modTreeNode} cget -exp_path]/[${modTreeNode} cget -name] 
+         set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -name] 
       }
       set checkModTruePath [exec true_path ${checkModulePath}]
       if { ${modTruePath} == ${checkModTruePath} } {

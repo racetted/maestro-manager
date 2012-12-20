@@ -227,11 +227,13 @@ proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType {_extraAr
                ExpLayout_importModule ${_expPath} ${_newNode} ${refModPath}
             }
          } else {
-            # create new module locally
-            ExpLayout_newModule ${_expPath} ${_newNode}
-            # create initial module flow.xml
-            set flowXmlFile [ModuleLayout_getFlowXml ${_expPath} ${_newNode}]
-            ModuleFlow_initXml ${flowXmlFile} ${_newNode}
+            # create new module locally if not exists
+            if { [ExpLayout_isModPathExists ${_expPath} ${_newNode} "" false] == false } {
+               ExpLayout_newModule ${_expPath} ${_newNode}
+               # create initial module flow.xml
+               set flowXmlFile [ModuleLayout_getFlowXml ${_expPath} ${_newNode}]
+               ModuleFlow_initXml ${flowXmlFile} ${_newNode}
+            }
          }
          # create resource dir
          MaestroConsole_addMsg "create [file dirname ${resourceFile}]."

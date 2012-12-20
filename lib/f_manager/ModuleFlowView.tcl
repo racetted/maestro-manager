@@ -499,8 +499,11 @@ proc ModuleFlowView_drawNode { _canvas _flowNodeRecord _position { _isRootNode f
       ${indexListW} configure -modifycmd [list ModuleFlowView_indexedNodeSelection ${_flowNodeRecord} ${_canvas} ${indexListW}]
       # bypass the switch item 
       if { [${_flowNodeRecord} cget -type] == "SwitchNode" && [${_flowNodeRecord} cget -switch_items] != "" } {
-         set _flowNodeRecord [ModuleFlow_getSwitchItemFlowNodeRecord ${_flowNodeRecord}]
-         ::log::log debug "ModuleFlowView_drawNode SwitchNode _flowNodeRecord:${_flowNodeRecord}"
+         set switchItemNodeRecord [ModuleFlow_getCurrentSwitchItemRecord ${_flowNodeRecord}]
+         if { ${switchItemNodeRecord} != "" } {
+            set _flowNodeRecord ${switchItemNodeRecord}
+            ::log::log debug "ModuleFlowView_drawNode SwitchNode _flowNodeRecord:${_flowNodeRecord}"
+         }
       }
    }
 
