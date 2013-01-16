@@ -843,7 +843,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    }
 
    if { [ExpLayout_isModuleWritable ${expPath} ${_moduleNode}] == false } {
-      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode}]
+      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode} ${_canvas}]
       if { ${isCopied} == false } {
          ModuleFlowView_checkReadOnlyNotify ${expPath} ${_moduleNode}
       }
