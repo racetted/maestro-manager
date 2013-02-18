@@ -108,6 +108,7 @@ proc ExpModTreeView_addHelpMenu { _expPath _parentWidget } {
 
    set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
    global ${expChecksum}_DebugOn
+   set ${expChecksum}_DebugOn false
 
    ${menuW} add checkbutton -label "Debug" -underline 0 -onvalue true -offvalue false -variable ${expChecksum}_DebugOn \
       -command [list ExpModTreeControl_debugChanged ${_expPath}]
@@ -161,7 +162,7 @@ proc ExpModTreeView_addExpToolbar { _expPath _canvas } {
    return ${expToolbar}
 }
 
-proc ExpModTreeView_addExpConfig { _expPath _canvas } {
+proc ExpModTreeView_addExpSettingsImg { _expPath _canvas } {
    set imageDir [SharedData_getMiscData IMAGE_DIR]
    set expCfgImage ${_canvas}.exp_cfg_image
    image create photo ${expCfgImage} -file ${imageDir}/config.png
@@ -169,11 +170,11 @@ proc ExpModTreeView_addExpConfig { _expPath _canvas } {
    set iconStartX [expr [SharedData_getMiscData CANVAS_X_START] - 35]
    set iconY [SharedData_getMiscData CANVAS_Y_START]
 
-   ${_canvas} create image ${iconStartX} ${iconY} -image ${expCfgImage} -tag "FlowItems ExpConfig"
-   ${_canvas} bind ExpConfig <Double-1> [list ModuleFlowView_goEditor ${_expPath}/experiment.cfg]
-   ${_canvas} bind ExpConfig <Button-3> [list ExpModTreeView_ExpConfigMenu ${_expPath} ${_canvas} %X %Y]
+   ${_canvas} create image ${iconStartX} ${iconY} -image ${expCfgImage} -tag "FlowItems ExpSettings"
+   ${_canvas} bind ExpSettings <Double-1> [list ModuleFlowView_goEditor ${_expPath}/experiment.cfg]
+   ${_canvas} bind ExpSettings <Button-3> [list ExpModTreeView_addExpSettingsMenu ${_expPath} ${_canvas} %X %Y]
 
-   tooltip::tooltip ${_canvas}  -items ExpConfig "View/edit experiment config file."
+   tooltip::tooltip ${_canvas}  -items ExpSettings "View/edit experiment settings."
 
    #DrawUtil_drawdashline ${_canvas} 40 40 58 40 none [SharedData_getColor FLOW_SUBMIT_ARROW] off on
    set lineStartX [expr [SharedData_getMiscData CANVAS_X_START] - 20]
@@ -181,14 +182,16 @@ proc ExpModTreeView_addExpConfig { _expPath _canvas } {
    DrawUtil_drawline ${_canvas} ${lineStartX} ${iconY} ${lineEndX} ${iconY} none [SharedData_getColor FLOW_SUBMIT_ARROW] off on
 }
 
-proc ExpModTreeView_ExpConfigMenu { _expPath _canvas _x _y } {
+proc ExpModTreeView_addExpSettingsMenu { _expPath _canvas _x _y } {
    set popMenu .pop_menu
    if { [winfo exists ${popMenu}] } {
       destroy ${popMenu}
    }
-   menu .pop_menu -title "Exp Config"
-   ${popMenu} add command -label "open" -underline 0 -command \
+   menu .pop_menu -title "Exp Settings"
+   ${popMenu} add command -label "Exp Config" -underline 0 -command \
       [list ModuleFlowView_goEditor ${_expPath}/experiment.cfg]
+   ${popMenu} add command -label "Exp Resource" -underline 0 -command \
+      [list ModuleFlowView_goEditor ${_expPath}/resources/resources.def]
    $popMenu add separator
 
    tk_popup $popMenu ${_x} ${_y}
@@ -268,7 +271,7 @@ proc ExpModTreeView_draw { _expPath _entryTreeNodeRecord } {
    set modCanvas [ExpModTreeView_getCanvas ${_expPath}]
 
    DrawUtil_clearCanvas ${modCanvas}
-   ExpModTreeView_addExpConfig ${_expPath} ${modCanvas}
+   ExpModTreeView_addExpSettingsImg ${_expPath} ${modCanvas}
 
    ExpModTreeView_drawModuleNode ${_expPath} ${_entryTreeNodeRecord} 0 true
 
