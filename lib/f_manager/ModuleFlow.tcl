@@ -287,9 +287,11 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
    ::log::log debug "ModuleFlow_parseXmlNode _parentFlowRecord:${_parentFlowRecord}"
    set xmlNodeName [${_domNode} nodeName]
    set isWorkUnit false
-   set workUnitValue [${_domNode} getAttribute work_unit false]
-   if { ${workUnitValue} == 1 } {
-      set isWorkUnit true
+   if { [${_domNode} nodeType] == "ELEMENT_NODE" } {
+      set workUnitValue [${_domNode} getAttribute work_unit false]
+      if { ${workUnitValue} == 1 } {
+         set isWorkUnit true
+      }
    }
 
    if { ${_parentFlowRecord} == "" } {
