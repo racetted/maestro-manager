@@ -1295,9 +1295,11 @@ proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRec
 
 proc ModuleFlowView_selectSwitchNodeAddItem { _valueListW _itemEntryW } {
    set currentSelection [${_valueListW} curselection]
-   # puts "ModuleFlowView_selectSwitchNodeAddItem currentSelection:${currentSelection}"
-   ${_itemEntryW} delete 0 end
-   ${_itemEntryW} insert 0 [${_valueListW} get ${currentSelection}]
+   if { ${currentSelection} != "" } {
+      # puts "ModuleFlowView_selectSwitchNodeAddItem currentSelection:${currentSelection}"
+      ${_itemEntryW} delete 0 end
+      ${_itemEntryW} insert 0 [${_valueListW} get ${currentSelection}]
+   }
 }
 
 proc ModuleFlowView_removeSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRecord ""} } {

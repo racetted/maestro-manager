@@ -160,6 +160,7 @@ proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
 # _useModLink is true if a link is to be created to the reference module
 # extraArgList _refModPath _useModLink
 proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType {_extraArgList ""} } {
+   global env
     ::log::log debug "ModuleLayout_createNode _expPath:${_expPath} _moduleNode:${_moduleNode} _newNode:${_newNode} _nodeType:${_nodeType}"
    # get module working dir
    set modWorkDir [ModuleLayout_getWorkDir ${_expPath} ${_moduleNode}]
@@ -187,6 +188,9 @@ proc ModuleLayout_createNode { _expPath _moduleNode _newNode _nodeType {_extraAr
          set resourceFile ${resourceWorkDir}${relativePath}.xml
          MaestroConsole_addMsg "create [file dirname ${resourceFile}]."
          file mkdir [file dirname "${resourceFile}"]
+	 set sampleResFile $env(SEQ_MANAGER_BIN)/../etc/samples/task_res_sample.xml
+         MaestroConsole_addMsg "cp ${sampleResFile} ${resourceFile}"
+	 exec cp ${sampleResFile} ${resourceFile}
       }
       FamilyNode {
          # create container dir
