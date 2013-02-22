@@ -1441,7 +1441,6 @@ proc ModuleFlow_record2NodeName { _recordName } {
    ::log::log debug "ModuleFlow_record2NodeName _recordName:${_recordName}"
 
    set value [${_recordName} cget -flow_path]
-   puts "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
    return ${value}
 }
 

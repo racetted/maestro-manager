@@ -398,7 +398,7 @@ proc ModuleFlowView_draw { _expPath _moduleNode } {
 
    set recordName [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
    ModuleFlowView_drawNode ${flowCanvas} ${recordName} 0 true
-   DrawUtil_AddCanvasBg ${flowCanvas}  [SharedData_getMiscData IMAGE_DIR]/artist_canvas_blue.png
+   DrawUtil_AddCanvasBg ${flowCanvas}  [SharedData_getMiscData BG_TEMPLATES_DIR]/artist_canvas_blue.png
    set allElementsBox [${flowCanvas} bbox all]
    set scrolledRegion [list 0 0 [lindex ${allElementsBox} 2] [lindex ${allElementsBox} 3]]
    ${flowCanvas} configure -scrollregion ${scrolledRegion}

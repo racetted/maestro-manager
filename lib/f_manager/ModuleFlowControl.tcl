@@ -550,7 +550,8 @@ proc ModuleFlowControl_getDepotModules {} {
 # returns the first value found from configuration mc_mod_depot
 # or ~afsisio/components/modules if not found
 proc ModuleFlowControl_getModDefaultDepot {} {
-   set defaultDepot /home/binops/afsi/sio/components/modules
+   global DefaultModDepotVar
+   set defaultDepot ${DefaultModDepotVar}
    set modDepotConfig [SharedData_getMiscData MC_MOD_DEPOT]
    if [ catch {
       if { ${modDepotConfig} != "" } {

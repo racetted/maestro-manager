@@ -4,11 +4,38 @@ package require log
 
 SharedData_init
 SharedData_setMiscData IMAGE_DIR $env(SEQ_MANAGER_BIN)/../etc/images
+SharedData_setMiscData BG_TEMPLATES_DIR $env(SEQ_MANAGER_BIN)/../etc/bg_templates
 
 #option add *activeBackground [SharedData_getColor ACTIVE_BG]
 #option add *selectBackground [SharedData_getColor SELECT_BG]
  
 MaestroConsole_init
+
+# reads application config file only once
+proc ExpModTreeControl_readAppConfig {} {
+   global env DefaultModDepotVar
+   set configFile  $env(SEQ_MANAGER_BIN)/../etc/config/xm.cfg
+   if { ! [info exists DefaultModDepotVar] } {
+      if { [file readable ${configFile}] } {
+         puts "Reading application config file: ${configFile}"
+         set configFileId [open ${configFile} r]
+         while { [gets ${configFileId} line] >= 0 } {
+            set spaceTokens [split ${line}]
+	    set key [lindex ${spaceTokens} 0]
+            switch ${key} {
+	       DefaultModDepot {
+	          set DefaultModDepotVar [lindex ${spaceTokens} 1]
+	       }
+	       default {
+	       }
+	    }
+         }
+      } else {
+         puts "WARNING! Application config file not found: ${configFile}"
+         set DefaultModDepotVar ""
+      }
+   }
+}
 
 proc ExpModTreeControl_init { _sourceWidget _expPath } {
    global errorInfo
@@ -22,15 +49,18 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
       ::log::lvSuppress error 0
       ::log::lvSuppress info 0
       ::log::lvSuppress debug
+
+      ExpModTreeControl_readAppConfig
+
       if { [ExpModTreeView_isOpened ${_expPath}] == false } {
          # get exp first module
          set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
 
-
-   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
-   global ${expChecksum}_DebugOn
-   set ${expChecksum}_DebugOn true
-   ExpModTreeControl_debugChanged ${_expPath}
+         set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
+         global ${expChecksum}_DebugOn
+         # set ${expChecksum}_DebugOn true
+         set ${expChecksum}_DebugOn false
+         # ExpModTreeControl_debugChanged ${_expPath}
 
          # recursive read of all module flow.xml
          # the exp module tree is created at the same time

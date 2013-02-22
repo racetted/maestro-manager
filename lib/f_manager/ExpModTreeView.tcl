@@ -275,7 +275,7 @@ proc ExpModTreeView_draw { _expPath _entryTreeNodeRecord } {
 
    ExpModTreeView_drawModuleNode ${_expPath} ${_entryTreeNodeRecord} 0 true
 
-   DrawUtil_AddCanvasBg ${modCanvas}  [SharedData_getMiscData IMAGE_DIR]/artist_canvas_purple.png
+   DrawUtil_AddCanvasBg ${modCanvas}  [SharedData_getMiscData BG_TEMPLATES_DIR]/artist_canvas_purple.png
 
    # set scroll region
    set allElementsBox [${modCanvas} bbox all]
