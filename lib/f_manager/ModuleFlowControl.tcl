@@ -551,7 +551,10 @@ proc ModuleFlowControl_getDepotModules {} {
 # or ~afsisio/components/modules if not found
 proc ModuleFlowControl_getModDefaultDepot {} {
    global DefaultModDepotVar
-   set defaultDepot ${DefaultModDepotVar}
+   set defaultDepot ""
+   if { [info exists DefaultModDepotVar] } {
+      set defaultDepot ${DefaultModDepotVar}
+   }
    set modDepotConfig [SharedData_getMiscData MC_MOD_DEPOT]
    if [ catch {
       if { ${modDepotConfig} != "" } {
