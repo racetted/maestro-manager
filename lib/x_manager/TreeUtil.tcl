@@ -136,8 +136,8 @@ proc TreeUtil::MpopXPNode {frm tree} {
     # -- Create  menu, for Experiments Nodes  
     menu $frm.xpopup -tearoff 0
     $frm.xpopup add separator 
-    $frm.xpopup add command -label {Exp Settings}                  -command "TreeUtil::EditExpConfig $tree"
-    $frm.xpopup add command -label {Exp Resources}                 -command "TreeUtil::EditExpResources $tree"
+    $frm.xpopup add command -label {Exp Config}                  -command "TreeUtil::EditExpConfig $tree"
+    $frm.xpopup add command -label {Exp Resource}                 -command "TreeUtil::EditExpResources $tree"
     $frm.xpopup add command -label {Quit} -command {} 
 
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
