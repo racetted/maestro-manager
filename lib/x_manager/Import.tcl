@@ -72,7 +72,7 @@ proc Import::ImportExp { exp } {
       set NewExpName [Entry $subf2.entrys  -textvariable Import::_importname \
                 -width 60\
 		-bg #FFFFFF \
-                -command  {Import::CheckName $subf2.entrys} \
+                -command  "Import::CheckName $subf2.entrys" \
 		-helptext "Import Name "]
       
       set ListPath [ComboBox $subf4.list -textvariable Import::Destination \
@@ -106,8 +106,8 @@ proc Import::ImportExp { exp } {
 		      #set xp [XpSelector::selectXp]
 		      set xp [tk_chooseDirectory -initialdir $env(HOME)/ -title "Choose a directory" -parent $Import::ImportW]
 		      if {$xp ne ""} {
-		            puts  "Selected $xp"
-			    if { ! [file exist $xp/EntryModule] } {
+			    set kris [catch {file type $xp/EntryModule} ftype]
+			    if {$kris != 0} {
 			           Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $Import::ImportW
 			    } else {
 		                   set Import::_selected $xp
@@ -120,7 +120,12 @@ proc Import::ImportExp { exp } {
       frame $frm.btn -height 2 -borderwidth 1 -relief flat
 
       set CancelB [button $frm.btn.cancel -text "Cancel" -image $XPManager::img_Cancel -command {destroy $Import::ImportW}]
-      set NextB   [button $frm.btn.next   -text "Next"   -image $XPManager::img_Next   -command {Import::NextButton}]
+      set NextB   [button $frm.btn.next   -text "Next"   -image $XPManager::img_Next   -command {\
+                                               if { ! [regexp {^[A-Za-z0-9_\-\.]+$} $Import::_importname ]} {
+					                 Dialogs::show_msgdlg $Dialogs::Dlg_ExpInvalidName  ok warning "" $Import::ImportW
+							 return
+					       }
+                                               Import::NextButton}]
 
       set HelpB   [button $frm.btn.help -text "Help" -image $XPManager::img_Help -command {\
                    Dialogs::show_msgdlg "This will Show Help " ok info "" $Import::ImportW}]
@@ -147,7 +152,8 @@ proc Import::ImportExp { exp } {
 	       set Import::_importname ""
       } else {
               # -- Is User wanting only one Exp.?
-	      if {[file exist $exp/EntryModule]} {
+	      set kris [catch {file type $exp/EntryModule} ftype]
+	      if {$kris == 0 && $ftype eq "link"} {
                       set Import::_importname [file tail $exp] 
               } else {
                       set Import::_importname "" 
@@ -182,30 +188,31 @@ proc Import::ImportExp { exp } {
 }
 proc Import::NextButton { } {
 
-             if {[string compare $Import::_selected ""] == 0} {
-		            Dialogs::show_msgdlg "You Must Choose an Experiment"  ok warning "" $Import::ImportW
-			    return
-	     }
+      if {[string compare $Import::_selected ""] == 0} {
+		    Dialogs::show_msgdlg "You Must Choose an Experiment"  ok warning "" $Import::ImportW
+		    return
+      }
 
-             if {[regexp {[ \r\n\t]+} $Import::Destination] || [string compare $Import::Destination ""] == 0} {
-		            Dialogs::show_msgdlg "You Must give a Valid Destination path"  ok warning "" $Import::ImportW
-			    return
-             }
+      if {[regexp {[ \r\n\t]+} $Import::Destination] || [string compare $Import::Destination ""] == 0} {
+		    Dialogs::show_msgdlg "You Must give a Valid Destination path"  ok warning "" $Import::ImportW
+		    return
+      }
 
-             if {[file isdirectory $Import::Destination] == 0 } {
-		        Dialogs::show_msgdlg $Dialogs::Dlg_CreatePath  ok warning "" $Import::ImportW
-			if [ catch { exec mkdir -p $Import::Destination } ] {
-		                    Dialogs::show_msgdlg "Could not create Directory:$Import::Destination"  ok error "" $Import::ImportW
-				    return
-			}
+      if {[file isdirectory $Import::Destination] == 0 } {
+		    Dialogs::show_msgdlg $Dialogs::Dlg_CreatePath  ok warning "" $Import::ImportW
+		    if [ catch { exec mkdir -p $Import::Destination } ] {
+		                   Dialogs::show_msgdlg "Could not create Directory:$Import::Destination"  ok error "" $Import::ImportW
+		     	           return
+                    }
                       
-	     } elseif {[file writable $Import::Destination] == 0 } {
+       } elseif {[file writable $Import::Destination] == 0 } {
 		            Dialogs::show_msgdlg $Dialogs::Dlg_PathNotOwned  ok warning "" $Import::ImportW
 			    return
-	     }
+       }
 
-	     # -- ok Execute Import
-            Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
+
+      # -- ok Execute Import
+      Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
 }
 
 
@@ -216,7 +223,8 @@ proc Import::GetConstantsSize { selected } {
                 $Import::ImportCte deselect
                 return
  }
- if { [file exist $selected/EntryModule] } {
+ set kris [catch {file type $selected/EntryModule} ftype]
+ if {$kris == 0 && $ftype eq "link"} {
         if {[file exist $selected/hub/constants/]} { 
                  set size [exec du -ms $selected/hub/constants/ | tr \011 \040]
 	         set vsize [split $size " "]
@@ -227,11 +235,10 @@ proc Import::GetConstantsSize { selected } {
 	        set Import::_Importsize 0 
 	}
  } else {
-        # -- this code has to be reviewd!!
+        # -- this code has to be reviewed!!
         if { 1 == 2 } {
 	    set hubs [exec  find $selected/ \( -type d -o -type l \) -name hub ]
 	    set listhub [split $hubs "\n"]
-	    puts "list=$listhub"
 	    set sum 0
 	    foreach hb $listhub {
 	               if {[file isdirectory $hb/constants] } {
@@ -265,11 +272,12 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       }
 
       if {[winfo exists .import2]} {
-             destroy .import2
+            destroy .import2
       }
 
-      set ImportW2 [toplevel .import2] 
-      wm title $ImportW2 "$Dialogs::Imp_title : continue ... "
+      set ImportW2 [toplevel .import2]
+
+      wm title $ImportW2 "$Dialogs::Imp_title : continuing with import ... "
       wm minsize $ImportW2 600 400
 
       # -- check how Many Exps
@@ -278,7 +286,8 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
 
       
       # -- if a multitude of exps
-      if {[file exist $srcexp/EntryModule] && [catch [file link $srcexp/EntryModule]]} {
+      set kris [catch {file type $srcexp/EntryModule} ftype]
+      if {$kris == 0 && $ftype eq "link"} {
              lappend listExp $srcexp
       } else {
              set listExp [XTree::FindExps $srcexp]
@@ -290,25 +299,31 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       set dptexp [TitleFrame $Ctrlfrm2.iexp -text $Dialogs::Imp_Parametres]
       set subf [$dptexp getframe]
 
-      set dpexp [ListBox::create $subf.lb \
+      set swkt [ScrolledWindow $subf.sw  -relief sunken -borderwidth 1]
+
+      set dpexp [ListBox::create $swkt.lb \
                 -relief sunken -borderwidth 1 \
 		-dragevent 1 \
-		-height 20 \
+		-height 30 \
                 -width 70 -highlightthickness 0 -selectmode single -selectforeground black\
 		-bg #FFFFFF \
 		-padx 25]
 
+      $swkt setwidget $dpexp
+
       set ButFrame [frame $Ctrlfrm2.bfrm]
       set CancelB2 [button $ButFrame.cancel -text "Cancel"  -command {destroy $Import::ImportW2}]
       set NextB2   [button $ButFrame.next   -text "Proceed" -command [list Import::ExecImport $Import::ImportW2 $newname $srcexp $dest $git $cte]]
-     
+    
+
       pack $NextB2   -side right  -padx 5 -pady 5
       pack $CancelB2 -side right  -pady 5
 
       pack $ButFrame -side bottom 
       pack $dptexp   -fill x
-      pack $dpexp    -anchor w
-
+      #pack $dpexp   $subf.ysb  -anchor w
+      
+      pack $swkt -fill both -expand true
       pack $Ctrlfrm2
 
 
@@ -338,6 +353,38 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       if {[string compare "$newname" ""] != 0} {
              $dpexp insert end "Name" -text "Experiment Name will be : $newname " 
       }
+      
+      # -- Warn if User will have dangling links in his xp.
+      set i 0
+      set tsrcexp [exec true_path -n $srcexp]
+      foreach exp $listExp {
+	  # Find links under ExpHome
+	  foreach lnk [glob -nocomplain -type {l r} -path $exp/ *] {
+		set compo [file tail $lnk]
+		if {[string equal $compo "EntryModule"]} {
+		      continue
+		}
+		# -- check if link point to local (under experiment path)
+		set truepath [exec true_path -n $lnk]
+		if {[string first $tsrcexp $truepath] == -1} {
+                         $dpexp insert end "warnbase$i" -text "WARNING: Under Experiment:$exp $compo is a link pointing outside of experiment" -fill red
+		         incr i
+		}
+	  }
+	  # Find links under modules if modules is directory
+	  set ftype  [file type $exp/modules]
+	  if {[string compare $ftype "directory"] == 0 } {
+	       foreach lnk [glob -nocomplain -type {l r} -path $exp/modules/ *] {
+		         set compo [file tail $lnk]
+		         # -- check if link point to local (under experiment path)
+		         set truepath [exec true_path -n $lnk]
+		         if {[string first $tsrcexp $truepath] == -1} {
+                                  $dpexp insert end "warnmod$i" -text "WARNING: Under modules:$exp/modules  $compo is a link pointing outside of experiment" -fill red 
+			          incr i
+                         }
+		}
+          }
+      }
 
 }
 
@@ -348,6 +395,14 @@ proc Import::UpdateExpName { widgt } {
 
 proc Import::CheckName { widgt } {
      # set Import::_importname after checking
+     set Name [$widgt get]
+     
+     # -- validated by the Enter command
+     if { ! [regexp {^[A-Za-z0-9_\-\.]+$} $Name]} {
+              Dialogs::show_msgdlg $Dialogs::Dlg_ExpInvalidName  ok warning "" $Import::::ImportW
+              return
+     }
+
 }
 
 
@@ -368,7 +423,7 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
       }
 
       set ExeImport [toplevel .execimport] 
-      wm title $ExeImport "$Dialogs::Imp_title : proceed ... "
+      wm title $ExeImport "$Dialogs::Imp_title : proceed with the import ... "
       wm minsize $ExeImport 600 200
 
       set frm [frame $ExeImport.ctrf]

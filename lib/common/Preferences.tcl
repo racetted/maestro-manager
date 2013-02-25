@@ -182,7 +182,6 @@ proc Preferences::ConfigDepot { } {
       set OkBU       [button $CtrlButton.ok     -image $XPManager::img_Ok     -command {destroy $Preferences::ConfigDepotWin}]
       set CancelBU   [button $CtrlButton.cancel -image $XPManager::img_Cancel -command {destroy $Preferences::ConfigDepotWin}]
       set SaveBU     [button $CtrlButton.save   -image $XPManager::img_Save   -command "Preferences::SaveDepotToConfig $Tname"]
-
      
       # -- pack Ok/Cancel butt.
       pack $CtrlButton -side bottom
@@ -218,7 +217,10 @@ proc Preferences::AddExpToDepot { nbk } {
 
     set ExpDir [tk_chooseDirectory -initialdir $::env(HOME)/ -title "Choose Experiment directory" -parent $Preferences::ConfigDepotWin]
 
-    if { "$ExpDir" != "" && [file isdirectory $ExpDir]} {
+    if {[string equal $ExpDir ""]} {
+           return
+    }
+    if {[file isdirectory $ExpDir]} {
                  set numslash [regsub -all {\/} $ExpDir "" kiki]
                  if {[string compare $ExpDir [file normalize $::env(HOME)]] == 0 || [string compare $ExpDir "/" ] == 0 } {
                              Dialogs::show_msgdlg $Dialogs::Dlg_PathDeep  ok error "" $Preferences::ConfigDepotWin
@@ -1090,6 +1092,7 @@ proc Preferences::MaestroEventsCreateWidget { frm } {
 
 proc Preferences::WallPaperIconsCreateWidget { frm } {
 
+      global SEQ_MANAGER_BIN
       variable  _WallPaper
       variable  SaveBI
       variable  CancelBI
@@ -1107,7 +1110,7 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
       set licn     [label $subfwall.lbicn -text $Dialogs::Pref_exp_icon    -font 8]
      
       # -- This is where the default images resides
-      set PathImages "/home/binops/afsi/sio/datafiles/images/MaestroExpManager"
+      set PathImages "${SEQ_MANAGER_BIN}/../etc/bg_templates"
 
       set CtrlButton [frame $frm.ctrlbuttons -border 2 -relief flat]
 
@@ -1173,12 +1176,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
                      if {[string compare $Preferences::exp_icon "$icon"] != 0 ||\
 		         [string compare $Preferences::flow_geometry "$kw1"] != 0 ||\
 		         [string compare [file tail $Preferences::background_image] $Preferences::_WallPaper] != 0} {
-                                  $Preferences::SaveBI configure -state normal
+                                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				  set Preferences::ChosenIcon "$icon"
                      } else {
-                                  $Preferences::SaveBI configure -state disabled
+                                  $Preferences::SaveBI   configure -state disabled
                                   $Preferences::CancelBI configure -state disabled
                                   $Preferences::OkBI     configure -state normal
 		     }
@@ -1188,12 +1191,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
                      if {[string compare $Preferences::exp_icon "$icon"] != 0 ||\
 		         [string compare $Preferences::flow_geometry "$kw1"] != 0 ||\
 			 [string compare [file tail $Preferences::background_image] $Preferences::_WallPaper] != 0} {
-                                  $Preferences::SaveBI configure -state normal
+                                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				  set Preferences::ChosenIcon "$icon"
                      } else {
-                                  $Preferences::SaveBI configure -state disabled
+                                  $Preferences::SaveBI   configure -state disabled
                                   $Preferences::CancelBI configure -state disabled
                                   $Preferences::OkBI     configure -state normal
 		     }
@@ -1203,12 +1206,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
                      if {[string compare $Preferences::exp_icon "$icon"] != 0 ||\
 		         [string compare $Preferences::flow_geometry "$kw1"] != 0 ||\
 			 [string compare [file tail $Preferences::background_image] $Preferences::_WallPaper] != 0} {
-                                  $Preferences::SaveBI configure -state normal
+                                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				  set Preferences::ChosenIcon "$icon"
                      } else {
-                                  $Preferences::SaveBI configure -state disabled
+                                  $Preferences::SaveBI   configure -state disabled
                                   $Preferences::CancelBI configure -state disabled
                                   $Preferences::OkBI     configure -state normal
 		     }
@@ -1218,12 +1221,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
                      if {[string compare $Preferences::exp_icon "$icon"] != 0 ||\
 		         [string compare $Preferences::flow_geometry "$kw1"] != 0 ||\
 			 [string compare [file tail $Preferences::background_image] $Preferences::_WallPaper] != 0} {
-                                  $Preferences::SaveBI configure -state normal
+                                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				  set Preferences::ChosenIcon "$icon"
                      } else {
-                                  $Preferences::SaveBI configure -state disabled
+                                  $Preferences::SaveBI   configure -state disabled
                                   $Preferences::CancelBI configure -state disabled
                                   $Preferences::OkBI     configure -state normal
 		     }
@@ -1233,12 +1236,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
                      if {[string compare $Preferences::exp_icon "$icon"] != 0 ||\
 		         [string compare $Preferences::flow_geometry "$kw1"] != 0 ||\
 			 [string compare [file tail $Preferences::background_image] $Preferences::_WallPaper] != 0} {
-                                  $Preferences::SaveBI configure -state normal
+                                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				  set Preferences::ChosenIcon "$icon"
                      } else {
-                                  $Preferences::SaveBI configure -state disabled
+                                  $Preferences::SaveBI   configure -state disabled
                                   $Preferences::CancelBI configure -state disabled
                                   $Preferences::OkBI     configure -state normal
 		     }
@@ -1280,7 +1283,7 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
 		      # -- Do check the min size of the gif
 
 		      # -- strip path if Depot images
-		      if {[regexp {\/home\/binops\/afsi\/sio\/datafiles\/images\/MaestroExpManager} $bkg_gif]} {
+		      if {[regexp {bg_templates} $bkg_gif]} {
 		                 set bkg_gif [file tail $bkg_gif]
 		      }
                       
@@ -1289,12 +1292,12 @@ proc Preferences::WallPaperIconsCreateWidget { frm } {
 		      if {[string compare [file tail $Preferences::background_image] $bkg_gif] != 0 ||\
 		          [string compare $Preferences::exp_icon "$icon"] != 0 || \
 			  [string compare $Preferences::flow_geometry "$kw1"] != 0} {
-		                  $Preferences::SaveBI configure -state normal
+		                  $Preferences::SaveBI   configure -state normal
                                   $Preferences::OkBI     configure -state disabled
                                   $Preferences::CancelBI configure -state normal
 				 set Preferences::ChosenWallP $Preferences::_WallPaper 
                       } else {
-                                 $Preferences::SaveBI configure -state disabled
+                                 $Preferences::SaveBI   configure -state disabled
                                  $Preferences::CancelBI configure -state disabled
                                  $Preferences::OkBI     configure -state normal
 		      }
@@ -1521,7 +1524,7 @@ proc Preferences::ParseUserMaestrorc { } {
    foreach line $data {
             regexp "\^\[ \\t\]\*navtabs\[ \\t=\]\(\.\*\)" $line  matched tabs
    }
-
+   
 
    # -- If tabs ok ,Update values 
    switch $MUSER {
@@ -1545,8 +1548,11 @@ proc Preferences::ParseUserMaestrorc { } {
 
    # -- Operational tabs will alws be put by default
    foreach line $data {
-         
+        
+	  # remove = 
 	  regsub -all {=} $line { } line
+	  # only one blank
+          regsub -all " +" $line " " line 
 
 	  set lname    [split [string trim $line " "] " "]
           set PerfName [string trim [lindex $lname 0] " "]
@@ -1603,14 +1609,14 @@ proc Preferences::setPrefValues { PName name args } {
           set word [join $args " "]
 	  switch $PName {
                  "UsrExpRepository"  { }
-		 "auto_msg_display"  { set  Preferences::auto_msg_display $name }
-		 "auto_launch"       { set  Preferences::auto_launch      $name }
-		 "show_abort_type"   { set  Preferences::show_abort_type  $name }
-		 "show_event_type"   { set  Preferences::show_event_type  $name }
-		 "show_info_type"    { set  Preferences::show_info_type   $name }
+		 "auto_msg_display"  { set  Preferences::auto_msg_display  $name }
+		 "auto_launch"       { set  Preferences::auto_launch       $name }
+		 "show_abort_type"   { set  Preferences::show_abort_type   $name }
+		 "show_event_type"   { set  Preferences::show_event_type   $name }
+		 "show_info_type"    { set  Preferences::show_info_type    $name }
 		 "node_display_pref" { set  Preferences::node_display_pref $name }
 		 "default_console"   {
-                                       set  Preferences::default_console  $name 
+                                       set  Preferences::default_console   $name 
                                        set  Preferences::default_console_args "$word"
 		                     }
 		 "text_viewer"       {
@@ -1651,6 +1657,7 @@ proc Preferences::setPrefValues { PName name args } {
                                         default {
                                                 set  Preferences::exp_icon_img [image create photo -file ${SEQ_MANAGER_BIN}/../etc/images/xp.gif] 
                                 		set  Preferences::exp_icon "xp"
+						puts ">>>>>Preferences::exp_icon_img in default name=$name"
                                                 }
                                       }
 			            }
@@ -1722,8 +1729,15 @@ proc Preferences::GetTabListDepots { nbk type} {
 
 
 proc Preferences::set_liste_Wall_Papers {} {
-     foreach wfile [glob -nocomplain -type { f r} -path /home/binops/afsi/sio/datafiles/images/MaestroExpManager/ *.gif] {
+     global SEQ_MANAGER_BIN
+
+     # does user have access to images ?
+     if {[catch {file stat ${SEQ_MANAGER_BIN}/../etc/bg_templates entry} err]} {
+            puts "Couldn't stat ${SEQ_MANAGER_BIN}/../etc/bg_templates "
+     } else {
+            foreach wfile [glob -nocomplain -type { f r} -path ${SEQ_MANAGER_BIN}/../etc/bg_templates/ *.gif] {
 		lappend Preferences::ListWallPapers [file tail $wfile]
+            }
      }
 }
 
@@ -1767,7 +1781,7 @@ proc Preferences::set_prefs_default {} {
 	              lappend listPref "flow_geometry=800x600"
 	      }
 	      if {[info exists Preferences::background_image] == 0} {
-	              lappend listPref "background_image=/home/binops/afsi/sio/datafiles/images/MaestroExpManager/artist_canvas_darkblue.gif"
+	              lappend listPref "background_image=$SEQ_MANAGER_BIN/../etc/bg_templates/artist_canvas_darkblue.gif"
 	      }
 	      if {[info exists Preferences::exp_icon] == 0} {
 	              set  Preferences::exp_icon_img [image create photo -file ${SEQ_MANAGER_BIN}/../etc/images/xp.gif]

@@ -103,7 +103,7 @@ proc Audit::AuditExp { exp1 } {
                     -helptext "Experiment path"]
       
       set efilter [ComboBox $subf3.list -textvariable Audit::_filter \
-                    -width 35 \
+                    -width 25 \
                     -editable false \
                     -autocomplete false \
                     -entrybg  #FFFFFF \
@@ -121,11 +121,14 @@ proc Audit::AuditExp { exp1 } {
                  -image $XPManager::img_XpSel \
                  -command {
 		            set xp [tk_chooseDirectory -initialdir $env(HOME)/ -title "Choose an Experiment" -parent .audit]
-			    if {! [file exist $xp/EntryModule]} {
-		                    Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" .audit
-			    } else {
-			            set Audit::_selected1 $xp
-			            set kiki1 $xp
+			    if { "$xp" ne "" } {
+			         set kris [catch {file type $xp/EntryModule} ftype]
+			         if {$kris != 0} {
+		                         Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" .audit
+			         } else {
+			                 set Audit::_selected1 $xp
+			                 set kiki1 $xp
+			         }
 			    }
 			  }
 
@@ -133,11 +136,14 @@ proc Audit::AuditExp { exp1 } {
                  -image $XPManager::img_XpSel \
                  -command  {
 		            set xp [tk_chooseDirectory -initialdir $env(HOME)/ -title "Choose an Experiment" -parent .audit]
-			    if {! [file exist $xp/EntryModule]} {
-		                    Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" .audit
-			    } else {
-			            set Audit::_selected2 $xp
-			            set kiki2 $xp
+			    if { "$xp" ne "" } {
+			         set kris [catch {file type $xp/EntryModule} ftype]
+			         if {$kris != 0} {
+		                         Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" .audit
+			         } else {
+			                 set Audit::_selected2 $xp
+			                 set kiki2 $xp
+			         }
 			    }
 			  }
      
@@ -251,7 +257,7 @@ proc Audit::AuditExp { exp1 } {
       $BAudit configure -state disabled
 
       # -- For now disable exphome
-      $notebook itemconfigure exphome -state disabled
+      #$notebook itemconfigure exphome -state disabled
 }
 
 proc Audit::EnableAuditBut { sentry } {
@@ -309,7 +315,7 @@ proc Audit::AuditAll {w} {
 
 
 
-      foreach panel {modules resources bin constants} {
+      foreach panel {modules resources bin constants exphome} {
              set x $TabFrames1($panel)
              set y $TabFrames2($panel)
 
@@ -371,6 +377,8 @@ proc Audit::AuditComponent {w ki} {
 
       if {[string compare $ki "constants"] == 0 } { 
 	      set modifier "/hub/constants"
+      } elseif {[string compare $ki "exphome"] == 0 } {
+	      set modifier "."
       } else {
 	      set modifier $ki
       }
@@ -482,6 +490,8 @@ proc Audit::CreateTabliste {dir TabFrame Frame kaka} {
 proc Audit::ViewDiff {tbl} {
 
         global SEQ_MANAGER_BIN
+        
+	set tclsh [ exec which maestro_wish8.5]
 
         set row [$tbl curselection]
 
@@ -518,7 +528,7 @@ proc Audit::ViewDiff {tbl} {
                       set fpath2 ${dir2}/$opt
 
 		      # -- We should check existence of file 1 & 2 before calling tkdiff
-                      exec  /home/binops/afsi/ssm/sw/linux26-i686/bin/tclsh8.4 ${SEQ_MANAGER_BIN}/tkdiff $fpath1 $fpath2 &
+                      exec  ${tclsh} ${SEQ_MANAGER_BIN}/tkdiff $fpath1 $fpath2 &
                 } else {
 		        Dialogs::show_msgdlg $Dialogs::Dlg_NoAsciiFile ok warning "" .audit
                 }
@@ -574,6 +584,13 @@ proc Audit::putContents {dir tbl nodeIdx} {
                return ""
     }
 
+    # -- Discard dirs in cas of exphome
+    if {[string equal [file tail $dir] "."] == 0} {
+	  set ExpHome "yes" 
+    } else {
+	  set ExpHome "no" 
+    }
+
     #
     # The following check is necessary because this procedure
     # is also invoked by the "Refresh" and "Parent" buttons
@@ -616,6 +633,7 @@ proc Audit::putContents {dir tbl nodeIdx} {
 	set matchLink {}
 	foreach entry [glob -nocomplain -types {l f} -directory $dir *] {
                  set ftype [file type $entry]
+		 
 		 if {[string compare $ftype "link"] == 0} {
 		         set PointTo [file readlink $entry]
 			 regsub -all {\.\/} $PointTo "" PointTo
@@ -623,13 +641,9 @@ proc Audit::putContents {dir tbl nodeIdx} {
 		 }
 	}
 
-        # -- Discard dirs in cas of exphome
-	#if {[string equal [file tail $dir] "."] == 0} {
-        #	  return 
-        #}
 
 	foreach entry [glob -nocomplain -types {d f} -directory $dir *] {
-            
+             
 	    if {[lsearch $matchLink [file tail $entry]] >= 0 } {
 	                continue
             }
@@ -639,10 +653,12 @@ proc Audit::putContents {dir tbl nodeIdx} {
 	    }
 
 
-	    if {[file isdirectory $entry]} {
-		lappend itemList [list D[file tail $entry] \
-		    ""\
-		    D[clock format $modTime -format "%Y-%m-%d %H:%M"] $entry]
+	    if {[file isdirectory $entry] } {
+	        if {[string equal $ExpHome "yes"] != 0 } {
+		        lappend itemList [list D[file tail $entry] \
+		            ""\
+		            D[clock format $modTime -format "%Y-%m-%d %H:%M"] $entry]
+                }
 	    } else {
                 # See if file has changed
 	        regsub -all "$Audit::_selected1" $entry "$Audit::_selected2" kiki

@@ -34,7 +34,7 @@ proc XTree::create { frm nb } {
 
     $sw setwidget $tree
 
-    pack $sw  -side top  -expand yes -fill both -pady 6
+    pack $sw    -side top  -expand yes -fill both -pady 6
     pack $title -fill both -expand yes -pady 6
 
     return $tree
@@ -43,7 +43,7 @@ proc XTree::create { frm nb } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::getPath {w node} {
-      # Note : only the experiment have data
+      # Note : only experiments have data
       set res ""
       while { $node != "root" } {
           set res [$w itemcget $node -text]/$res
@@ -283,7 +283,8 @@ $fromDir"  ok warning ""  $win
 
 
     # -- check if this is an expriment
-    if { [file exists $basedir/EntryModule] && [catch [file link $basedir/EntryModule]] } {
+   set kris [catch {file type $basedir/EntryModule} ftype]
+   if {  $kris == 0 &&  $ftype eq "link" } {
                  set basename [file tail $basedir]
 		 lappend listExp $basedir
 		 set dd [join ${listD}/$basename ""]
@@ -310,7 +311,8 @@ $fromDir"  ok warning ""  $win
 		           continue
 		   }
 	           set Ftype [file type $dname]
-	           if { [file exists $dname/EntryModule] && [catch [file link $dname/EntryModule]] } {
+                   set kris [catch {file type $dname/EntryModule} ftype]
+	           if { $kris == 0 && $ftype eq "link" } {
 		       set basename [file tail $dname]
 		       lappend listExp $dname
 		      
@@ -321,7 +323,7 @@ $fromDir"  ok warning ""  $win
 		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img}"
 		       }
 		       foreach cmd $CmdList {
-		             eval  "$cmd"  
+		             eval  "$cmd" 
 		       }
 		   } else {
 		      set basename [file tail $dname]
@@ -372,7 +374,9 @@ proc XTree::FindExps {args} {
    while {[set dir [XTree::lshift args]] != ""} {
            foreach x [glob -nocomplain [file join $dir *]] {
 		  if {[file isdir $x]} {
-		           if { [file exists $x/EntryModule] && [catch [file link $x/EntryModule]] } {
+		           # [file exists $x/EntryModule] && [catch [file link $x/EntryModule]]  
+			   set kris [catch {file type $x/EntryModule} ftype]
+		           if  {$kris == 0 && $ftype eq "link"}  {
 		                  lappend files $x 
 				  continue
                            }

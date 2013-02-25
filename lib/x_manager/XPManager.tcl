@@ -82,7 +82,9 @@ namespace eval XPManager {
     foreach script { Preferences.tcl XpOptions.tcl } {
 	namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/common/$script
     }
-    
+   
+    # this is for the exp's configs *.cfg files
+     namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/f_manager/ExpModTreeView.tcl
 }
 
 proc XPManager::create { } {
@@ -314,7 +316,7 @@ proc XPManager::update_progdlg {w pn titre} {
 proc XPManager::ListExperiments {} {
     global ListAllExperiments
     set ListAllExperiments {}
-   
+  
     set buf1 {}
     set buf2 {}
     set buf1 [XTree::FindExps $XPManager::ExpOpsRepository]
@@ -333,10 +335,9 @@ proc XPManager::ListExperiments {} {
     set ExperimentInode [TreeUtil::FindExpInode $ListAllExperiments]
 
     # DEBUG
-     
     #dict for {id info} $ExperimentInode {
     #	    dict with info {
-    #	           puts "ExpId=$id inode=$inode Exp_path=$experiment"
+    #              puts "ExpId=$id inode=$inode Exp_path=$experiment"
     #	    }
     #}
 }
@@ -349,9 +350,11 @@ proc XPManager::ParseOpParExpDepot {} {
            $prefDparser alias ExpOpsRepository    XPManager::set_prefs_cmd_ExpOpsRepository
            $prefDparser alias ExpParRepository    XPManager::set_prefs_cmd_ExpParRepository
            $prefDparser alias ExpPreOpsRepository XPManager::set_prefs_cmd_ExpPreOpsRepository
+	   # this is temp. 
+           $prefDparser alias DefaultModDepot XPManager::set_prefs_cmd_DefaultModDepot
 
            set cmd {
-                   set fid [open [file join ${SEQ_MANAGER_BIN}/../etc/config/ Operational_Exp.cfg ] r]
+                   set fid [open [file join ${SEQ_MANAGER_BIN}/../etc/config/ xm.cfg ] r]
                    set script [read $fid]
                    close $fid
                    $prefDparser eval $script
@@ -385,6 +388,10 @@ proc XPManager::set_prefs_cmd_ExpPreOpsRepository {name args} {
            set XPManager::ExpPreOpsRepository    $name
 	   # -- Puts alws by default OP. exps
 	   set ArrayTabsDepot($Dialogs::Nbk_PrExp) $name
+}
+
+# this is temp.
+proc XPManager::set_prefs_cmd_DefaultModDepot {name args} { 
 }
 
 # -- Global script
@@ -429,4 +436,3 @@ if {[string compare $Preferences::ListUsrTabs "" ] == 0 } {
 #if { $Preferences::ERROR_DEPOT_DO_NOT_EXIST == 1 } {
 #                     Dialogs::show_msgdlg $Dialogs::Dlg_DepotNotExist  ok warning "" .
 #}
-

@@ -1,3 +1,5 @@
+ package require log
+ 
  namespace eval TreeUtil {
             variable _PopUpSelection = "no-selection"
             variable frmt
@@ -6,11 +8,10 @@
 
 
 #---------------------------------------------------
-#
+# -- tk_pop for Experiments & non Experiment nodes
 #
 #
 #---------------------------------------------------
-# -- tk_pop for Experiments & non Experiment nodes
 proc TreeUtil::_treepopup {frm tree node} {
    variable data
 
@@ -54,6 +55,11 @@ proc TreeUtil::_treepopup {frm tree node} {
 	}
 
         tk_popup $frm.stpopup [winfo pointerx [focus]] [winfo pointery [focus]]
+  } else {
+        # -- This is an Xp node
+	$frm.xpopup  entryconfigure 1 -state normal
+	$frm.xpopup  entryconfigure 2 -state normal
+        tk_popup $frm.xpopup [winfo pointerx [focus]] [winfo pointery [focus]]
   }
 }
 
@@ -67,7 +73,7 @@ proc TreeUtil::_lblpopup { frm } {
 }
 
 #---------------------------------------------------
-#
+# Pop Up menu for non experiments & root nodes
 #
 #
 #---------------------------------------------------
@@ -86,6 +92,7 @@ proc TreeUtil::MpopNode {frm tree} {
 			                 Import::ImportExp $TreeUtil::_PopUpSelection 
 			            }
 
+
     $frm.stpopup add command -label {Create New Exp at this level} -command {NewExp::New_xp $TreeUtil::_PopUpSelection [$XpBrowser::notebook raise]}
     
     $frm.stpopup add command -label {View git}     -command "TreeUtil::RunGit $frm $tree" 
@@ -98,7 +105,7 @@ proc TreeUtil::MpopNode {frm tree} {
 }
 
 #---------------------------------------------------
-#
+# Pop Up menu for Root Node
 #
 #
 #---------------------------------------------------
@@ -118,6 +125,43 @@ proc TreeUtil::MpopRNode {frm tree} {
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
 }
 #---------------------------------------------------
+# Pop Up menu for Xp Nodes
+#
+#
+#---------------------------------------------------
+proc TreeUtil::MpopXPNode {frm tree} {
+    variable data
+    variable node
+    
+    # -- Create  menu, for Experiments Nodes  
+    menu $frm.xpopup -tearoff 0
+    $frm.xpopup add separator 
+    $frm.xpopup add command -label {Exp Settings}                  -command "TreeUtil::EditExpConfig $tree"
+    $frm.xpopup add command -label {Exp Resources}                 -command "TreeUtil::EditExpResources $tree"
+    $frm.xpopup add command -label {Quit} -command {} 
+
+    $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
+}
+#---------------------------------------------------
+# Edit Experiment config ie experiment.cfg
+#---------------------------------------------------
+proc TreeUtil::EditExpConfig { tree } {
+     set node [$tree selection get]
+     set data  [$tree itemcget $node -data]
+   
+     ::ModuleFlowView_goEditor $data/experiment.cfg
+}
+
+#---------------------------------------------------
+# Edit Experiment resource file ie resources.def
+#---------------------------------------------------
+proc TreeUtil::EditExpResources { tree } {
+     set node [$tree selection get]
+     set data  [$tree itemcget $node -data]
+     
+     ::ModuleFlowView_goEditor $data/resources/resources.def
+}
+#---------------------------------------------------
 #
 #
 #
@@ -129,7 +173,11 @@ proc TreeUtil::NewXpRootLevel { tree nbk } {
     NewExp::New_xp [XTree::getPath $tree $node] $nbk
 }
 
+#---------------------------------------------------
 # NOT USED!
+#
+#
+#---------------------------------------------------
 proc TreeUtil::TLcreate { frm lbl panel tree } {
 
     # -- Create a menu for Tools 
@@ -168,7 +216,7 @@ proc TreeUtil::ExpandNode { tree } {
 }
 
 #---------------------------------------------------
-#
+# Exec gitk on a root node
 #
 #
 #---------------------------------------------------
@@ -189,7 +237,7 @@ proc TreeUtil::RunGit { frm tree } {
 }
 
 #---------------------------------------------------
-#
+# Download git repository
 #
 #
 #---------------------------------------------------
@@ -198,7 +246,7 @@ proc TreeUtil::DownloadGit { frm tree } {
 }
 
 #---------------------------------------------------
-#
+# Check if a git repository exist
 #
 #
 #---------------------------------------------------
@@ -222,7 +270,7 @@ proc TreeUtil::CheckGit { tree node } {
 
 
 #---------------------------------------------------
-#
+# check if a node is writable
 #
 #
 #---------------------------------------------------
@@ -244,7 +292,7 @@ proc TreeUtil::WritableNode { tree node } {
 }
 
 #---------------------------------------------------
-#
+# not used !
 #
 #
 #---------------------------------------------------
@@ -293,7 +341,7 @@ proc TreeUtil::BrowseNode { tree } {
 
 }
 #---------------------------------------------------
-#
+# Not used !
 #
 #
 #---------------------------------------------------
@@ -402,7 +450,7 @@ proc TreeUtil::Refresh_Exp { frmt } {
        # -- which notebook
        set nbk [$XpBrowser::notebook raise]
 
-       # every things for now 
+       # -- every things for now 
        set listxp [Preferences::GetTabListDepots $nbk "r"]
 
        if { [regexp $nbk TreeUtil::$frmt kk] } {
@@ -438,7 +486,8 @@ proc TreeUtil::GetRootPath { path } {
                         # -- Ok There is a match
 			# -- check to remove exp name
 			set kiki $path
-			if {[file exist $path/EntryModule]} {
+			set kris [catch {file type $path/EntryModule} ftype]
+			if {$kris == 0 && $ftype eq "link" } {
 			         set kiki [file dirname $path]
                         }
 
@@ -459,7 +508,8 @@ proc TreeUtil::GetRootPath { path } {
                         # -- Ok There is a match
 			# -- check to remove exp name
 			set kiki $path
-			if {[file exist $path/EntryModule]} {
+			set kris [catch {file type $path/EntryModule} ftype]
+			if {$kris == 0 && $ftype eq "link" } {
 			        set kiki [file dirname $path]
                         }
 			regsub -all $upth $kiki {} kiki
@@ -475,7 +525,8 @@ proc TreeUtil::GetRootPath { path } {
             if {[regexp $upth $path]} {
 	                set upth [string trimright $upth "/"]
 			set kiki $path
-			if {[file exist $path/EntryModule]} {
+			set kris [catch {file type $path/EntryModule} ftype]
+			if {$kris == 0 && $ftype eq "link" } {
 			        set kiki [file dirname $path]
                         }
                         
@@ -488,8 +539,6 @@ proc TreeUtil::GetRootPath { path } {
 
     return ""
 }
-
-
 #---------------------------------------------------
 #
 #
@@ -498,6 +547,8 @@ proc TreeUtil::GetRootPath { path } {
 proc TreeUtil::FindExpInode {listExp} {
       # -- find inod of exp
       set i 0
+      set dictInod [dict create]
+
       foreach lexp $listExp {
             file stat $lexp statinfo
 	    set inode $statinfo(ino)
@@ -507,11 +558,17 @@ proc TreeUtil::FindExpInode {listExp} {
 		    incr i
 	    } else {
 	            puts "ERROR INODE EXISTE"
-		    return ""
+		    return $dictInod
 	    }
       }
 
       return $dictInod
 }
-
+#---------------------------------------------------
+# Check to see if a link is a dangling link
+# not used now
+#---------------------------------------------------
+proc TreeUtil::IsBrokenLink { linkname } {
+    return [expr { ! [file exists [file readlink $linkname]] }]
+}
 

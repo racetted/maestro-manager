@@ -46,58 +46,69 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
       if { "$data" != "" } {
-
                set _XpBrSelected [string trimright [XTree::getPath $tree $node] "/"]
-                 
 	       eval $XpBrowser::confNode
 	       $tree itemconfigure $node -fill red
 	       set XpBrowser::confNode "$tree itemconfigure $node -fill black"
-
-	       if {[file writable $::_XpBrSelected/]} {
-	                $XpBrowser::Eexpdate    configure -state normal
-		        $XpBrowser::BSetExpdate configure -state normal
-	       } else {
-	                $XpBrowser::Eexpdate    configure -state disabled
-		        $XpBrowser::BSetExpdate configure -state disabled
-	       }
-
-	       # -- Show ExpDate
-	       if {[file exist $::_XpBrSelected/EntryModule] && [file exist $::_XpBrSelected/ExpDate]} {
-	                       # before chech if Expdate is not empty
-                               set dte [exec cat $::_XpBrSelected/ExpDate | egrep "^(1|2)" | cut -c1-10] 
-			       # have to validate
-			       set _ExpDate $dte
-	       } else {
-			       set _ExpDate ""
-	       }
-
-               # -- [En|dis]able Set button
-	       if {[file writable $::_XpBrSelected/]} {
-	                $XpBrowser::Eexpcatch   configure -state normal
-		        $XpBrowser::BSetCatchup configure -state normal
-	       } else {
-	                $XpBrowser::Eexpcatch   configure -state disabled
-		        $XpBrowser::BSetCatchup configure -state disabled
-	       }
-
-	       # -- Show Catchup
-	       if {[file exist $::_XpBrSelected/EntryModule] && [file exist $::_XpBrSelected/catchup.xml]} {
-		               # -- need to parse xml
-			       set cth [exec  cat $::_XpBrSelected/catchup.xml  | grep CATCHUP | cut -d\= -f2 ]
-			       regsub -all {[\"/>]} $cth {} cth
-			       # have to validate
-			       set _ExpCatchup $cth
-                                     
-	       } else {
-			       set _ExpCatchup ""
-			       #$XpBrowser::Eexpcatch configure -state disabled
-			       #$XpBrowser::BSetCatchup configure -state disabled
-	       }
-	       
-	       foreach but {Bmflow Bxflow Bimport Baudit} {
-	          eval \$XpBrowser::$but configure -state normal
-	       }
+               XpBrowser::ActivateExpParams $_XpBrSelected
       }
+
+}
+#---------------------------------------------------------
+# Having a valid Experiments show Experiment 
+# date and  catchup 
+#---------------------------------------------------------
+proc XpBrowser::ActivateExpParams { XpSelected } {
+      
+
+      if {[file writable $XpSelected/]} {
+                $XpBrowser::Eexpdate    configure -state normal
+	        $XpBrowser::BSetExpdate configure -state normal
+       } else {
+                $XpBrowser::Eexpdate    configure -state disabled
+	        $XpBrowser::BSetExpdate configure -state disabled
+       }
+
+       # -- Show ExpDate
+       set kris [catch {file type $XpSelected/EntryModule} ftype]
+       if {$kris == 0 && $ftype eq "link"} {
+                       # before chech if Expdate is there and not empty
+		       if {[file exist $XpSelected/ExpDate] && [file size $XpSelected/ExpDate] != 0} {
+                              set dte [exec cat $XpSelected/ExpDate | egrep "^(1|2)" | cut -c1-10] 
+		              # have to validate
+		              set ::_ExpDate $dte
+                       } else {
+		              set ::_ExpDate ""
+		       }
+       } else {
+		       set ::_ExpDate ""
+       }
+
+       # -- [En|dis]able Set button
+       if {[file writable $XpSelected/]} {
+                $XpBrowser::Eexpcatch   configure -state normal
+	        $XpBrowser::BSetCatchup configure -state normal
+       } else {
+                $XpBrowser::Eexpcatch   configure -state disabled
+	        $XpBrowser::BSetCatchup configure -state disabled
+       }
+
+       # -- Show Catchup
+       if {$kris == 0 && $ftype eq "link" && [file exist $XpSelected/catchup.xml]} {
+	               # -- need to parse xml
+		       set cth [exec  cat $XpSelected/catchup.xml  | grep CATCHUP | cut -d\= -f2 ]
+		       regsub -all {[\"/>]} $cth {} cth
+		       # have to validate
+		       set _ExpCatchup $cth
+       } else {
+		       set _ExpCatchup ""
+		       #$XpBrowser::Eexpcatch configure -state disabled
+		       #$XpBrowser::BSetCatchup configure -state disabled
+       }
+	       
+       foreach but {Bmflow Bxflow Bimport Baudit} {
+          eval \$XpBrowser::$but configure -state normal
+       }
 
 }
 
@@ -120,6 +131,8 @@ proc XpBrowser::create { frm } {
       variable BSetCatchup 
       variable Eexpdate 
       variable Eexpcatch 
+      variable XpBfrm 
+      variable expsel 
 
 
       set ::_XpBrSelected ""
@@ -131,13 +144,24 @@ proc XpBrowser::create { frm } {
       set tsel [TitleFrame $XpBfrm.texp1 -text $Dialogs::Gui_selectedExp -font "ansi 10"]
       set subf1 [$tsel getframe]
 
+
       label $subf1.lname -text $Dialogs::Gui_ExpName -font "ansi 10"
       set expsel [Entry $subf1.entrysel  -textvariable ::_XpBrSelected \
                 -width 70\
-		-editable false\
+		-editable true\
 		-bg #FFFFFF \
-                -command  {} \
+		-validate key\
+                -validatecommand  { XpBrowser::CheckEntry %P }\
 		-helptext "Selected Experiment"]
+
+       Button $subf1.bbrowse -text "Experiment Selector" \
+	                     -image $XPManager::img_XpSel \
+			     -command {
+			                set xp [tk_chooseDirectory -initialdir $env(HOME)/ -title "Select an Experiment" -mustexist true -parent $XpBrowser::XpBfrm]
+				        if { "$xp" ne "" } {
+					      XpBrowser::validateAndShowExp $xp
+					}
+				      }
 
       # -- Need an other frame to pack expdate, catchup and 2 buttons
       set frmother [frame $subf1.oth -border 2 -relief flat]
@@ -190,7 +214,8 @@ proc XpBrowser::create { frm } {
       # -- Set Default tabs to show to any user  
       set ListTabToShow {}
       if { ! [regexp "afsiops|afsisio|afsipar" $MUSER] } {
-	      set ListTabToShow {*}$Preferences::ListUsrTabs
+	      #set ListTabToShow {*}$Preferences::ListUsrTabs
+	      set ListTabToShow $Preferences::ListUsrTabs
               lappend ListTabToShow {*}[list "$Dialogs::XpB_OpExp" "$Dialogs::XpB_PaExp" "$Dialogs::XpB_PoExp"]
       } else {
               set ListTabToShow [list "$Dialogs::XpB_OpExp" "$Dialogs::XpB_PaExp" "$Dialogs::XpB_PoExp"]
@@ -224,9 +249,14 @@ proc XpBrowser::create { frm } {
 		    }
 
                 # -- Bind doubleclick tree elem with 
-                TreeUtil::MpopNode  $pane $pxt 
-		TreeUtil::MpopRNode $pane $pxt
+                TreeUtil::MpopNode   $pane $pxt 
+		TreeUtil::MpopRNode  $pane $pxt
+		TreeUtil::MpopXPNode $pane $pxt
 		$pxt bindText  <Double-Button-1>  "XpBrowser::_getXp $pane $pxt [$pxt selection get]" 
+              
+	        # -- double click on tab should Refresh the exp's 
+		# -- pane is given automatically (appended to args ) to the proc
+	        $notebook bindtabs <Double-Button-1>  TreeUtil::Refresh_Exp 
 
                 # -- Keep a trace
 		set TreesWidgets($panel)  $pxt
@@ -241,16 +271,17 @@ proc XpBrowser::create { frm } {
       pack $XpBfrm.lab -fill both
 
       pack $tsel -anchor w -fill x -padx 4 -pady 4 
-      grid $subf1.lname -row 0  -column 0  -padx 4 -pady 1 -sticky w 
-      grid $expsel -row 0 -column 1 -padx 2 -pady 1 -sticky w
+      grid $subf1.lname   -row 0 -column 0 -padx 4 -pady 1 -sticky w 
+      grid $expsel        -row 0 -column 1 -padx 2 -pady 1 -sticky w
+      grid $subf1.bbrowse -row 0 -column 2 -padx 4 -sticky w
     
-      grid $subf1.ldate  -row 1 -column 0 -padx 4 -pady 1 -sticky w 
+      grid $subf1.ldate   -row 1 -column 0 -padx 4 -pady 1 -sticky w 
 
-      pack $Eexpdate -side left 
-      pack $BSetExpdate -side left -padx 4
+      pack $Eexpdate        -side left 
+      pack $BSetExpdate     -side left -padx 4
       pack $frmother.lcatch -side left -padx 4
-      pack $Eexpcatch -side left -padx 4
-      pack $BSetCatchup -side left -padx 4
+      pack $Eexpcatch       -side left -padx 4
+      pack $BSetCatchup     -side left -padx 4
 
       grid $frmother -row 1 -column 1 -pady 1 -sticky w
 
@@ -300,6 +331,46 @@ proc XpBrowser::create { frm } {
      $BSetExpdate configure -state disabled
      $Eexpcatch   configure -state disabled
      $BSetCatchup configure -state disabled
+
+     # - bind Entry (exp name ) to return key
+     bind $expsel <Key-Return> {
+              XpBrowser::validateAndShowExp [ $XpBrowser::expsel get ]
+     }
+}
+#---------------------------------
+# validate string given by entry
+#---------------------------------
+proc XpBrowser::validateAndShowExp { sel_xp } {
+   
+      set kris [catch {file type $sel_xp/EntryModule} ftype]
+      if { $kris != 0 || $ftype ne "link"  } {
+                 Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $XpBrowser::XpBfrm
+		 # -- Disable button 
+                 set ::_XpBrSelected ""
+	         foreach but {Bmflow Bxflow Bimport Baudit} {
+	              eval \$XpBrowser::$but configure -state disabled
+	         }
+         } else {
+                 set ::_XpBrSelected $sel_xp
+		 
+	         #foreach but {Bmflow Bxflow Bimport Baudit} {
+	         #     eval \$XpBrowser::$but configure -state normal
+	         #}
+		 XpBrowser::ActivateExpParams $sel_xp
+         }
+}
+
+proc XpBrowser::CheckEntry { str } {
+     
+      # -- rm blank
+       regsub -all " +" $str "" str
+
+      if { "$str" == "" } {
+	         foreach but {Bmflow Bxflow Bimport Baudit} {
+	              eval \$XpBrowser::$but configure -state disabled
+                 }
+      }
+      return true
 }
 
 proc XpBrowser::SetExpdate {exp value} {

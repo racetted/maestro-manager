@@ -205,7 +205,7 @@ proc Dialogs::setDlg {} {
 	          set XpB_OpExp "Operational"
 	          set XpB_PaExp "Parallel"
 	          set XpB_PoExp "Pre-operational"
-		  set Dlg_ProvideExpPath "You must Provide the path of an Experiment"
+		  set Dlg_ProvideExpPath "You must Provide A correct path of an Experiment"
           } else {
 	          set XPM_ApplicationName "Gestionnaire d'experiences"
 	          set Dlg_NoExpPath "Le Chemin que vous avez fournis ne contient aucune Experience valide!"
