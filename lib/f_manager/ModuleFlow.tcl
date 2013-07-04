@@ -159,26 +159,7 @@ proc ModuleFlow_readXml { _expPath _moduleXmlFile _parentFlowRecord {_modName ""
 
 proc ModuleFlow_saveXml { _moduleXmlFile _modRootFlowNode } {
    set xmlDoc [dom createDocument MODULE]
-   set xmlRootNode [${xmlDoc} documentElement]
-   set date [clock format [clock seconds] -format "%d %b %Y"]
-
-   ${xmlRootNode} setAttribute name [${_modRootFlowNode} cget -name]
-   if { [${_modRootFlowNode} cget -work_unit] == true } {
-      ${xmlRootNode} setAttribute work_unit 1
-   }
-
-   # create the first node
-   foreach submitNode [ModuleFlow_getSubmitRecords ${_modRootFlowNode}] {
-      set xmlSubmitNode [${xmlDoc} createElement SUBMITS]
-      ${xmlSubmitNode} setAttribute sub_name [${submitNode} cget -name]
-      ${xmlRootNode} appendChild ${xmlSubmitNode}
-   }
-
-   foreach submitNode [ModuleFlow_getSubmitRecords ${_modRootFlowNode}] {
-      # iterate through all submits
-      ModuleFlow_flowNodeRecord2Xml ${submitNode} ${xmlDoc} ${xmlRootNode}
-   }
-
+   ModuleFlow_flowNodeRecord2Xml ${_modRootFlowNode} ${xmlDoc} "" ${_modRootFlowNode}
    MaestroConsole_addMsg "save flow xml file:${_moduleXmlFile}"
    set result [${xmlDoc} asXML]
    set fileId [open ${_moduleXmlFile} w 0664]
@@ -208,19 +189,28 @@ proc ModuleFlow_initXml { _moduleXmlFile _moduleNode } {
    ${xmlDoc} delete
 }
 
-proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
+proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode _modRootFlowNode } {
 
    ::log::log debug "ModuleFlow_flowNodeRecord2Xml _flowNodeRecord:${_flowNodeRecord}"
    set nodeType [${_flowNodeRecord} cget -type]
    set xmlNodeName [ModuleFlow_getXmlTypeFromNode ${nodeType}]
 
    ::log::log debug "ModuleFlow_flowNodeRecord2Xml xmlNodeName:${xmlNodeName}"
-   set xmlDomNode [${_xmlDoc} createElement ${xmlNodeName}]
+   if {  ${_xmlParentNode} == "" } {
+      # first node creation
+      set xmlRootNode [${_xmlDoc} documentElement]
+      set xmlDomNode ${xmlRootNode}
+      # xmlParentNode is for recursive call
+      set xmlParentNode ${xmlRootNode}
+   } else {
+      set xmlDomNode [${_xmlDoc} createElement ${xmlNodeName}]
+      ${_xmlParentNode} appendChild ${xmlDomNode}
+   }
+
    ${xmlDomNode} setAttribute name [${_flowNodeRecord} cget -name]
    if { [${_flowNodeRecord} cget -work_unit] == true } {
       ${xmlDomNode} setAttribute work_unit 1
    }
-   ${_xmlParentNode} appendChild ${xmlDomNode}
 
    if { ${nodeType} == "SwitchNode" } {
       ${xmlDomNode} setAttribute type [ModuleFlow_getXmlSwitchModeFromNode [${_flowNodeRecord} cget -switch_mode]]
@@ -233,14 +223,14 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
          ${_flowNodeRecord} configure -curselection ${switchItem}
          foreach submitNodeRecord [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {
             ModuleFlow_addXmlSubmitTag ${_xmlDoc} ${xmlSwitchItemNode} ${submitNodeRecord}
-            ModuleFlow_flowNodeRecord2Xml ${submitNodeRecord} ${_xmlDoc} ${xmlSwitchItemNode}
+            ModuleFlow_flowNodeRecord2Xml ${submitNodeRecord} ${_xmlDoc} ${xmlSwitchItemNode} ${_modRootFlowNode} 
          }
       }
       return
    }
 
-   # we stop here for module nodes
-   if { ${nodeType} != "ModuleNode" } {
+   # we stop here for module node that is not root node
+   if { ${nodeType} != "ModuleNode" || ${_modRootFlowNode} == ${_flowNodeRecord} } {
       # create submits tag first
       foreach submitNode [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {   
          # create submit tag
@@ -259,10 +249,10 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode } {
       foreach submitNode [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {
          if { [ModuleFlow_isContainer ${_flowNodeRecord}] } {
             # following nodes belong to the new container node
-            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${xmlDomNode}
+            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${xmlDomNode} ${_modRootFlowNode} 
          } else {
             # following nodes belong to the previous container node
-            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${_xmlParentNode}
+            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${_xmlParentNode} ${_modRootFlowNode} 
          }
       }
    }
@@ -1441,6 +1431,7 @@ proc ModuleFlow_record2NodeName { _recordName } {
    ::log::log debug "ModuleFlow_record2NodeName _recordName:${_recordName}"
 
    set value [${_recordName} cget -flow_path]
+   puts "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
    return ${value}
 }
 
