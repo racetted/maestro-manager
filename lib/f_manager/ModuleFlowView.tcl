@@ -346,6 +346,9 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {_force false} } {
 
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
 
+      # close toplevels registered as child windows
+      ModuleFlowView_destroyRegisteredToplevels ${_expPath} ${_moduleNode}
+
       # close global variables set my the module
       foreach globalVar [info globals ${moduleId}*] {
          global [set globalVar]
@@ -380,7 +383,6 @@ proc ModuleFlowView_closeWindow { _expPath _moduleNode {_force false} } {
       # delete widgets
       destroy ${topWidget}
 
-      
       ::log::log debug "ModuleFlowView_closeWindow ${_expPath} ${_moduleNode} done"
       
    }
@@ -726,7 +728,9 @@ proc ModuleFlowView_addMenuResource { _menu _canvas _flowNodeRecord } {
       set state disabled
    }
    ${_menu} add command -label "Resource" -underline 0 -state ${state} -command \
-      [list ModuleFlowControl_resourceSelected [ModuleFlowView_getExpPath ${_canvas}] ${_flowNodeRecord}]
+      [list ModuleFlowControl_resourceSelected [ModuleFlowView_getExpPath ${_canvas}] ${_canvas} ${_flowNodeRecord}]
+   ${_menu} add command -label "Resource Xml" -underline 0 -state ${state} -command \
+      [list ModuleFlowControl_resourceSelected [ModuleFlowView_getExpPath ${_canvas}] ${_canvas} ${_flowNodeRecord} true]
 }
 
 proc ModuleFlowView_addMenuEdit { _menu _canvas _flowNodeRecord } {
@@ -866,6 +870,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    }
 
    toplevel ${topWidget}
+   ModuleFlowView_registerToplevel ${expPath} ${_moduleNode} ${topWidget}
 
    MiscTkUtils_positionWindow ${_canvas} ${topWidget}
    # when window is destroyed, clears the highlighted node
@@ -1000,6 +1005,9 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
 
    # bind events to the widgets
    ${refEntry} bind <KeyPress-Return> [list ModuleFlowView_newNodeRefEntryCallback ${expPath} ${_moduleNode} ${refEntry}]
+
+   wm protocol ${topWidget} WM_DELETE_WINDOW \
+      [list ModuleFlowView_newNodeCancel ${topWidget} ${expPath} ${_moduleNode}]
    bind ${cancelButton} <ButtonRelease> [list ModuleFlowView_newNodeCancel %W ${expPath} ${_moduleNode}]
    bind ${okButton} <ButtonRelease> [list ModuleFlowControl_addNodeOk ${topWidget} ${expPath} ${_moduleNode} ${_flowNodeRecord}]
 
@@ -1038,6 +1046,7 @@ proc ModuleFlowView_createNodeEditWidgets { _moduleNode _canvas _flowNodeRecord 
    }
 
    toplevel ${topWidget}
+   ModuleFlowView_registerToplevel ${expPath} ${_moduleNode} ${topWidget}
 
    MiscTkUtils_positionWindow ${_canvas} ${topWidget}
    # when window is destroyed, clears the highlighted node
@@ -1072,6 +1081,9 @@ proc ModuleFlowView_createNodeEditWidgets { _moduleNode _canvas _flowNodeRecord 
 
    wm title ${topWidget} "Edit Node [file tail ${_flowNodeRecord}] ([ModuleFlow_record2NodeName ${_flowNodeRecord}])"
 
+   wm protocol ${topWidget} WM_DELETE_WINDOW \
+      [list ModuleFlowView_editNodeCancel ${topWidget} ${expPath} ${_moduleNode}]
+
    # bind events to the widgets
    bind ${cancelButton} <ButtonRelease> [list ModuleFlowView_editNodeCancel %W ${expPath} ${_moduleNode}]
    bind ${okButton} <ButtonRelease> [list ModuleFlowControl_editNodeOk ${topWidget} ${expPath} ${_moduleNode} ${_flowNodeRecord}]
@@ -1104,12 +1116,16 @@ proc ModuleFlowView_newNodeCancel { _sourceWidget _expPath _moduleNode } {
 
    # destroy window
    after idle destroy ${topWidget}
+
+   ModuleFlowView_unregisterToplevel ${_expPath} ${_moduleNode} ${topWidget}
 }
 
 proc ModuleFlowView_editNodeCancel { _sourceWidget _expPath _moduleNode } {
    set topWidget [winfo toplevel ${_sourceWidget}]
    # destroy window
    after idle destroy ${topWidget}
+
+   ModuleFlowView_unregisterToplevel ${_expPath} ${_moduleNode} ${topWidget}
 }
 
 proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
@@ -1436,6 +1452,7 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
    }
 
    toplevel ${topWidget}
+   ModuleFlowView_registerToplevel ${expPath} ${_moduleNode} ${topWidget}
 
    MiscTkUtils_positionWindow ${_canvas} ${topWidget}
    # when window is destroyed, clears the highlighted node
@@ -1526,8 +1543,11 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
    wm title ${topWidget} "Rename ${nodeType} [${_flowNodeRecord} cget -name]"
    wm minsize ${topWidget} 300 100
 
+   wm protocol ${topWidget} WM_DELETE_WINDOW \
+      [list ModuleFlowView_genericCloseToplevel ${expPath} ${_moduleNode} ${topWidget}]
+
    # bind events to the widgets
-   bind ${cancelButton} <ButtonRelease> [list after idle destroy ${topWidget}]
+   bind ${cancelButton} <ButtonRelease> [list ModuleFlowView_genericCloseToplevel ${expPath} ${_moduleNode} ${topWidget}]
    bind ${okButton} <ButtonRelease> [list ModuleFlowControl_renameNodeOk ${topWidget} ${expPath} ${_moduleNode} ${_flowNodeRecord}]
 
    focus ${newNameEntry}
@@ -1683,6 +1703,7 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
       set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
       set addNodeTopWidget .add_node_top_${moduleId}
       set renameNodeTopWidget .rename_top_${moduleId}
+      set resourceNodeTopWidget .resource_top_${moduleId}
       ::log::log debug "ModuleFlowView_setWidgetNames creating array ${moduleId}_ModuleFlowWidgetNames"
       array set ${moduleId}_ModuleFlowWidgetNames \
          [list \
@@ -1722,6 +1743,7 @@ proc ModuleFlowView_setWidgetNames { _expPath _moduleNode } {
          rename_button_frame ${renameNodeTopWidget}.button_frame \
          rename_ok_button ${renameNodeTopWidget}.button_frame.ok_button \
          rename_cancel_button ${renameNodeTopWidget}.button_frame.cancel_button \
+         resource_top_widget ${resourceNodeTopWidget}
          ]
    }
 }
@@ -1731,4 +1753,49 @@ proc ModuleFlowView_clearWidgetNames { _expPath _moduleNode } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global array ${moduleId}_ModuleFlowWidgetNames
    array unset ${moduleId}_ModuleFlowWidgetNames
+}
+
+proc ModuleFlowView_genericCloseToplevel { _expPath _moduleNode _topLevelW } {
+   ModuleFlowView_unregisterToplevel ${_expPath} ${_moduleNode} ${_topLevelW}
+   after idle [list destroy ${_topLevelW}]
+}
+
+# allows child toplevel windows to register with the module flow view so that
+# when the user closes the module view, the child toplevels are closed as well...
+proc ModuleFlowView_registerToplevel { _expPath _moduleNode _topLevelW } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_ModuleFlowToplevels
+
+   puts "ModuleFlowView_registerToplevel _expPath:${_expPath} _moduleNode:${_moduleNode}"
+   if { ! [info exists ${moduleId}_ModuleFlowToplevels] } {
+      set ${moduleId}_ModuleFlowToplevels [list ${_topLevelW}]
+   } else {
+      if { [lsearch -exact [set ${moduleId}_ModuleFlowToplevels] ${_topLevelW}] == -1 } {
+         lappend ${moduleId}_ModuleFlowToplevels ${_topLevelW}
+      }
+   }
+}
+
+proc ModuleFlowView_unregisterToplevel { _expPath _moduleNode _topLevelW } {
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_ModuleFlowToplevels
+
+   if { [info exists ${moduleId}_ModuleFlowToplevels] } {
+      set foundIndex [lsearch -exact [set ${moduleId}_ModuleFlowToplevels] ${_topLevelW}]
+      if { ${foundIndex} != -1 } {
+         set ${moduleId}_ModuleFlowToplevels [lreplace [set  ${moduleId}_ModuleFlowToplevels] ${foundIndex} ${foundIndex}]
+      }
+   }
+}
+
+proc ModuleFlowView_destroyRegisteredToplevels { _expPath _moduleNode  } {
+   puts "ModuleFlowView_destroyRegisteredToplevels ${_expPath} ${_moduleNode}"
+   set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
+   global ${moduleId}_ModuleFlowToplevels
+   if { [info exists ${moduleId}_ModuleFlowToplevels] } {
+      foreach toplevelW [set ${moduleId}_ModuleFlowToplevels] {
+         puts "ModuleFlowView_destroyRegisteredToplevels destroy ${toplevelW}"
+         destroy ${toplevelW}
+      }
+   }
 }

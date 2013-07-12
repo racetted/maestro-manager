@@ -68,13 +68,29 @@ proc ModuleFlowControl_sourceSelected { _expPath _flowNodeRecord } {
    ModuleFlowView_goEditor ${sourceFile}
 }
 
-proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
+proc ModuleFlowControl_resourceSelected { _expPath _canvas _flowNodeRecord {goXml false} } {
    set flowNode [ModuleFlow_record2RealNode ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
 
-   # get the container module
-   set moduleNodeRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
-   set moduleNode [ModuleFlow_record2NodeName ${moduleNodeRecord}]
+   if { [ModuleFlow_isExpRootNode ${_flowNodeRecord}] == true } {
+      set moduleNode [${_flowNodeRecord} cget -flow_path]
+   } else {
+      if { ${nodeType} == "ModuleNode" } {
+         set currentModule [file tail [ModuleFlowView_getModNode ${_canvas}]]
+         if { [file tail ${_flowNodeRecord}] == ${currentModule} } {
+            # module node is the current module being edited
+            set moduleNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
+         } else {
+            set moduleNodeRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
+            set moduleNode [ModuleFlow_record2NodeName ${moduleNodeRecord}]
+         }
+      } else {
+         # get the container module
+         set moduleNodeRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
+         set moduleNode [ModuleFlow_record2NodeName ${moduleNodeRecord}]
+      }
+   }
+
    if { [${_flowNodeRecord} cget -status] == "new" } {
       # it's a new node not saved yet, edit the file from snapshot dir
       set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${moduleNode} ${flowNode} ${nodeType} true]
@@ -84,10 +100,11 @@ proc ModuleFlowControl_resourceSelected { _expPath _flowNodeRecord } {
 
    ::log::log debug "ModuleFlowControl_resourceSelected resourceFile:${resourceFile}"
 
-   if { ! [file readable ${resourceFile}] } {
-      MaestroConsole_addWarningMsg "file ${resourceFile} does not exists."
+   if { ${goXml} == true } {
+      ModuleFlowView_goEditor ${resourceFile}
+   } else {
+      ResourceControl_init ${_expPath} ${moduleNode} ${_flowNodeRecord}
    }
-   ModuleFlowView_goEditor ${resourceFile}
 }
 
 proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNodeRecord } {
