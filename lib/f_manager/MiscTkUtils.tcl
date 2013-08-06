@@ -19,3 +19,19 @@ proc MiscTkUtils_InitPosition { _topWidget } {
    wm geometry ${_topWidget} +100+100
 }
 
+proc MiscTkUtils_normalCursor { w } {
+   if { [winfo exists $w] } {
+      catch {
+         $w configure -cursor {}
+         update idletasks
+      }
+   }
+}
+
+proc MiscTkUtils_busyCursor { w } {
+   if { [winfo exists $w] } {
+      $w configure -cursor watch
+      update idletasks
+   }
+}
+

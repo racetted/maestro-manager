@@ -28,7 +28,7 @@ proc ExpModTreeView_toFront { _expPath } {
    }
 }
 
-proc ExpModTreeView_createWidgets { _expPath } {
+proc ExpModTreeView_createWidgets { _expPath _sourceWidget } {
 
    set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
    if { [winfo exists ${topWidget}] } {
@@ -37,7 +37,8 @@ proc ExpModTreeView_createWidgets { _expPath } {
 
    toplevel ${topWidget}
 
-   MiscTkUtils_InitPosition ${topWidget}
+   # MiscTkUtils_InitPosition ${topWidget}
+   MiscTkUtils_positionWindow  ${_sourceWidget} ${topWidget}
 
    wm title ${topWidget} "Flow Manager Exp=[file tail ${_expPath}]"
 
