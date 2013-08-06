@@ -424,7 +424,7 @@ proc ExpModTreeView_nodeMenu { _canvas _modTreeNodeRecord x y } {
 
    ::log::log debug "ExpModTreeView_nodeMenu expPath: ${expPath}"
    ${popMenu} add command -label "open" -underline 0 -command \
-      [ list ExpModTreeControl_moduleSelection ${expPath} ${moduleNode} ]
+      [ list ExpModTreeControl_moduleSelection ${expPath} ${moduleNode} ${_canvas}]
    #$popMenu add separator
 
    tk_popup $popMenu $x $y
