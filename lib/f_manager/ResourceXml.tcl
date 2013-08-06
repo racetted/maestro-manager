@@ -117,11 +117,11 @@ proc ResourceXml_saveBatchAttribute { _xmlDoc _attrName _attrValue } {
 #
 # returned value from ResourceXml_getDependencyList:
 #
+# { node /SHOP/GeneratePngWIS84 end "" "" "" "" }
+# { node /SHOP/GeneratePngWIS85a end "" "" "" "" }
+# { node /SHOP/GeneratePngWIS85b end "" "" "" "" }
+# { node /SHOP/GeneratePngWIS86 end "" "" "" "" }
 #
-# {/SHOP/GeneratePngWIS84 end}
-# {dep_name /SHOP/GeneratePngWIS85a type node status end}
-# {dep_name /SHOP/GeneratePngWIS85b type node status end}
-# {dep_name /SHOP/GeneratePngWIS86 type node status end}
 proc ResourceXml_getDependencyList { _xmlDoc } {
    set rootNode [${_xmlDoc} documentElement]
    set depXmlNodes [${rootNode} selectNodes /NODE_RESOURCES/DEPENDS_ON]
@@ -148,9 +148,13 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
    return ${depsList}
 }
 
-# dep_name, status, index, local_index, exp, hour,
+# adds one dependency entry in the resource.xml file
+# 
 # _nameValueList is a name-value list
 # possible values of the keys in the name-value list are dep_name, status, type, index, local_index, exp, hour
+# example:
+# "dep_name /SHOP/GeneratePngWIS86 status end type node"
+#
 proc ResourceXml_addDependency { _xmlDoc _nameValueList } {
    set rootNode [${_xmlDoc} documentElement]
    set resourcesXmlNode [${rootNode} selectNodes /NODE_RESOURCES]

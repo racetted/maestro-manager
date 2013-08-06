@@ -169,13 +169,14 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
    }
  
    if { [ catch { ModuleFlow_createNewNode ${_expPath} ${_parentFlowNodeRecord} ${nodeName} ${nodeType} ${insertPosition} ${extraArgList} } errMsg] } {
-      MaestroConsole_addErrorMsg ${errorInfo}
+      MaestroConsole_addErrorMsg "$::errorInfo"
       if { ${errMsg} == "NodeDuplicate" } {
          MessageDlg .msg_window -icon error -message "A node with the same name already exists!" \
             -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
       } else {
          MessageDlg .msg_window -icon error -message "${errMsg}. See Console Window fore more details." \
             -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
+         MaestroConsole_show
       }
       return
    }
@@ -401,6 +402,7 @@ proc ModuleFlowControl_cancelWrite { _expPath _moduleNode _failedOp _sourceW } {
    MessageDlg .msg_window -icon error -message "An error happend during the ${_failedOp}. Check the maestro console for more details. Operation cancelled." \
       -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
 
+   MaestroConsole_show
    # clear module working dir
    ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
    ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false
@@ -424,7 +426,7 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
       # save flow xml file
       ModuleFlow_saveXml ${moduleFlowXml} ${moduleNodeRecord}
    } errMsg] } {
-      MaestroConsole_addErrorMsg ${errMsg}
+      MaestroConsole_addErrorMsg "$::errorInfo"
       ModuleFlowControl_cancelWrite ${_expPath} ${_moduleNode} "module save flow.xml" ${_topWidget}
       return
    }
@@ -436,7 +438,7 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
       # save module container directory
       ModuleLayout_saveWorkingDir ${_expPath} ${moduleLayoutNode}
    } errMsg] } {
-      MaestroConsole_addErrorMsg ${errMsg}
+      MaestroConsole_addErrorMsg "$::errorInfo"
       ModuleFlowControl_cancelWrite ${_expPath} ${_moduleNode} "module directory save" ${_topWidget}
       return
    }
@@ -461,7 +463,7 @@ proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
    }
 
    set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
-   set parentNodeRecord [ModuleFlow_getParentContainer ${modNodeRecord}]
+   set parentNodeRecord [ModuleFlow_getContainer ${modNodeRecord}]
 
 
    if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
