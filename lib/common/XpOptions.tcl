@@ -11,12 +11,18 @@ proc XpOptions::globalOptions {} {
      #option add *selectBackground        "#509df4"
      option add *selectForeground        white
      option add *activeBackground        "#509df4"
+     option add *disabledForeground      "#4e144dbb4d62"
+     option add *Entry.background        white
+     option add *Listbox.background      white
+     option add *Spinbox.background      white
+     option add *Text.background         white
 
 }
 
 proc XpOptions::tablelistOptions {} {
 
      option add *Tablelist.background        white
+     option add *Tablelist.disabledForeground "#4e144dbb4d62"
      option add *Tablelist.stripeBackground  #e4e8ec
      option add *Tablelist.setGrid           yes
      option add *Tablelist.movableColumns    yes
