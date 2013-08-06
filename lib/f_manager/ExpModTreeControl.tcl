@@ -60,14 +60,14 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
          global ${expChecksum}_DebugOn
          # set ${expChecksum}_DebugOn true
          set ${expChecksum}_DebugOn false
-         # ExpModTreeControl_debugChanged ${_expPath}
+         ExpModTreeControl_debugChanged ${_expPath}
 
          # recursive read of all module flow.xml
          # the exp module tree is created at the same time
          ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
 
          # create the exp modules tree gui
-         ExpModTreeView_createWidgets ${_expPath}
+         ExpModTreeView_createWidgets ${_expPath} ${_sourceWidget}
 
          # get exp first module
          set entryModTreeNode [ExpModTree_getEntryModRecord ${_expPath}]
@@ -80,8 +80,8 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
       ::log::log error ${errorInfo}
       MessageDlg .msg_window -icon error -message "${errMsg} See console log window for more details." -aspect 400 \
          -title "Application Error" -type ok -justify center -parent ${_sourceWidget}
-      # MaestroConsole_addErrorMsg ${errMsg}
       MaestroConsole_addErrorMsg ${errorInfo}
+      MaestroConsole_show
    }
 }
 
@@ -91,15 +91,24 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 #
 proc ExpModTreeControl_moduleSelection { _expPath _moduleNode {_sourceW .} } {
    ::log::log debug "ExpModTreeControl_moduleSelection _expPath:${_expPath} _moduleNode:${_moduleNode}"
-   set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
-   set moduleColor [ExpModTreeView_getModuleColor ${_expPath} ${_moduleNode}]
-   DrawUtil_setShadowColor ${modTreeNodeRecord} [ExpModTreeView_getCanvas ${_expPath}] ${moduleColor}
-   if { [ModuleFlow_isModuleNew ${_expPath} ${_moduleNode}] == false } {
-      ModuleFlowView_initModule ${_expPath} ${_moduleNode} ${_sourceW}
-      ExpModTreeControl_addOpenedModule ${_expPath} ${_moduleNode}
-   } else {
-      ::log::log debug "ExpModTreeControl_moduleSelection new module"
+   MiscTkUtils_busyCursor [winfo toplevel ${_sourceW}]
+   if { [ catch { 
+      set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
+      set moduleColor [ExpModTreeView_getModuleColor ${_expPath} ${_moduleNode}]
+      DrawUtil_setShadowColor ${modTreeNodeRecord} [ExpModTreeView_getCanvas ${_expPath}] ${moduleColor}
+      if { [ModuleFlow_isModuleNew ${_expPath} ${_moduleNode}] == false } {
+         ModuleFlowView_initModule ${_expPath} ${_moduleNode} ${_sourceW}
+         ExpModTreeControl_addOpenedModule ${_expPath} ${_moduleNode}
+      } else {
+         ::log::log debug "ExpModTreeControl_moduleSelection new module"
+      }
+   } errMsg ] } {
+      MaestroConsole_addErrorMsg ${errMsg}
+      MessageDlg .msg_window -icon error -message "An error happened opening the module flow. Check the maestro console for more details." \
+         -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
+      MaestroConsole_show
    }
+   MiscTkUtils_normalCursor [winfo toplevel ${_sourceW}]
 }
 
 proc ExpModTreeControl_moduleClosing { _expPath _moduleNode } {
@@ -118,6 +127,7 @@ proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
       MaestroConsole_addErrorMsg ${errMsg}
       MessageDlg .msg_window -icon error -message "An error happend generating the exp flow.xml file. Check the maestro console for more details." \
          -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
+      MaestroConsole_show
       return
    }
    ExpModTreeControl_setModuleFlowChanged ${_expPath} false
