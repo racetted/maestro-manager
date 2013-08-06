@@ -246,12 +246,13 @@ proc ResourceControl_validateDepsData { _tableVar _outErrMsg } {
 proc ResourceControl_saveLoopData { _expPath _moduleNode _flowNode _resourceXmlDoc } {
    ::log::log debug "ResourceControl_saveLoopData $_expPath $_moduleNode $_flowNode ${_resourceXmlDoc}" 
    set loopFrame [ResourceView_getLoopFrameWidget  ${_expPath} ${_moduleNode} ${_flowNode}]
+
    set loopStartValue [ResourceView_getLoopStartEntry ${loopFrame}]
    set loopStepValue [ResourceView_getLoopStepEntry ${loopFrame}]
    set loopEndValue [ResourceView_getLoopEndEntry ${loopFrame}]
    set loopSetValue [ResourceView_getLoopSetEntry ${loopFrame}]
 
-   if { [string is integer ${loopStartValue}] == true && [string is integer ${loopEndValue}] &&
+   if { [string is integer ${loopStartValue}] && [string is integer ${loopEndValue}] &&
         ${loopStartValue} > ${loopEndValue} } {
       error "Error saving loop settings: Loop start value must be smaller than loop end value."
       return
@@ -287,7 +288,10 @@ proc ResourceControl_saveSelected { _expPath _moduleNode _flowNodeRecord } {
       # save the xml file
       ResourceXml_saveDocument ${resourceFile} ${resourceXmlDoc} true
 
+      # force refresh
       ResourceView_setDataChanged ${topWidget} false
+      ResourceControl_refreshSelected ${_expPath} ${_moduleNode} ${_flowNodeRecord}
+
    } errMsg ] } {
       MaestroConsole_addErrorMsg "$::errorInfo"
       set answer [ MessageDlg .msg_window -icon error -message "${errMsg} Click on Ok to see console logs for more details." \
