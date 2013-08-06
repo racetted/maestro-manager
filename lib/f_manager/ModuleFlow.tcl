@@ -495,7 +495,7 @@ proc ModuleFlow_xmlParseDependencies { _flowNodeRecord _xmlNode } {
 
       lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
    }
-   puts "ModuleFlow_xmlParseDependencies _flowNodeRecord:${_flowNodeRecord} _xmlNode:${_xmlNode} depsList:$depsList"
+   ::log::log debug "ModuleFlow_xmlParseDependencies _flowNodeRecord:${_flowNodeRecord} _xmlNode:${_xmlNode} depsList:$depsList"
    ${_flowNodeRecord} configure -deps ${depsList}
    return ${depsList}
 }
@@ -1467,9 +1467,6 @@ proc ModuleFlow_hasSubmitSiblings { _flowNodeRecord } {
    return ${hasSiblings}
 }
 
-proc ModuleFlow_getDependencies { _flowNodeRecord } {
-}
-
 # add specific prefix to avoid name class with other records since
 # a record name automatically becomes a tcl command
 # flow node record is composed of mnode_${checksum_exppath}_${flow_node}
@@ -1490,10 +1487,8 @@ proc ModuleFlow_getRecordName { _expPath _nodeName } {
 # i.e. mnode_123456_/enkf_mod/assim/gem_mod
 # would return /enkf_mod/assim/gem_mod
 proc ModuleFlow_record2NodeName { _recordName } {
-   ::log::log debug "ModuleFlow_record2NodeName _recordName:${_recordName}"
-
    set value [${_recordName} cget -flow_path]
-   puts "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
+   ::log::log debug "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
    return ${value}
 }
 
@@ -1674,7 +1669,7 @@ proc ModuleFlow_hasRelativeSyntax { _checkNode } {
 proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outErrMsg } {
    puts "ModuleFlow_getFromRelativePath $_expPath $_flowNodeRecord $_checkNode"
    upvar ${_outErrMsg} myOutputErrMsg
-   set myOutputErrMsg "Invalid relative path syntax!"
+   set myOutputErrMsg "Relative syntax can only appear at start of node definition!"
 
    set splittedNode [split ${_checkNode} /]
    set relativeSyntaxEndReached false
@@ -1683,6 +1678,13 @@ proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outEr
    set baseNodeRecord ${_flowNodeRecord}
    set errorFlag false
    set count 0
+   foreach checkToken { . .. ... } {
+      if { [llength [lsearch -exact -all ${splittedNode} ${checkToken}]] > 1 } {
+         set myOutputErrMsg "Relative syntax \"${checkToken}\" can only appear once!"
+	 return -1
+      }
+   }
+
    while { ${errorFlag} == false && ${count} < [llength ${splittedNode}] } {
       set splitPart [lindex ${splittedNode} ${count}]
       puts "splitPart:${splitPart}"
@@ -1692,7 +1694,6 @@ proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outEr
 	    # get immediate container
 	    if { ${relativeSyntaxEndReached} == true } {
 	       set errorFlag true
-	       set myOutputErrMsg "Relative syntax can only appear at start of node definition!"
 	    } else {
 	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
             }
@@ -1702,7 +1703,6 @@ proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outEr
 	    # get container of container
 	    if { ${relativeSyntaxEndReached} == true } {
 	       set errorFlag true
-	       set myOutputErrMsg "Relative syntax can only appear at start of node definition!"
 	    } else {
 	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
 	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
@@ -1710,8 +1710,12 @@ proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outEr
 	 }
          "..." {
             set hasRelativeSyntax true
-	    # get the module container
-            set baseNodeRecord [ModuleFlow_getModuleContainer ${baseNodeRecord}]
+	    if { ${relativeSyntaxEndReached} == true } {
+	       set errorFlag true
+	    } else {
+	       # get the module container
+               set baseNodeRecord [ModuleFlow_getModuleContainer ${baseNodeRecord}]
+            }
 	 }
          "" -
          "/" {
