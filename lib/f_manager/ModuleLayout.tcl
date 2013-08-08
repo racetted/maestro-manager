@@ -87,9 +87,11 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${workingDir}
 
    # get the modules container files
-   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
-   MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
-   exec rsync -r -t ${sourceModule}/ ${workingDir}
+   if { [file exist ${sourceModule}] } {
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
+      MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
+      exec rsync -r -t ${sourceModule}/ ${workingDir}
+   }
 
    # get the module resource files in the exp resource work dir
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
@@ -104,9 +106,11 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${resourceWorkDir}
 
    # get the resource files
-   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
-   MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
-   exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
+   if { [file exist ${sourceResources}] } {
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
+      MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
+      exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
+   }
 
    MaestroConsole_addMsg "Creating temp module directory done."
    return ${workingDir}
@@ -426,7 +430,7 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
    switch ${_nodeType} {
       TaskNode -
       NpassTaskNode {
-         if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true && ${_resOnly} == false } {
+         if { ${_resOnly} == false } {
             MaestroConsole_addMsg "delete file ${nodeFullPath}.tsk"
             file delete ${nodeFullPath}.tsk;
             MaestroConsole_addMsg "delete file ${nodeFullPath}.cfg"
@@ -442,7 +446,6 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
          set configFile ${nodeFullPath}/container.cfg;
          set resourceDir ${resourceWorkDir}${relativePath}
          set resourceFile ${resourceWorkDir}${relativePath}/container.xml
-         if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true } {
             if { ${_keepChildren} == true } {
                # delete only container directory... move children files to
                # parent dir
@@ -472,7 +475,6 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                MaestroConsole_addMsg "synchonize delete -force ${nodeFullPath}"
                file delete -force ${nodeFullPath}
             }
-         }
 
          ::log::log debug "ModuleLayout_deleteNode deleting ${resourceDir}"
          MaestroConsole_addMsg "delete ${resourceDir}."
