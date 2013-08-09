@@ -592,7 +592,6 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 
    # create node in modules directory
    set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true } {
       set useModLink false
       set modPath ""
       if { [ModuleFlow_getNodeRefCount ${newNodeRecord}] == 0 } {
@@ -610,7 +609,6 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
       } else {
          ::log::log debug "ModuleFlow_createNewNode not creating layout for node: ${newNodeRecord}"
       }
-   }
    # attach to submitter
    set insertParentPos ${_insertPosition}
 
@@ -841,7 +839,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    # Nodes that belong to a reference module will be cleared at another level if the module reference count
    # is 0
    puts "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true && ${nodeRefCount} == 0 } {
+   if { ${nodeRefCount} == 0 } {
       # need to check if the node is ready to be deleted from the layout.
       # for nodes belonging to a switch branch, it gets deleted only if it is not used in other
       # branches

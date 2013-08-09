@@ -196,29 +196,37 @@ proc ModuleFlowView_addStatusBar { _expPath _moduleNode _topWidget } {
 # save is enable whenever changes are done on the flow
 # i.e. adding/deleting nodes
 proc ModuleFlowView_saveStatus { _expPath _moduleNode _status } {
-   if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true } {
-      set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
-      set saveButton [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} save_button]
-      ${saveButton} configure -state ${_status}
-      if { ${_status} == "normal" } {
-         ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} true
-      }
+   set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
+   set saveButton [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} save_button]
+   ${saveButton} configure -state ${_status}
+   if { ${_status} == "normal" } {
+      ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} true
    }
 }
 
-# notifies the user once about module read-only
+# notifies the user once about referenced module pointing outside of exp.
 # notification is done only once per module window instance
-proc ModuleFlowView_checkReadOnlyNotify { _expPath _moduleNode } {
-   if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == false } {
+proc ModuleFlowView_outsideModRefNotify { _expPath _moduleNode _sourceW } {
+   set isContinue true
+   if { [ExpLayout_isModuleOutsideLink ${_expPath} ${_moduleNode}] } {
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
-      global ${moduleId}_Module_Writable
-      if { ! [info exists ${moduleId}_Module_Writable] } {
-         set topWidget [ModuleFlowView_getTopLevel ${_expPath} ${_moduleNode}]
-         MessageDlg .msg_window -icon warning -message "This module is read-only, you will not be allowed to save the flow." \
-               -aspect 400 -title "Module Flow Notification" -type ok -justify center -parent ${topWidget}
-         set ${moduleId}_Module_Writable 1
+      global ${moduleId}_Module_Ref_Notif
+      if { ! [info exists ${moduleId}_Module_Ref_Notif] } {
+         set modInstances [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+         set extraMsg ""
+         if { ${modInstances} > 1 } {
+            set extraMsg "\n\nNote: The [file tail ${_moduleNode}] module is used in ${modInstances} different locations within the experiment."
+         }
+         set modTruePath [ExpLayout_getModuleTruepath ${_expPath} ${_moduleNode}]
+         set answer [MessageDlg .msg_window -icon warning -message "You are about to edit a referenced module. ${extraMsg} \
+            \n\nReferenced module:\n${modTruePath}" -aspect 800 -title "Edit Module Notification" -type okcancel -justify center -parent ${_sourceW}]
+	 set ${moduleId}_Module_Ref_Notif 1
+         if { ${answer} == 1 } {
+            set isContinue false
+         }
       }
    }
+   return ${isContinue}
 }
 
 # warns user that there are unsaved changes to the flow before refreshing or quitting the current window
@@ -232,20 +240,24 @@ proc ModuleFlowView_flowChangeNotify { _expPath _moduleNode _topWidget } {
    return ${isContinue}
 }
 
-proc ModuleFlowView_multiEditNotify { _expPath _moduleNode _topWidget } {
+proc ModuleFlowView_multiEditNotify { _expPath _moduleNode _topWidget {ask_once true} } {
    set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
    global ${moduleId}_Module_Multi_Instance
    set isContinue true
 
-   if { [ExpModTree_getModInstances ${_expPath} ${_moduleNode}] > 1 } {
+   set number [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+   if { ${number} > 1 } {
+     
       if { ! [info exists ${moduleId}_Module_Multi_Instance] } {
          # we only ask the user once per module flow opening
-         set answer [MessageDlg .msg_window -icon warning -message "This module is used in more than one instance in the experiment, are you sure you want to continue?" \
+         set answer [MessageDlg .msg_window -icon warning -message "This module ([file tail ${_moduleNode}]) is used in more than one instance (${number}) in the experiment, are you sure you want to continue?" \
                -aspect 400 -title "Module Flow Notification" -type okcancel -justify center -parent ${_topWidget}]
          if { ${answer} == 1 } {
             set isContinue false
          }
-         set ${moduleId}_Module_Multi_Instance 1
+	 if { ${ask_once} == true } {
+            set ${moduleId}_Module_Multi_Instance 1
+         }
       }
    }
 
@@ -851,12 +863,10 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
       return
    }
 
-   if { [ExpLayout_isModuleWritable ${expPath} ${_moduleNode}] == false } {
-      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode} ${_canvas}]
-      if { ${isCopied} == false } {
-         ModuleFlowView_checkReadOnlyNotify ${expPath} ${_moduleNode}
-      }
+   if { [ModuleFlowView_outsideModRefNotify ${expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
    }
+
    set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
 
    # the type option is used to hold the values of node type selection
@@ -1031,12 +1041,10 @@ proc ModuleFlowView_createNodeEditWidgets { _moduleNode _canvas _flowNodeRecord 
       return
    }
 
-   if { [ExpLayout_isModuleWritable ${expPath} ${_moduleNode}] == false } {
-      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode}]
-      if { ${isCopied} == false } {
-         ModuleFlowView_checkReadOnlyNotify ${expPath} ${_moduleNode}
-      }
+   if { [ModuleFlowView_outsideModRefNotify ${expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
    }
+
    set moduleId [ExpLayout_getModuleChecksum ${expPath} ${_moduleNode}]
 
    # hightlight parent flow node
@@ -1422,28 +1430,19 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
    global  HighLightRestoreCmd
    set expPath [ModuleFlowView_getExpPath ${_canvas}]
    set nodeType [${_flowNodeRecord} cget -type]
-   if { [ExpLayout_isModuleWritable ${expPath} ${_moduleNode}] == false } {
-      # current module must be writable
-      set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${_moduleNode} ${_canvas}]
-      if { ${isCopied} == false } {
-         ModuleFlowView_checkReadOnlyNotify ${expPath} ${_moduleNode}
-      }
+   if { [ModuleFlowView_multiEditNotify ${expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
+   }
+
+   if { [ModuleFlowView_outsideModRefNotify ${expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
    }
 
    if { ${nodeType} == "ModuleNode" } {
       set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
-      # if { ${_allModules} == true } {
-      #  set instanceNumber [ExpModTree_getModInstances ${expPath} ${flowNode}]
-      #   MessageDlg .msg_window -icon warning -message "All instances (${instanceNumber}) of module [file tail ${flowNode}] will be renamed!" \
-      #         -aspect 400 -title "Module Flow Notification" -type ok -justify center -parent [winfo toplevel ${_canvas}]
-      #}
 
-      # module node to be renamed must be local
-      if { [ExpLayout_isModuleWritable ${expPath} ${flowNode}] == false } {
-         set isCopied [ModuleFlowView_copyLocalNotify ${expPath} ${flowNode} ${_canvas}]
-         if { ${isCopied} == false } {
-            return
-         }
+      if { [ModuleFlowView_multiEditNotify ${expPath} ${flowNode} ${_canvas} false] == false } {
+         return
       }
    }
 

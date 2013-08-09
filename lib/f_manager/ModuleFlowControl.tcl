@@ -327,6 +327,15 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
    global HighLightRestoreCmd
    # hightlight parent flow node
    set HighLightRestoreCmd ""
+
+   if { [ModuleFlowView_multiEditNotify ${_expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
+   }
+
+   if { [ModuleFlowView_outsideModRefNotify ${_expPath} ${_moduleNode} ${_canvas}] == false } {
+      return
+   }
+
    if { ${_deleteBranch} != false } {
       ModuleFlowView_highLightBranch ${_flowNodeRecord} ${_canvas} HighLightRestoreCmd
    } else {
@@ -349,8 +358,6 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
       -title ${titleValue} -type okcancel -justify center -parent ${_canvas} ]
 
    ::log::log debug "ModuleFlowControl_deleteNodeSelected answer:${answer}"
-
-   ModuleFlowView_checkReadOnlyNotify ${_expPath} ${_moduleNode}
 
    # clears the highlighted node
    DrawUtil_resetHighLightNode ${HighLightRestoreCmd}
