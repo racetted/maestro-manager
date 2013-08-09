@@ -58,8 +58,8 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 
          set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
          global ${expChecksum}_DebugOn
-         # set ${expChecksum}_DebugOn true
-         set ${expChecksum}_DebugOn false
+         set ${expChecksum}_DebugOn true
+         #set ${expChecksum}_DebugOn false
          ExpModTreeControl_debugChanged ${_expPath}
 
          # recursive read of all module flow.xml
@@ -119,6 +119,33 @@ proc ExpModTreeControl_moduleClosing { _expPath _moduleNode } {
    ExpModTreeControl_removeOpenedModule ${_expPath} ${_moduleNode}
 }
 
+proc ExpModeTreeControl_copyModule { _expPath _moduleNode _sourceW } {
+
+   set modInstances [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+   set extraMsg ""
+   if { ${modInstances} > 1 } {
+      set extraMsg "\n\nNote: The [file tail ${_moduleNode}] module is used in ${modInstances} different locations within the experiment."
+   }
+   set sourceTopWidget [winfo toplevel ${_sourceW}]
+   set modTruePath [ExpLayout_getModuleTruepath ${_expPath} ${_moduleNode}]
+   set answer [MessageDlg .msg_window -icon warning -message "Are you sure you want to copy the referenced module locally?${extraMsg} \
+            \n\nReferenced module:\n${modTruePath}" -aspect 800 -title "Copy Module Confirmation" -type yesno -justify center -parent ${sourceTopWidget}]
+   if { ${answer} == 0 } {
+      ::log::log debug "ExpModeTreeControl_copyModule yes copy"
+         # copy local
+         set isCopied true
+         if { [ catch { ModuleFlowControl_copyLocalSelected ${_expPath} ${_moduleNode} } errMsg ] } {
+            MessageDlg .msg_window -icon error -message "${errMsg}" \
+               -title "Module Copy Error" -type ok -justify center -parent ${sourceTopWidget}
+            return false
+         }
+         MessageDlg .msg_window -icon info -message "The module has been copied locally." \
+            -aspect 400 -title "Module Copy Notification" -type ok -justify center -parent ${sourceTopWidget}
+   } else {
+      ::log::log debug "ExpModeTreeControl_copyModule cancel copy"
+   }
+}
+
 proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
    
    if { [ catch { 
@@ -126,7 +153,7 @@ proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
    } errMsg ] } {
       MaestroConsole_addErrorMsg ${errMsg}
       MessageDlg .msg_window -icon error -message "An error happend generating the exp flow.xml file. Check the maestro console for more details." \
-         -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
+         -title "Failed Operation" -type ok -justify center -parent ${_topWidget}
       MaestroConsole_show
       return
    }
