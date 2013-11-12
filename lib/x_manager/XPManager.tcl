@@ -424,9 +424,9 @@ if { $Preferences::ERROR_PARSING_USER_CONFIG == 1 } {
                      Dialogs::show_msgdlg $Dialogs::Dlg_Error_parsing_user_file  ok warning "" .
 }
 
-if { $Preferences::ERROR_NOT_RECOGNIZED_PREF == 1 } {
-                     Dialogs::show_msgdlg $Dialogs::Dlg_NonRecognizedPref  ok warning "" .
-}
+#if { $Preferences::ERROR_NOT_RECOGNIZED_PREF == 1 } {
+#                     Dialogs::show_msgdlg $Dialogs::Dlg_NonRecognizedPref  ok warning "" .
+#}
 
 if {[string compare $Preferences::ListUsrTabs "" ] == 0 } {
                      Dialogs::show_msgdlg $Dialogs::Dlg_DefineExpPath  ok warning "" .
