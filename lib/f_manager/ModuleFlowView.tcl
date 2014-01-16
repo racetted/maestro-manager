@@ -803,7 +803,7 @@ proc ModuleFlowView_addMenuDelete { _menu _canvas _flowNodeRecord } {
          }
       }
       if { ( ${nodeType} == "ModuleNode" && [file tail ${_flowNodeRecord}] != ${moduleTailName} ) ||
-         [${_flowNodeRecord} cget -submits] == "" } {
+         [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] == "" } {
 
          # leaf node
          ${_menu} add command -label "Delete" -underline 0 \

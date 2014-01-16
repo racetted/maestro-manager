@@ -140,7 +140,12 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       ModuleNode {
          set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
          set modulePath [${modPathEntry} cget -text]
-         if { ${modulePath} != "" && ! [file exists ${modulePath}/flow.xml] } {
+         set derivedModulePath ${modulePath}
+         # if module path starts with relative syntax, appends the modules directory to the value
+         if { [string first ./ ${modulePath}] == 0 || [string first ../ ${modulePath}] == 0 } {
+            set derivedModulePath ${_expPath}/modules/${modulePath}
+         }
+         if { ${derivedModulePath} != "" && ! [file exists ${derivedModulePath}/flow.xml] } {
             MessageDlg .msg_window -icon error -message "Invalid module path: ${modulePath}. Module flow.xml not found." \
                -aspect 400 -title "Module selection error" -type ok -justify center -parent ${_topWidget}
             return
@@ -148,7 +153,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
 
          catch { set useModuleLink [set ${moduleId}_Link_Module] }
 
-         if { [ExpLayout_isModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${modulePath} ${useModuleLink}] == true } {
+         if { [ExpLayout_isModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${derivedModulePath} ${useModuleLink}] == true } {
             set answer [MessageDlg .msg_window -icon question -message "Module directory or link already exists. Do you want to reuse?" \
                -title "Add Module Node" -type okcancel -justify center -parent ${_topWidget} ]
             if { ${answer} == 1 } {
@@ -159,10 +164,17 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
 
          lappend extraArgList use_mod_link ${useModuleLink} mod_path ${modulePath}
       }
+
       SwitchNode {
          set switchModeOption [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchmode_option] 
          set switchMode [${switchModeOption} cget -text]
          set switchItems [ModuleFlowView_getSwitchNodeItems ${_expPath} ${_moduleNode}]
+         puts "ModuleFlowControl_addNodeOk switchItems:${switchItems}"
+         if { ${insertPosition} == "serial" && ${switchItems} == "" } {
+            MessageDlg .msg_window -icon error -message "In serial position, you must provide switch items!" \
+               -title "Add New Node Error" -type ok -justify center -parent ${_topWidget}
+            return
+         }
          lappend extraArgList switch_mode ${switchMode}
          lappend extraArgList switch_items ${switchItems}
       }

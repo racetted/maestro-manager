@@ -23,12 +23,15 @@ namespace import ::struct::record::*
 # experiment modules tree.
 #
 # name - name of node (only leaf part)
+# flow_path - value of the full node withouth the record id in front example: /enkf_mod/avg_anal_mod/gem/Transfer 
 # children - contained children (full name).
 #           the parent & children relation allows us to walk down a tree
 #           as the sequencer would see it.
 # type  - string representing node type (FamilyNode, ModuleNode, etc)
-# submits - flow children (full name), nodes submitted by current node
+# submits - flow children, nodes submitted by current node (values is leaf part of node i.e. see name attribute)
 # submitter - node that submits the current node; 
+#                 This value is empty if the submitter is the parent container, it has a value only if the submitter is a task
+#                 and the value of the submitter is then the name of the task node (not the full node)
 #                 if the node is submitted by a task, then the submitter is 
 #                 the submitter task which is different than the parent which must
 #                 be of type container
@@ -574,16 +577,20 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    # create new node
    ::log::log debug "ModuleFlow_createNewNode flow node record:${newNodeRecord} -name ${_newName} -type ${_nodeType} -submitter ${_currentNodeRecord} -flow_path ${newNode}"
    FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -status new -work_unit ${isWorkUnit} -flow_path ${newNode}
+   # special case for SwitchNode: switch_items must also be created
    if { ${_nodeType} == "SwitchNode" } {
       set switchMode $extraArgs(switch_mode)
       set switchItems $extraArgs(switch_items)
       ::log::log debug "ModuleFlow_createNewNode ${newNodeRecord} configure -switch_mode ${switchMode} -switch_items ${switchItems}"
       ${newNodeRecord} configure -switch_mode ${switchMode} -switch_items ${switchItems}
+      if { ${switchItems} != "" } {
+         ${newNodeRecord} configure curselection [lindex  ${switchItems} 0]
+      }
       foreach switchItem ${switchItems} {
          # I create a node for each switch item
          set switchItemRecord ${newNodeRecord}/${switchItem}
          ::log::log debug "ModuleFlow_createNewNode FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}"
-         FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}
+         FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}/${switchItem} -submitter ${newNodeRecord}
       }
    }
 
@@ -620,9 +627,23 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # - assign all submits of the current node to the new node
          set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_currentNodeRecord}]
          set childPosition 0
-         foreach submitNodeRecord ${submittedNodeRecords} {
-            ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} ${childPosition}
-            incr childPosition
+         if { [${newNodeRecord} cget -type] == "SwitchNode" } {
+            # get all switching items
+            set switchingItemsNodeRecords [ModuleFlow_getAllSwitchItemFlowNodeRecord ${newNodeRecord}]
+            ::log::log debug "ModuleFlow_createNewNode switchingItemsNodeRecords: ${switchingItemsNodeRecords}"
+            # assign the nodes to each one of the switching items
+            foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_addSubmitNode ${switchingItemsNodeRecord} ${submitNodeRecord} ${childPosition}
+                  incr childPosition
+               }
+            }
+         } else {
+            foreach submitNodeRecord ${submittedNodeRecords} {
+               ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} ${childPosition}
+               incr childPosition
+            }
          }
 
          # - assign the new node as the only submitted node of current node
@@ -642,11 +663,30 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # because the record name is built using the experiment containment tree (not submit tree)
          if { [ModuleFlow_isContainer ${newNodeRecord}] == true } {
             # I have to go down the submits path until the end or until bumping another container
-            set childPosition 0
-            foreach submitNodeRecord ${submittedNodeRecords} {
-               ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
-               ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
-               incr childPosition
+            if { [${newNodeRecord} cget -type] == "SwitchNode" } {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
+                  incr childPosition
+               }
+               # get all switching items
+               set switchingItemsNodeRecords [ModuleFlow_getAllSwitchItemFlowNodeRecord ${newNodeRecord}]
+               ::log::log debug "ModuleFlow_createNewNode switchingItemsNodeRecords: ${switchingItemsNodeRecords}"
+               # assign the nodes to each one of the switching items
+               foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
+                  set childPosition 0
+                  foreach submitNodeRecord ${submittedNodeRecords} {
+                     ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${switchingItemsNodeRecord} ${childPosition}
+                     incr childPosition
+                  }
+               }
+            } else {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
+                  ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
+                  incr childPosition
+               }
             }
          }
       }
@@ -1075,10 +1115,11 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
    # the node gets the new container parent node
    # since the name of the node is build within the experiment tree, it needs to be changed
    # to take into account the new container in the way
+   set newNode [${_flowNodeRecord} cget -flow_path]/[${_flowNodeRecord} cget -name]
    set recordName [ModuleFlow_getRecordName ${_expPath} ${_newContainerRecord}/[${_flowNodeRecord} cget -name]]
    FlowNode ${recordName} -name [${_flowNodeRecord} cget -name] -type [${_flowNodeRecord} cget -type] \
       -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
-      -submitter [${_flowNodeRecord} cget -submitter]
+      -submitter [${_flowNodeRecord} cget -submitter] -flow_path ${newNode}
 
    # satisfy same relation on the new container parent node
    # the new child is added to the parent container node
@@ -1318,13 +1359,13 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
    return ${newSubmits}
 }
 
-
 # add node _submitNodeRecord to the list of nodes submitted by _flowNodeRecord at position _position
 # _flowNodeRecord & _submitNode are FlowNode records
 proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position end } } {
    ::log::log debug "ModuleFlow_addSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord} _position:${_position}"
    # attach to submitter
    # submits are stored as relative path to the parent container
+# SUA TO BE DONE, this switch logic should be done at the caller maybe... check it out
    if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
       set submitterRecord [ModuleFlow_getCurrentSwitchItemRecord ${_flowNodeRecord}]
    } else {

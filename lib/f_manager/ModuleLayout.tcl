@@ -406,7 +406,8 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "Move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
-            file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
+            # file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
+            ModuleLayout_moveOrCopy ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
          }
       }
       default {

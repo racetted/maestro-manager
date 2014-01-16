@@ -10,10 +10,11 @@ proc ResourceControl_retrieveData { _expPath _moduleNode _flowNodeRecord {refres
 
    if { [${_flowNodeRecord} cget -status] == "new" } {
       # it's a new node not saved yet, edit the file from snapshot dir
-      set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} ${flowNode} ${nodeType} true]
+      set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} [ModuleFlow_record2RealNode ${_flowNodeRecord}] ${nodeType} true]
    } else {
-      set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} ${flowNode} ${nodeType}]
+      set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} [ModuleFlow_record2RealNode ${_flowNodeRecord}] ${nodeType}]
    }
+   ::log::log debug "ResourceControl_retrieveData ${_expPath} ${_moduleNode} ${_flowNodeRecord} looking for resource file:${resourceFile}"
 
    if { [file readable ${resourceFile}] } {
       set resourceXmlDoc [ResourceXml_parseFile ${resourceFile}]
@@ -33,7 +34,7 @@ proc ResourceControl_retrieveData { _expPath _moduleNode _flowNodeRecord {refres
    set topWidget [ModuleFlowView_getWidgetName  ${_expPath} ${_moduleNode} resource_top_widget]
    ResourceView_setDataChanged ${topWidget} false
 
-   if { [file writable ${resourceFile}] } {
+   if { [file writable [file dirname ${resourceFile}]] } {
       ResourceView_invokeStateChangeWidgets ${topWidget} normal
    } else {
       ResourceView_invokeStateChangeWidgets ${topWidget} disabled
@@ -267,7 +268,7 @@ proc ResourceControl_saveLoopData { _expPath _moduleNode _flowNode _resourceXmlD
 proc ResourceControl_saveSelected { _expPath _moduleNode _flowNodeRecord } {
    set nodeType [${_flowNodeRecord} cget -type]
    set flowNode [${_flowNodeRecord} cget -flow_path]
-   set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} ${flowNode} ${nodeType}]
+   set resourceFile [ModuleLayout_getNodeResourcePath ${_expPath} ${_moduleNode} [ModuleFlow_record2RealNode ${_flowNodeRecord}] ${nodeType}]
 
    # get a new xml document to work with
    set resourceXmlDoc [ResourceXml_createDocument]
