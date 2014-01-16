@@ -1115,30 +1115,39 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
    # the node gets the new container parent node
    # since the name of the node is build within the experiment tree, it needs to be changed
    # to take into account the new container in the way
-   set newNode [${_flowNodeRecord} cget -flow_path]/[${_flowNodeRecord} cget -name]
+   set newNode [${_newContainerRecord} cget -flow_path]/[${_flowNodeRecord} cget -name]
    set recordName [ModuleFlow_getRecordName ${_expPath} ${_newContainerRecord}/[${_flowNodeRecord} cget -name]]
    FlowNode ${recordName} -name [${_flowNodeRecord} cget -name] -type [${_flowNodeRecord} cget -type] \
       -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
-      -submitter [${_flowNodeRecord} cget -submitter] -flow_path ${newNode}
+      -submitter [${_flowNodeRecord} cget -submitter] -flow_path ${newNode} -switch_mode [${_flowNodeRecord} cget -switch_mode] \
+      -switch_items [${_flowNodeRecord} cget -switch_items] -work_unit [${_flowNodeRecord} cget -work_unit] \
+      -curselection [${_flowNodeRecord} cget -curselection] 
 
    # satisfy same relation on the new container parent node
    # the new child is added to the parent container node
    ModuleFlow_addChildNode ${_newContainerRecord} ${_flowNodeRecord} ${_childPosition}
 
-   # continue down the submit path if not container
-   set submits [${_flowNodeRecord} cget -submits]
-   set childPosition 0
-   foreach submitNode ${submits} {
-      #set submitNodeName [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
-      if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
-         set submitNodeName ${_flowNodeRecord}/${submitNode}
-         set parentContainerRecord ${recordName}
-      } else {
-         set parentContainerRecord ${_newContainerRecord}
-         set submitNodeName [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
+   # special case for SwitchNode
+   if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
+      foreach switchItem [${_flowNodeRecord} cget -switch_items] {
+         set switchItemRecord ${_flowNodeRecord}/${switchItem}
+         ModuleFlow_assignNewContainer ${_expPath} ${switchItemRecord} ${recordName} 0         
       }
-      ModuleFlow_assignNewContainer ${_expPath} ${submitNodeName} ${parentContainerRecord} ${childPosition}
-      incr childPosition
+   } else {
+      # continue down the submit path if not container
+      set submits [${_flowNodeRecord} cget -submits]
+      set childPosition 0
+      foreach submitNode ${submits} {
+         if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
+            set submitNodeRecord ${_flowNodeRecord}/${submitNode}
+            set parentContainerRecord ${recordName}
+         } else {
+            set parentContainerRecord ${_newContainerRecord}
+            set submitNodeRecord [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
+         }
+         ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition}
+         incr childPosition
+      }
    }
 
    # delete previous record of the node
