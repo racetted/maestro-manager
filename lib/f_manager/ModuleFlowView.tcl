@@ -794,12 +794,16 @@ proc ModuleFlowView_addMenuDelete { _menu _canvas _flowNodeRecord } {
       # delete is not allowed on the root module node of a module flow
       ${_menu} add command -label "Delete" -underline 0 -state disabled
    } else {
+      set deleteSingleNodeAllowed true
       if { ${nodeType} == "SwitchNode" } {
          set currentSwitchItem [ModuleFlowView_getCurrentSwitchItem [ModuleFlowView_getExpPath ${_canvas}] ${_flowNodeRecord} ${_canvas}]
          if { ${currentSwitchItem} != "" } {
             set deleteLabel "Delete branch ${currentSwitchItem}"
             ${_menu} add command -label ${deleteLabel} -underline 0 \
                -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord} ${currentSwitchItem}]
+         }
+         if { [llength [${_flowNodeRecord} cget -switch_items]] > 1 } {
+            set deleteSingleNodeAllowed false
          }
       }
       if { ( ${nodeType} == "ModuleNode" && [file tail ${_flowNodeRecord}] != ${moduleTailName} ) ||
@@ -810,13 +814,18 @@ proc ModuleFlowView_addMenuDelete { _menu _canvas _flowNodeRecord } {
             -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord}]
       } else {
          # add delete submenu
-         set deleteMenu ${_menu}.delete_menu
-         ${_menu} add cascade -label "Delete" -underline 0 -menu [menu ${deleteMenu}]
-         ${deleteMenu} add command -label "Single Node" -underline 0 \
-            -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord}]
-         ${deleteMenu} add command -label "Branch" -underline 0 \
-            -command [list ModuleFlowControl_deleteNodeSelected  ${expPath} ${moduleNode} \
-               ${_canvas} ${_flowNodeRecord} true]
+         if { ${deleteSingleNodeAllowed} == true } {
+            set deleteMenu ${_menu}.delete_menu
+            ${_menu} add cascade -label "Delete" -underline 0 -menu [menu ${deleteMenu}]
+            ${deleteMenu} add command -label "Single Node" -underline 0 \
+               -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord}]
+            ${deleteMenu} add command -label "Branch" -underline 0 \
+               -command [list ModuleFlowControl_deleteNodeSelected  ${expPath} ${moduleNode} \
+                  ${_canvas} ${_flowNodeRecord} true]
+         } else {
+            ${_menu} add command -label "Delete" -underline 0 \
+               -command [list ModuleFlowControl_deleteNodeSelected ${expPath} ${moduleNode} ${_canvas} ${_flowNodeRecord} true]
+         }
       }
    }
 }
