@@ -1214,6 +1214,8 @@ proc ModuleFlowView_newNodeTypeCallback { _expPath _moduleNode args } {
       grid ${workUnitCb} -row ${workUnitRow} -column 1 -sticky w -padx 2 -pady 2
    }
    set ${moduleId}_PreviousTypeOption ${nodeType}
+
+   update idletasks
 }
 
 proc ModuleFlowView_cleanPreviousWidgets { _expPath _moduleNode } {

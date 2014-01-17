@@ -618,6 +618,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
       }
    # attach to submitter
    set insertParentPos ${_insertPosition}
+   set nodeRecordsToDelete {}
 
    switch ${_insertPosition} {
       serial {
@@ -676,7 +677,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
                foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
                   set childPosition 0
                   foreach submitNodeRecord ${submittedNodeRecords} {
-                     ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${switchingItemsNodeRecord} ${childPosition}
+                     ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${switchingItemsNodeRecord} ${childPosition} nodeRecordsToDelete
                      incr childPosition
                   }
                }
@@ -684,7 +685,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
                set childPosition 0
                foreach submitNodeRecord ${submittedNodeRecords} {
                   ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
-                  ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
+                  ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition} nodeRecordsToDelete
                   incr childPosition
                }
             }
@@ -705,7 +706,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # if new node is container need to re-assign children at the container level
          if { [ModuleFlow_isContainer ${newNodeRecord}] == true } {
             ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${_currentNodeRecord} ${newNodeRecord}
-            ModuleFlow_assignNewContainer ${_expPath} ${_currentNodeRecord} ${newNodeRecord} 0
+            ModuleFlow_assignNewContainer ${_expPath} ${_currentNodeRecord} ${newNodeRecord} 0 nodeRecordsToDelete
          }
          set containerNodeRecord [ModuleFlow_getContainer ${_currentNodeRecord}]
          set insertParentPos end
@@ -719,14 +720,8 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    # attach to parent container
    ModuleFlow_addChildNode ${containerNodeRecord} ${newNodeRecord} ${insertParentPos}
 
-   proc out {} {
-   if { [ModuleFlow_getNodeRefCount ${containerNodeRecord} matchFlowRecords] != 0 } {
-      # if container is part of switching node, copy the new created node in other branch
-      foreach matchFlowRecord ${matchFlowRecords} {
-         puts "ModuleFlow_createNewNode() ModuleFlow_copySubmitTree ${containerNodeRecord} ${matchFlowRecord}"
-         ModuleFlow_copySubmitTree ${containerNodeRecord} ${matchFlowRecord}
-      }
-   }
+   foreach recordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${recordToDelete}
    }
 }
 
@@ -827,6 +822,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
 
       return
    }
+   set nodeRecordsToDelete {}
 
    if { ${_deleteBranch} == true } {
       # special case for SwitchNode
@@ -855,7 +851,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
                # assign new submitter: node that was submitted by switch item to the submitter of the switch node
                ModuleFlow_addSubmitNode ${submitter} ${itemSubmitRecord} ${childPosition}
                # assign new container
-               ModuleFlow_assignNewContainer ${_expPath} ${itemSubmitRecord} ${parentContainerRecord} ${childPosition}
+               ModuleFlow_assignNewContainer ${_expPath} ${itemSubmitRecord} ${parentContainerRecord} ${childPosition} nodeRecordsToDelete
                incr childPosition
             }
          }
@@ -869,7 +865,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
             # I have to go down the submits path until the end or until bumping another container
             set childPosition 0
             foreach submitNodeRecord ${submittedNodeRecords} {
-               ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition}
+               ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition} nodeRecordsToDelete
                incr childPosition
             }
          }
@@ -899,6 +895,10 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    # get the layout node as seen within the module directory
    set layoutNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}]
 
+   foreach recordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${recordToDelete}
+   }
+   
    if { ${nodeType} == "SwitchNode" } {
       # need to delete switch items first
       foreach switchItem [${_flowNodeRecord} cget -switch_items] {
@@ -1067,6 +1067,8 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    # get the layout node as seen within the module directory
    set layoutNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}]
 
+   set nodeRecordsToDelete {}
+
    # if new node is a container, need to re-assign children at the container level
    # - all submitted nodes until the next container is a new child
    # - All nodes that are children (to the right) of the new container nodes needs to be renamed
@@ -1086,7 +1088,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
             set submitRecords [ModuleFlow_getSubmitRecords ${oldSwitchItemRecord}]
             set childPosition 0
             foreach submitRecord ${submitRecords} {
-               ModuleFlow_assignNewContainer ${_expPath} ${submitRecord} ${newSwitchItemRecord} ${childPosition}
+               ModuleFlow_assignNewContainer ${_expPath} ${submitRecord} ${newSwitchItemRecord} ${childPosition} nodeRecordsToDelete
                incr childPosition
             }
             # remove old switching item record
@@ -1095,7 +1097,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
       } else {
          foreach submitNodeRecord ${submittedNodeRecords} {
             # ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
-            ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
+            ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition} nodeRecordsToDelete
             incr childPosition
          }
       }
@@ -1106,6 +1108,11 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
          ModuleFlow_setSubmitter ${submitRecord} ${newNodeRecord}
       }
    }
+
+   foreach nodeRecordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${nodeRecordToDelete}
+   }
+
    # set all child nodes status to new
    ModuleFlow_changeStatus ${_expPath} ${newNode} new true
 
@@ -1141,7 +1148,9 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
 # - newly given child nodes must be removed from existing parent container
 # It follows the submit tree of the starting node but does not change the submits relation
 #
-proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecord _childPosition } {
+proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecord _childPosition _out_delete_list_var } {
+   upvar ${_out_delete_list_var} localDeleteListVar
+
    ::log::log debug "ModuleFlow_assignNewContainer _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
 
    # first the node needs to be removed from its current container node
@@ -1166,7 +1175,7 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
    if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
       foreach switchItem [${_flowNodeRecord} cget -switch_items] {
          set switchItemRecord ${_flowNodeRecord}/${switchItem}
-         ModuleFlow_assignNewContainer ${_expPath} ${switchItemRecord} ${recordName} 0         
+         ModuleFlow_assignNewContainer ${_expPath} ${switchItemRecord} ${recordName} 0 localDeleteListVar       
       }
    } else {
       # continue down the submit path if not container
@@ -1180,14 +1189,15 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
             set parentContainerRecord ${_newContainerRecord}
             set submitNodeRecord [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
          }
-         ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition}
+         ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition} localDeleteListVar
          incr childPosition
       }
    }
 
    # delete previous record of the node
    ::log::log debug "ModuleFlow_assignNewContainer deleting record ${_flowNodeRecord}"
-   record delete instance ${_flowNodeRecord}
+   # record delete instance ${_flowNodeRecord}
+   lappend localDeleteListVar ${_flowNodeRecord}
 }
 
 # 
