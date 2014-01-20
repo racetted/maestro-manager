@@ -492,23 +492,38 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
 }
 
 proc ModuleLayout_deleteModule { _expPath _moduleNode _deleteNode } {
+   ::log::log debug "ModuleLayout_deleteModule _expPath:${_expPath} _moduleNode:${_moduleNode} _deleteNode:${_deleteNode}"
 
-   set modulePath [ExpLayout_getModulePath ${_expPath} ${_deleteNode}]
-   set refCount [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]
-   if { [ExpModTree_getModInstances ${_expPath} ${_deleteNode}] == 0 } {
-      set linkTarget ""
-      catch { set linkTarget [file readlink ${modulePath}] }
-      if { [file exists ${modulePath}] && ${linkTarget} != "" } {
-         # module is a link remove the link
-         MaestroConsole_addMsg "delete module link ${modulePath}."
-         file delete ${modulePath}
+   if { [ catch {
+
+      set modulePath [ExpLayout_getModulePath ${_expPath} ${_deleteNode}]
+      ::log::log debug "ModuleLayout_deleteModule modulePath:${modulePath}"
+      set refCount [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]
+      ::log::log debug "ModuleLayout_deleteModule refCount:${refCount}"
+      ::log::log debug "ModuleLayout_deleteModule ExpModTree_getModInstances ${_expPath} ${_deleteNode} ? [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]"
+      if { [ExpModTree_getModInstances ${_expPath} ${_deleteNode}] == 0 } {
+         set linkTarget ""
+         catch { set linkTarget [file readlink ${modulePath}] }
+         if { [file exists ${modulePath}] && ${linkTarget} != "" } {
+            # module is a link remove the link
+            MaestroConsole_addMsg "delete module link ${modulePath}."
+            ::log::log debug "ModuleLayout_deleteModule delete module link ${modulePath}"
+            file delete ${modulePath}
+         } else {
+            MaestroConsole_addMsg "delete module directory ${modulePath}."
+            file delete -force ${modulePath}
+            ::log::log debug "ModuleLayout_deleteModule delete module directory ${modulePath}."
+         }
       } else {
-         MaestroConsole_addMsg "delete module directory ${modulePath}."
-         file delete -force ${modulePath}
+         MaestroConsole_addMsg "Not deleting module ${modulePath}... reference count:${refCount} != 0."
+         ::log::log debug "ModuleLayout_deleteModule Not deleting module ${modulePath}... reference count:${refCount} != 0"
       }
-   } else {
-      MaestroConsole_addMsg "Not deleting module ${modulePath}... reference count:${refCount} != 0."
+
+   } errMsg] } {
+      MaestroConsole_addErrorMsg ${errMsg}
+      ::log::log debug "ModuleLayout_deleteModule ERROR: ${errMsg}"
    }
+
 }
 
 # creates dummy resource files

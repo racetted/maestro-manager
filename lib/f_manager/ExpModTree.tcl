@@ -44,38 +44,21 @@ proc ExpModTree_getReferenceName { _expPath _moduleNode } {
 # _moduleNode is full module node name i.e. /enkf_mod/anal_mod/Analysis/gem_mod
 #
 proc ExpModTree_getModInstances { _expPath _moduleNode } {
+   ::log::log debug "ExpModTree_getModInstances: _expPath=${_expPath} _moduleNode=${_moduleNode}"
    set count 0
-   # set moduleName [file tail ${_moduleNode}]
-   set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
-   set moduleName [${modTreeNodeRecord} cget -name]
-   set modulePath ${_expPath}/modules/${moduleName}
-   set modTruePath [exec true_path ${modulePath}]
-   foreach modTreeNode [record show instances ExpModTreeNode] {
-      proc out {} {
-      if { [${modTreeNode} cget -ref_name] != "" } {
-         set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -ref_name] 
-      } else {
-         set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -name] 
-      }
-      }
+   if { [ catch {
+      set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
+      set moduleName [${modTreeNodeRecord} cget -name]
 
-      set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -name] 
-
-      set checkModTruePath [exec true_path ${checkModulePath}]
-      if { ${modTruePath} == ${checkModTruePath} } {
-         incr count
+      foreach modTreeNode [record show instances ExpModTreeNode] {
+         if { ${moduleName} == [${modTreeNode} cget -name] } {
+            incr count
+         }
       }
+   } errMsg] } {
+      ::log::log debug "ExpModTree_getModInstances WARNING: ${errMsg}"
    }
 
-   proc out {} {
-   set modTreeNodePrefix [ExpModTree_getRecordPrefix ${_expPath}]
-   foreach modTreeNode [record show instances ExpModTreeNode] {
-      if { [string match ::${modTreeNodePrefix}* ${modTreeNode}] 
-           && [file tail ${modTreeNode}] == ${moduleName} } {
-         incr count
-      }
-   }
-   }
    return ${count}
 }
 
@@ -83,8 +66,8 @@ proc ExpModTree_getModInstances { _expPath _moduleNode } {
 # _parentTreeNodeRecord is a ExpModTreeNode record of the parent
 # _refName would be used if the module is a link and not local... It is the
 # name of the reference module (might be different than the actual one used (link name vs target)
-proc ExpModTree_addModule { _expPath _moduleNode _parentTreeNodeRecord {_refName ""}} {
-   ::log::log debug "ExpModTree_addModule _moduleNode:${_moduleNode} _parentNode:${_parentTreeNodeRecord}"
+proc ExpModTree_addModule { _expPath _moduleNode _parentTreeNodeRecord {_refName ""} } {
+   ::log::log debug "ExpModTree_addModule _moduleNode:${_moduleNode} _parentNode:${_parentTreeNodeRecord} _refName:${_refName}"
    set moduleName [file tail ${_moduleNode}]
 
    set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]

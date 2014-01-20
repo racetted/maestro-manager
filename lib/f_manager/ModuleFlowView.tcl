@@ -984,6 +984,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    checkbutton ${useModLinkCb} -indicatoron true -variable ${moduleId}_Link_Module \
       -onvalue true -offvalue false
    set ${moduleId}_Link_Module true
+   ::tooltip::tooltip  ${useModLinkCb} "When enabled, creates a link to the defined \"Module Path\""
 
    # creates checkbox to ask whether the container is a work_unit i.e. supertask
    set workUnitLabel [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_wunit_label]

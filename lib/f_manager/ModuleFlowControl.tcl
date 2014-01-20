@@ -153,7 +153,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
 
          catch { set useModuleLink [set ${moduleId}_Link_Module] }
 
-         if { [ExpLayout_isModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${derivedModulePath} ${useModuleLink}] == true } {
+         if { ${modulePath} != "" && [ExpLayout_isModPathExists ${_expPath} ${_parentFlowNodeRecord}/${nodeName} ${derivedModulePath} ${useModuleLink}] == true } {
             set answer [MessageDlg .msg_window -icon question -message "Module directory or link already exists. Do you want to reuse?" \
                -title "Add Module Node" -type okcancel -justify center -parent ${_topWidget} ]
             if { ${answer} == 1 } {
@@ -388,8 +388,10 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
             set answer [MessageDlg .delete_window -icon question -aspect 400 \
                -message "The [file tail ${flowNode}] module is not being used anymore, do you want to delete the module from \$SEQ_EXP_HOME/modules directory as well?" \
                -title "Delete Module Confirmation" -type yesno -justify center -parent ${_canvas} ]
+            ::log::log debug "ModuleFlowControl_deleteNodeSelected the directory as well answer:${answer}"
             if { ${answer} == 0 } {
                # register module deletion
+               ::log::log debug "ModuleFlowControl_deleteNodeSelected ModuleFlowControl_addPostSaveCmd ModuleLayout_deleteModule ${_expPath} ${_moduleNode} ${flowNode}"
                ModuleFlowControl_addPostSaveCmd ${_expPath} ${_moduleNode} \
                   [list ModuleLayout_deleteModule ${_expPath} ${_moduleNode} ${flowNode}]
             }
