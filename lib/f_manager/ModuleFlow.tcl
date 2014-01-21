@@ -1059,7 +1059,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    ::log::log debug "ModuleFlow_renameNode FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType}"
    FlowNode ${newNodeRecord} -name ${_newName} -flow_path ${newNode} -type ${nodeType} -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
       -submitter [${_flowNodeRecord} cget -submitter] -status new -switch_mode [${_flowNodeRecord} cget -switch_mode] -switch_items [${_flowNodeRecord} cget -switch_items] \
-      -curselection [${_flowNodeRecord} cget -curselection]
+      -curselection [${_flowNodeRecord} cget -curselection] -deps [${_flowNodeRecord} cget -deps]
 
    # the node reference count will help us know wheter we can rename node layout files (.tsk, .cfg) or if we need to make a copy of those
    set nodeRefCount [ModuleFlow_getNodeRefCount ${_flowNodeRecord}]
