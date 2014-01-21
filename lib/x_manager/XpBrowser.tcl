@@ -295,7 +295,7 @@ proc XpBrowser::create { frm } {
       pack $XpBfrmCb  -fill x
 
       pack $notebook -fill both -expand yes -padx 4 -pady 4
-      pack $XpBfrm -fill both
+      pack $XpBfrm -fill both -expand yes
 
       $notebook raise [$notebook page 0]
       
