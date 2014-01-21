@@ -955,11 +955,17 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
       -vcmd {
          # allow wordchar and dot characters only
          # replace dot by _ so we can test
-         regsub -all . %P _ tmpentry
-         if { [string is wordchar ${tmpentry}] } {
-            return 1
+         regsub -all {\.} %P _ tmpentry
+         
+         # name cannot start with a number
+         # name cannot contain slashes
+         if { [string length ${tmpentry}] > 0 && [string is digit [string index ${tmpentry} 0]] == "1" } {
+            return 0
          }
-         return 0
+         if { ! [string is wordchar ${tmpentry}] } {
+            return 0
+         }
+         return 1
       }
 
    # creates module reference label & field
@@ -1495,11 +1501,18 @@ proc ModuleFlowView_renameNodeWidgets { _moduleNode _canvas _flowNodeRecord {_al
       -vcmd {
          # allow wordchar and dot characters only
          # replace dot by _ so we can test
-         regsub -all . %P _ tmpentry
-         if { [string is wordchar ${tmpentry}] } {
-            return 1
+         regsub -all {\.} %P _ tmpentry
+         # name cannot start with a number
+         # name cannot contain slashes
+
+         if { [string length ${tmpentry}] > 0 && [string is digit [string index ${tmpentry} 0]] == "1" } {
+            return 0
          }
-         return 0
+
+         if { ! [string is wordchar ${tmpentry}] } {
+            return 0
+         }
+         return 1
       }
 
    ::tooltip::tooltip ${newNameEntry} "Enter new name here."
