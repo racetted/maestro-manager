@@ -57,7 +57,7 @@ proc XTree::getPath {w node} {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::init { tree args } {
-
+   # puts "XTree::init tree:${tree} args:${args}"
     variable count
     set count 0
 
@@ -136,6 +136,7 @@ proc XTree::moddir { idx tree node } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::select { where num tree node } {
+   # puts "XTree::select where:${where} num:${num} tree:${tree} node:${node}"
     variable dblclick
 
 
@@ -163,6 +164,7 @@ proc XTree::select { where num tree node } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::select_node { tree node } {
+   # puts "XTree::select_node tree:${tree} node:${node}"
 
     $tree selection set $node
     update
@@ -181,6 +183,7 @@ proc XTree::select_node { tree node } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::edit { where tree node } {
+    # puts "XTree::edit where:${where} tree:${tree} node:${node}"
     variable dblclick
 
     if { [info exists dblclick] } {
@@ -201,7 +204,7 @@ proc XTree::edit { where tree node } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::expand { tree but } {
-   
+    # puts "XTree::expand tree:${tree} but:${but}"
     if { [set cur [$tree selection get]] != "" } {
         if { $but == 0 } {
             $tree opentree $cur
@@ -222,7 +225,7 @@ proc XTree::expand { tree but } {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::walkin { tree fromDir branche level listD parent CmdList suffix ftype indice } {
-
+   # puts "XTree::walkin tree:${tree} fromDir:${fromDir} branche:${branche}"
     global listExp
     set matchLink {}
 
@@ -304,7 +307,7 @@ $fromDir"  ok warning ""  $win
     }
 
     # -- if not go deep
-    foreach dname [glob -nocomplain -type {d r} -path $basedir *] {
+    foreach dname [lsort -dictionary [glob -nocomplain -type {d r} -path $basedir *]] {
               if {[file isdirectory $dname]} {
 		   # -- discard directories refered to by a link
 		   if {[lsearch $matchLink [file tail $dname]] >= 0 } {
@@ -356,7 +359,7 @@ proc XTree::lshift listVar {
 # -- Need to detect recursion
 #---------------------------------------------
 proc XTree::FindExps {args} {
-
+   # puts "XTree::FindExps args:${args}"
    set files {}
    set matchLink {}
 
