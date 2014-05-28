@@ -1273,12 +1273,17 @@ proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flow
 proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRecord ""} } {
    # get item to add
    set newItemValue [${_itemEntryW} get]
+   set ItemValueList [split ${newItemValue} ","]
    if { ${newItemValue} != "" } {
-      # validate hour field is 2 digits between 00 and 23
-      if { ! ([string length ${newItemValue}] == 2 && ${newItemValue} >= "00" && ${newItemValue} <= "23") } {
-         MessageDlg .msg_window -icon error -message "Invalid hour value: ${newItemValue}. Must be two digits character between 00 and 23." -aspect 400 \
-            -title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
-         return
+      if { ${newItemValue} != "default" } {
+	# validate hour field is 2 digits between 00 and 23
+	foreach itemValue ${ItemValueList} {
+	  if { ! ([string length ${itemValue}] == 2 && ${itemValue} >= "00" && ${itemValue} <= "23") } {
+	    MessageDlg .msg_window -icon error -message "Invalid hour value: ${newItemValue}. Must be two digits character between 00 and 23." -aspect 400 \
+		-title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
+	    return
+	  }
+	}
       }
       # get all existings items
       set currentItems [${_valueListW} get 0 end]
