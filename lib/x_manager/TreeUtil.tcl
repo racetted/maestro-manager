@@ -100,7 +100,7 @@ proc TreeUtil::MpopNode {frm tree} {
     $frm.stpopup add command -label {Quit} -command {} 
 
 
-    $tree bindText  <Button-3>  "TreeUtil::mporting file_treepopup $frm $tree [$tree selection get]"
+    $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
 
 }
 
