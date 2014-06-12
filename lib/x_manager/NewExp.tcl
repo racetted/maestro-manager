@@ -3,7 +3,7 @@ array set DirFullName {
            hub    "hub"
            mod    "modules"
            seq    "sequencing"
-           log    "log"
+           log    "logs"
            lis    "listings"
            res    "resources"
 }
@@ -223,19 +223,11 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 	       -bg #FFFFFF \
 	       -padx 0]
 
-     set NElist [text  $sfrm.txt -width 80 -height 20 -bg #FFFFFF -font 10 -wrap none]
+     set NElist [text  $sfrm.txt -width 80 -height 13 -bg #FFFFFF -font 10 -wrap none]
 
      set BFrame [frame $frm.bfrm]
      set Cancel [button $BFrame.cancel -image $XPManager::img_Cancel -command {destroy $NewExp::NextResume}]
      set Ok     [button $BFrame.next   -text "Proceed" -command [list NewExp::CreateNew $NextResume $path $name $entrymod $arrloc $arrentry]]
-
-     pack $Cancel -side right
-     pack $Ok -side right  -padx 4
-
-     pack $BFrame -side bottom
-     pack $NElist -fill x
-     pack $titre -anchor w
-     pack $frm
 
      # -- Show other Parametres of New experiment:
      $NElist insert end "$Dialogs::New_ExpName:$name\n"     
@@ -244,13 +236,32 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      $NElist insert end "_______________________________________\n"
      $NElist insert end "\n"
 
+     set remote_warning 0
+
      foreach loc {bin hub mod seq res lis log} {
               if {[string compare $arlc($loc) "local"] == 0} {
                       $NElist insert end  "Directory: $::DirFullName($loc) will be created localy\n"
 	      } else {
+                      if {$loc != "log"} {set remote_warning 1}
                       $NElist insert end  "Directory: $::DirFullName($loc) will be a link to  $arent($loc)\n"
 	      }
      }
+
+     pack $Cancel -side right
+     pack $Ok -side right  -padx 4
+
+     pack $BFrame -side bottom
+     pack $NElist -fill x
+
+     if {$remote_warning == 1} {
+        $NElist insert end "\n"
+        set NEwarning [text $sfrm.w -width 80 -height 3 -bg tomato -font 12 -wrap none]
+        pack $NEwarning -fill y
+        $NEwarning insert end "$Dialogs::New_ExpRemoteWarning"
+     }
+
+     pack $titre -anchor w
+     pack $frm
 }
 
 
@@ -366,14 +377,20 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
                            $NewExp::Entrymod configure -state normal}]
 
       set radseq_local   [radiobutton $subfdirs.radseql -text "" -variable seq -value local  -command  {\
+                           $NewExp::Entryseq configure -text "" ;\
+			  set NewExp::ArrayDirLocations(seq) "local" ;\
                            $NewExp::Entryseq configure -state disabled}]
       set radseq_remote  [radiobutton $subfdirs.radseqr -text "" -variable seq -value remote -command  {\
+                           set NewExp::ArrayDirLocations(seq) "remote" ;\
                            $NewExp::Entryseq configure -state normal}]
 
       set radlog_local   [radiobutton $subfdirs.radlogl -text "" -variable log -value local  -command  {\
-                           $NewExp::Entryseq configure -state disabled}]
+                           $NewExp::Entrylog configure -text "" ;\
+			  set NewExp::ArrayDirLocations(seq) "local" ;\
+                           $NewExp::Entrylog configure -state disabled}]
       set radlog_remote  [radiobutton $subfdirs.radlogr -text "" -variable log -value remote -command  {\
-                           $NewExp::Entryseq configure -state normal}]
+                           set NewExp::ArrayDirLocations(log) "remote" ;\
+                           $NewExp::Entrylog configure -state normal}]
 
 
       # -- Put default values for entries
@@ -401,11 +418,15 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       set Entrymod        [Entry $subfdirs.emod   -textvariable mod -width 25  -bg #FFFFFF -font 12 -helptext "" \
 		           -command  {}]
 
-      set Entryseq        [Entry $subfdirs.eseq   -textvariable seq -width 25  -bg #FFFFFF -font 12 -helptext "" \
+      set Entryseq        [Entry $subfdirs.eseq   -textvariable eseq -width 25  -bg #FFFFFF -font 12 -helptext "remote sequencing" \
+		           -validate key\
+			   -validatecommand {NewExp::ValidKey "seq" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
       
-      set Entrylog        [Entry $subfdirs.elog   -textvariable log -width 25  -bg #FFFFFF -font 12 -helptext "" \
+      set Entrylog        [Entry $subfdirs.elog   -textvariable elog -width 25  -bg #FFFFFF -font 12 -helptext "remote log" \
+		           -validate key\
+			   -validatecommand {NewExp::ValidKey "log" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
 
@@ -470,8 +491,8 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       $radlog_local  select
 
       $radmod_remote configure -state disabled
-      $radlog_remote configure -state disabled
-      $radseq_remote configure -state disabled 
+      #$radlog_remote configure -state disabled
+      #$radseq_remote configure -state disabled 
        
       # -- At Entry Disable All Remote Entry 
       $NewExp::Entrybin   configure -state disabled
@@ -552,7 +573,7 @@ proc NewExp::FinalCheck { win path name entrmod arlocation arvalues } {
        upvar  $arvalues   arval
 
        set arerror {}
-       foreach loc {bin hub res lis} {
+       foreach loc {bin hub res lis seq log} {
 	       if {[string compare $arloc($loc) "remote"] == 0 && \
 	           [string compare $arval($loc) ""] == 0 } {
 	             lappend arerror "$loc"    
@@ -610,8 +631,6 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        if [catch {
                catch {[exec mkdir -p $path/$name/modules]}
-               catch {[exec mkdir -p $path/$name/sequencing]}
-               catch {[exec mkdir -p $path/$name/logs]}
                catch {[exec mkdir -p $path/$name/modules/$entrymod]}
                catch {[exec ln -s modules/$entrymod $path/$name/EntryModule]}
        } message ] {
@@ -627,7 +646,7 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
        # -- for local and remote directory Creation
        set l_error 0
        set r_error 0
-       foreach loc {bin hub res lis} {
+       foreach loc {bin hub res lis seq log} {
 	       if {[string compare $arloc($loc) "local"] == 0 } {
                            if [catch { exec mkdir -p $path/$name/$::DirFullName($loc) }] {
                                    set l_error 1
@@ -641,11 +660,11 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        # -- see if errors  Note no rollback at this point
        if { $l_error == 1 } {
-             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories (bin|hub|resources|listing)"  ok warning "" $parent 
+             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories (bin|hub|resources|listing|sequencing|logs)"  ok warning "" $parent 
        }
 
        if { $r_error == 1 } {
-             Dialogs::show_msgdlg "Unable to create sub-Experiment links (bin|hub|resources|listing)"  ok warning "" $parent 
+             Dialogs::show_msgdlg "Unable to create sub-Experiment links (bin|hub|resources|listing|sequencing|logs)"  ok warning "" $parent 
        }
 
        # -- under resources create entry mod.
