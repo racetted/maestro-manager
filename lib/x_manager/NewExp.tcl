@@ -654,7 +654,9 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
                } else {
 	                   if [catch { exec ln -s $arentry($loc) $path/$name/$::DirFullName($loc) }] {
                                    set r_error 1
-			   }
+			   } else {
+		                   exec mkdir -p $arentry($loc)/$::DirFullName($loc)
+                           }
 	       }
        }
 
