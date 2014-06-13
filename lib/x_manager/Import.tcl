@@ -477,11 +477,14 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
 
       fconfigure $fid -buffering line -translation auto 
       fileevent  $fid readable "Import::GetImportScriptOutputs $fid $WinInfoWidget $ExeImport"
-
 }
 
 proc Import::GetImportScriptOutputs {fid Winfo win} {
-    
+
+      # Refresh exp browser window
+      set nbk [$XpBrowser::notebook raise]
+      set listxp [Preferences::GetTabListDepots $nbk "r"]
+      XTree::reinit $::TreesWidgets([string trim $nbk " "])  {*}$listxp
 
       if {[gets $fid line] >= 0 } {
 
