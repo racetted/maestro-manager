@@ -254,10 +254,9 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      pack $NElist -fill x
 
      if {$remote_warning == 1} {
-        $NElist insert end "\n"
-        set NEwarning [text $sfrm.w -width 80 -height 3 -bg tomato -font 12 -wrap none]
-        pack $NEwarning -fill y
-        $NEwarning insert end "$Dialogs::New_ExpRemoteWarning"
+        set NEwarning [text  $sfrm.warning -width 80 -height 5 -bg #FFFFFF -font 10 -wrap none -fg red]
+        $NEwarning insert end "$Dialogs::New_ExpRemoteWarning\n"
+        pack $NEwarning -fill x
      }
 
      pack $titre -anchor w
