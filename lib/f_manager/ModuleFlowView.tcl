@@ -903,7 +903,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
       if { ${hasSiblings} == true && [${_flowNodeRecord} cget -type] != "ModuleNode" } {
          lappend values "parent"
       }
-      spinbox ${positionSpinW} -values ${values} -wrap yes
+      spinbox ${positionSpinW} -values ${values} -wrap yes -bg white
       ${positionSpinW} set ${initialValue}
 
    }
@@ -923,7 +923,7 @@ proc ModuleFlowView_createNodeAddWidgets { _moduleNode _canvas _flowNodeRecord }
    set nameLabel [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_name_label]
    set nameEntry [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_name_entry]
    Label ${nameLabel} -text "Name:"
-   Entry ${nameEntry} -validate all \
+   Entry ${nameEntry} -bg white -validate all \
       -vcmd {
          # allow wordchar and dot characters only
          # replace dot by _ so we can test
@@ -1247,7 +1247,7 @@ proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flow
    set frameWidget [${_switchValuesFrame} getframe]
    set valueListWidget [listbox ${frameWidget}.values_list]
    set buttonFrame [frame ${frameWidget}.button_Frame]
-   set itemEntry [entry ${buttonFrame}.item_entry -width 8 ]
+   set itemEntry [entry ${buttonFrame}.item_entry -width 8 -bg white]
    set addButton [button ${buttonFrame}.add_button -text Add]
 
    if { ${_flowNodeRecord} != "" } {
