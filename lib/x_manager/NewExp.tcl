@@ -159,7 +159,7 @@ proc NewExp::New_xp { exp nbk } {
 				  return
 			}
 
-                        NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName}]
+                        NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName true}]
       
       pack $controlframe.lab -fill x
 
@@ -227,6 +227,9 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 
      set BFrame [frame $frm.bfrm]
      set Cancel [button $BFrame.cancel -image $XPManager::img_Cancel -command {destroy $NewExp::NextResume}]
+     set Back   [button $BFrame.back -text "Back" -command {\
+                   NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName false ;\
+                   destroy $NewExp::NextResume}]
      set Ok     [button $BFrame.next   -text "Proceed" -command [list NewExp::CreateNew $NextResume $path $name $entrymod $arrloc $arrentry]]
 
      # -- Show other Parametres of New experiment:
@@ -248,6 +251,7 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      }
 
      pack $Cancel -side right
+     pack $Back -side right  -padx 4
      pack $Ok -side right  -padx 4
 
      pack $BFrame -side bottom
@@ -264,7 +268,7 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 }
 
 
-proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
+proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} } {
 
       variable PrefWinDirs
       variable Entrybin
@@ -296,7 +300,8 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       label $frm.lab -text  $Dialogs::New_Dirs -font "ansi 12 "
       set tdirs  [TitleFrame $frm.dirs  -text $Dialogs::New_Dirs]
       set subfdirs  [$tdirs getframe]
-    
+      
+      
       array set ArrayDirLocations {
                bin   "local"
 	       res   "local"
@@ -306,15 +311,17 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
 	       seq   "local"
 	       log   "local"
       }
-      
-      array set ArrayEntryValues {
-               bin   ""
-	       res   ""
-	       hub   ""
-	       lis   ""
-	       mod   ""
-	       seq   ""
-	       log   ""
+
+      if { $first_time == true } {
+         array set ArrayEntryValues {
+                  bin   ""
+	          res   ""
+	          hub   ""
+	          lis   ""
+	          mod   ""
+	          seq   ""
+	          log   ""
+         }
       }
 
       set CtrlButton     [frame  $frm.ctrlbuttons -border 2 -relief flat]
@@ -480,6 +487,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
 
       pack $frm
 
+      
       # -- by Default all directories Local
       $radbin_local  select
       $radhub_local  select
@@ -492,7 +500,8 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       $radmod_remote configure -state disabled
       #$radlog_remote configure -state disabled
       #$radseq_remote configure -state disabled 
-       
+      
+      
       # -- At Entry Disable All Remote Entry 
       $NewExp::Entrybin   configure -state disabled
       $NewExp::Entryhub   configure -state disabled
@@ -501,6 +510,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       $NewExp::Entrymod   configure -state disabled
       $NewExp::Entryseq   configure -state disabled
       $NewExp::Entrylog   configure -state disabled
+     
 }
 
 proc NewExp::ValidKey { ArgVar arrayent action type str } {
