@@ -1049,7 +1049,7 @@ proc ModuleFlowView_createNodeEditWidgets { _moduleNode _canvas _flowNodeRecord 
 
    set switchValuesFrame [ModuleFlowView_getWidgetName ${expPath} ${_moduleNode} addnode_switchvalues_frame]
    set switchModeValue [${_flowNodeRecord} cget -switch_mode]
-   ModuleFlowViwe_addSwitchItemWidgets  ${switchValuesFrame} ${switchModeValue} ${_flowNodeRecord}
+   ModuleFlowViwe_addSwitchItemWidgets  ${switchValuesFrame} ${switchModeValue} ${expPath} ${_moduleNode} ${_flowNodeRecord}
 
    # create frame for ok/cancel buttons
    # add ok/cancel button
@@ -1225,7 +1225,7 @@ proc ModuleFlowView_addSwitchNodeExtraWidget { _expPath _moduleNode } {
    puts "ModuleFlowView_addSwitchNodeExtraWidget switchModeValue:${switchModeValue}"
    
    set switchValuesFrame [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_switchvalues_frame]
-   ModuleFlowViwe_addSwitchItemWidgets ${switchValuesFrame} ${switchModeValue}
+   ModuleFlowViwe_addSwitchItemWidgets ${switchValuesFrame} ${switchModeValue} ${_expPath} ${_moduleNode}
 
    grid ${switchModeLabel} -row 4 -column 0 -sticky w -padx 2 -pady 2
    grid ${switchModeOption} -row 4 -column 1 -sticky we -padx 2 -pady 2
@@ -1233,7 +1233,7 @@ proc ModuleFlowView_addSwitchNodeExtraWidget { _expPath _moduleNode } {
    grid rowconfigure ${entryFrame} 5 -weight 1
 }
 
-proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flowNodeRecord ""} } {
+proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode _expPath _moduleN {_flowNodeRecord ""} } {
    switch ${_switchMode} {
       DatestampHour {
          set labelText "Default Hours"
@@ -1242,7 +1242,6 @@ proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flow
          set labelText ""
       }
    }
-
    LabelFrame ${_switchValuesFrame} -side top -text ${labelText} -bd 1 -relief raised
    set frameWidget [${_switchValuesFrame} getframe]
    set valueListWidget [listbox ${frameWidget}.values_list]
@@ -1257,7 +1256,7 @@ proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flow
       }
    }
 
-   ${addButton} configure -command [list ModuleFlowView_addSwitchNodeAddItem ${valueListWidget} ${itemEntry} ${_flowNodeRecord}]
+   ${addButton} configure -command [list ModuleFlowView_addSwitchNodeAddItem ${valueListWidget} ${itemEntry} ${_switchMode} ${_expPath} ${_moduleN} ${_flowNodeRecord}]
    set remButton [button ${buttonFrame}.rem_button -text Remove]
    ${remButton} configure -command [list ModuleFlowView_removeSwitchNodeAddItem ${valueListWidget} ${itemEntry} ${_flowNodeRecord}]
    bind ${valueListWidget} <<ListboxSelect>> [list ModuleFlowView_selectSwitchNodeAddItem ${valueListWidget} ${itemEntry}]
@@ -1270,7 +1269,14 @@ proc ModuleFlowViwe_addSwitchItemWidgets { _switchValuesFrame _switchMode {_flow
    grid rowconfigure ${frameWidget} 0 -weight 1
 }
 
-proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRecord ""} } {
+proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW _switchMode _expPath _moduleN {_flowNodeRecord ""} } {
+   if { ${_flowNodeRecord} == "" } {
+     set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleN}]
+     global ${moduleId}_SwitchModeOption
+     set switchModeValue [set ${moduleId}_SwitchModeOption]
+   } else {
+     set switchModeValue ${_switchMode}
+   }
    # get item to add
    set newItemValue [${_itemEntryW} get]
    set ItemValueList [split ${newItemValue} ","]
@@ -1278,11 +1284,19 @@ proc ModuleFlowView_addSwitchNodeAddItem { _valueListW _itemEntryW {_flowNodeRec
       if { ${newItemValue} != "default" } {
 	# validate hour field is 2 digits between 00 and 23
 	foreach itemValue ${ItemValueList} {
-	  if { ! ([string length ${itemValue}] == 2 && ${itemValue} >= "00" && ${itemValue} <= "23") } {
-	    MessageDlg .msg_window -icon error -message "Invalid hour value: ${newItemValue}. Must be two digits character between 00 and 23." -aspect 400 \
-		-title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
-	    return
-	  }
+          if { $switchModeValue == "DatestampHour" } {
+	    if { ! ([string length ${itemValue}] == 2 && ${itemValue} >= "00" && ${itemValue} <= "23") } {
+	      MessageDlg .msg_window -icon error -message "Invalid value: ${newItemValue}. Must be two digits character between 00 and 23 for DatestampHour switch." -aspect 400 \
+	      -title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
+	      return
+            }
+          } elseif { $switchModeValue == "DayOfWeek" } {
+            if { ! ([string length ${itemValue}] == 1 && ${itemValue} >= "0" && ${itemValue} <= "6") } {
+	      MessageDlg .msg_window -icon error -message "Invalid value: ${newItemValue}. Must be one digit character between 0 and 6 for DayOfWeek switch." -aspect 400 \
+	      -title "Add Node Error" -type ok -justify center -parent [winfo toplevel ${_valueListW}]
+	      return
+            }
+          }
 	}
       }
       # get all existings items
