@@ -1219,7 +1219,7 @@ proc ModuleFlowView_addSwitchNodeExtraWidget { _expPath _moduleNode } {
 
    Label ${switchModeLabel} -text "Switch Mode:"
    catch { unset ${moduleId}_SwichModeOption }
-   tk_optionMenu ${switchModeOption} ${moduleId}_SwitchModeOption DatestampHour DayOfWeek DayOfMonth
+   tk_optionMenu ${switchModeOption} ${moduleId}_SwitchModeOption DatestampHour DayOfWeek
 
    set switchModeValue [set ${moduleId}_SwitchModeOption]
    puts "ModuleFlowView_addSwitchNodeExtraWidget switchModeValue:${switchModeValue}"
