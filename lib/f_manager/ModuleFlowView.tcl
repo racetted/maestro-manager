@@ -1360,7 +1360,7 @@ proc ModuleFlowView_getCurrentSwitchItem {  _expPath _flowNodeRecord _canvas} {
    set value ""
    set switchModeValue [${_flowNodeRecord} cget -switch_mode]
    # set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
-   if { ${switchModeValue} == "DatestampHour" } {
+   if { ${switchModeValue} == "DatestampHour" || ${switchModeValue} == "DayOfWeek" } {
       set comboBoxWidget [DrawUtils_getIndexWidgetName ${_flowNodeRecord} ${_canvas}]
       # check if the current value of the combobox matches a valid entry in the list
       if { [${comboBoxWidget} getvalue] != -1 } {
