@@ -55,6 +55,7 @@ proc Dialogs::setDlg {} {
 	 variable New_ExpSubD
 	 variable New_ExpDest
 	 variable New_ExpEnMo
+	 variable New_ExpResFile
          variable New_ExpRemoteWarning
 	 variable New_Dirs
 	 variable New_DirName
@@ -159,6 +160,7 @@ proc Dialogs::setDlg {} {
 	          set New_ExpSubD "Experiment Sub-directories"
 	          set New_ExpDest "Experiment destination path"
 	          set New_ExpEnMo "Experiment Entry Module Name"
+                  set New_ExpResFile "Experiment Resource File (optional)"
                   set New_ExpRemoteWarning "Warning: if hub, modules, sequencing, resources or listings are set to remote,\nthen they need to be visible from all execution hosts. However, for listings and hub,\nthe host-specific links underneath do not need to be visible. "
 	          set New_Dirs "Experiment Directories"
 	          set New_DirName "Directory name"
@@ -255,6 +257,7 @@ proc Dialogs::setDlg {} {
 	          set New_ExpSubD "Sous-repertoires de l'exprience"
 	          set New_ExpDest "Chemin de Destination de l'experience"
 	          set New_ExpEnMo "Module d'entree de l'experience"
+                  set New_ExpResFile "Fichier de ressource de l'experience (optionnel)"
                   set New_ExpRemoteWarning "Attention: si hub, modules, sequencing, resources ou listings sont places en remote,\nils doivent etre visibles par tous les hosts qui executent l'experience. Par contre, pour listings and hub,\nles liens specifiques du host n'ont pas besoin d'etre visibles. "
 	          set New_Dirs "Repertoires de l'experience"
 	          set New_DirName "Nom du repertoire"

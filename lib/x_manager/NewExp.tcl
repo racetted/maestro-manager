@@ -16,6 +16,7 @@ namespace eval NewExp {
       variable ExpName
       variable ExpPath
       variable XpPath
+      variable ResFilePath
 }
 
 proc NewExp::New_xp { exp nbk } {
@@ -27,10 +28,13 @@ proc NewExp::New_xp { exp nbk } {
       variable EntryModName 
       variable ExpPath
       variable XpPath
+      variable ResFilePath
 
       if {[winfo exists .newxp]} {
              destroy .newxp
       }
+
+      set ResFilePath ""
 
       set win_new_xp [toplevel .newxp] 
       wm title $win_new_xp $Dialogs::New_ExpTitle 
@@ -53,11 +57,13 @@ proc NewExp::New_xp { exp nbk } {
       set tith [TitleFrame $controlframe.tith -text $Dialogs::New_ExpSubD]
       set titp [TitleFrame $controlframe.titp -text $Dialogs::New_ExpDest]
       set tite [TitleFrame $controlframe.tite -text $Dialogs::New_ExpEnMo]
+      set titr [TitleFrame $controlframe.titr -text $Dialogs::New_ExpResFile]
 
       set subf1 [$titn getframe]
       set subf2 [$tith getframe]
       set subf3 [$titp getframe]
       set subf4 [$tite getframe]
+      set subf5 [$titr getframe]
       
       set ExpName  [Entry $subf1.entryn \
                          -textvariable  NewExp::XPname \
@@ -106,8 +112,31 @@ proc NewExp::New_xp { exp nbk } {
 				        }
 		             }
 
+      Entry $subf5.entryrespath -textvariable NewExp::ResFilePath -width 45 -bg #FFFFFF -helptext "Resource file path"   
 
+      Button $subf5.browseb -text "Browse" -command {
+                                   set dir [tk_getOpenFile -initialdir $env(HOME)/.suites -title "Choose a resource file" -parent .newxp]
+			               if {[string compare x$dir "x"] != 0} {
+				          set NewExp::ResFilePath $dir
+				       }
+		                   }
 
+      Button $subf5.checkres -text "Use default" -command { set NewExp::ResFilePath "$env(HOME)/.suites/default/resources.def" }
+      if { ![file exists $::env(HOME)/.suites/default/resources.def] } {
+         $subf5.checkres configure -state disabled
+      }
+      Button $subf5.createdefb -text "Create/edit default file" -command "
+                                   if { ! [file exists $::env(HOME)/.suites/default] } {
+                                      file mkdir $::env(HOME)/.suites/default
+                                   }
+                                   if { ![file exists $::env(HOME)/.suites/default/resources.def] && [file writable $::env(HOME)/.suites/default] } {
+                                      close [open $::env(HOME)/.suites/default/resources.def w]
+                                   }
+                                   ::ModuleFlowView_goEditor $::env(HOME)/.suites/default/resources.def
+                                   
+                                   $subf5.checkres configure -state active
+                          "
+                                   
       frame $controlframe.sep -height 2 -borderwidth 1 -relief sunken
       frame $controlframe.buttons -border 2 -relief groove
 
@@ -173,7 +202,13 @@ proc NewExp::New_xp { exp nbk } {
       pack $tite         -anchor w -pady 2 -padx 2 
       pack $ExpEntryMod  -side left -padx 4 
       pack $ButModNotif  -side left -padx 4
-      
+
+      pack $titr -anchor w -pady 2 -padx 2
+      pack $subf5.entryrespath -side top -pady 2
+      pack $subf5.browseb -side left -padx 4 -pady 2
+      pack $subf5.checkres -side left -padx 4 -pady 2
+      pack $subf5.createdefb -side left -padx 4 -pady 2       
+
       pack $controlframe.sep -fill x -pady 4
       
       pack $ButCancel   -side left -padx  4 
@@ -681,6 +716,9 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
        # -- under resources create entry mod.
        if [  catch { exec mkdir -p $path/$name/resources/$entrymod } ] {
              Dialogs::show_msgdlg "Unable to create Entry Module:$entrymod under resources"  ok warning "" $parent 
+       }
+       if { $NewExp::ResFilePath != "" } {
+          exec cp $NewExp::ResFilePath $path/$name/resources/resources.def
        }
 
        # -- if every things is ok update. 
