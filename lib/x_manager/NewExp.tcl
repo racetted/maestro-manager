@@ -121,18 +121,18 @@ proc NewExp::New_xp { exp nbk } {
 				       }
 		                   }
 
-      Button $subf5.checkres -text "Use default" -command { set NewExp::ResFilePath "$env(HOME)/.suites/default/resources.def" }
-      if { ![file exists $::env(HOME)/.suites/default/resources.def] } {
+      Button $subf5.checkres -text "Use default" -command { set NewExp::ResFilePath "$env(HOME)/.suites/default_resources.def" }
+      if { ![file exists $::env(HOME)/.suites/default_resources.def] } {
          $subf5.checkres configure -state disabled
       }
       Button $subf5.createdefb -text "Create/edit default file" -command "
-                                   if { ! [file exists $::env(HOME)/.suites/default] } {
-                                      file mkdir $::env(HOME)/.suites/default
+                                   if { ! [file exists $::env(HOME)/.suites] } {
+                                      [ file mkdir $::env(HOME)/.suites ]
                                    }
-                                   if { ![file exists $::env(HOME)/.suites/default/resources.def] && [file writable $::env(HOME)/.suites/default] } {
-                                      close [open $::env(HOME)/.suites/default/resources.def w]
+                                   if { ![file exists $::env(HOME)/.suites/default_resources.def] && [file writable $::env(HOME)/.suites/] } {
+                                      close [open $::env(HOME)/.suites/default_resources.def a]
                                    }
-                                   ::ModuleFlowView_goEditor $::env(HOME)/.suites/default/resources.def
+                                   ::ModuleFlowView_goEditor $::env(HOME)/.suites/default_resources.def
                                    
                                    $subf5.checkres configure -state active
                           "
