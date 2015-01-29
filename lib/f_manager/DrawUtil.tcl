@@ -276,9 +276,8 @@ proc DrawUtil_drawLosange { canvas tx1 ty1 text maxtext textfill outline fill bi
       set foundIndex [lsearch ${switchItems} ${curSelection}]
       if { ${curSelection} != "" && ${foundIndex} != -1 } {
          set initialIndex @${foundIndex}
+         ${indexListW} setvalue ${initialIndex}
       }
-
-      ${indexListW} setvalue ${initialIndex}
    }
 
    set barY [expr ${maxY} + 15]
