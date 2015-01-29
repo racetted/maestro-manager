@@ -278,7 +278,7 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 
      foreach loc {bin hub mod seq res lis log} {
               if {[string compare $arlc($loc) "local"] == 0} {
-                      $NElist insert end  "Directory: $::DirFullName($loc) will be created localy\n"
+                      $NElist insert end  "Directory: $::DirFullName($loc) will be created locally\n"
 	      } else {
                       if {$loc != "log"} {set remote_warning 1}
                       $NElist insert end  "Directory: $::DirFullName($loc) will be a link to  $arent($loc)\n"
