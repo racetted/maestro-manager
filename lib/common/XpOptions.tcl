@@ -7,8 +7,8 @@ proc XpOptions::globalOptions {} {
      catch {font create TkDefaultFont -family Helvetica -size -12}
 
      option add *Font                    TkDefaultFont
-     option add *selectBackground        #678db2
-     #option add *selectBackground        "#509df4"
+     #option add *selectBackground        #678db2
+     option add *selectBackground        "#509df4"
      option add *selectForeground        white
      option add *activeBackground        "#509df4"
 
