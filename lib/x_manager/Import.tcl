@@ -90,7 +90,7 @@ proc Import::ImportExp { exp } {
 		    -helptext "List of Available Paths"]
 
       set ImportGit [checkbutton $subf5.radgit -text "Import Git" -font 8 -variable Import::_ImportGit -onvalue 1 -offvalue 0]
-      set ImportCte [checkbutton $subf5.radcte -text "Copy Constants Localy (MB)" -font 8 -variable Import::_ImportCte -onvalue 1 -offvalue 0 \
+      set ImportCte [checkbutton $subf5.radcte -text "Copy Constants Locally (MB)" -font 8 -variable Import::_ImportCte -onvalue 1 -offvalue 0 \
                       -command {Import::GetConstantsSize $Import::_selected} ]
 
       set ImportSize [Entry  $subf5.size -textvariable Import::_Importsize \
@@ -342,7 +342,7 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
 
       # -- Check Constants
       if { $cte == 1 } {
-             $dpexp insert end "Const" -text "Constants Files will be copied localy" 
+             $dpexp insert end "Const" -text "Constants Files will be copied locally" 
       } else {
              $dpexp insert end "Const" -text "Constants will not be Imported ... You must create links to the original constant files." 
       }
@@ -481,11 +481,6 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
 
 proc Import::GetImportScriptOutputs {fid Winfo win} {
 
-      # Refresh exp browser window
-      set nbk [$XpBrowser::notebook raise]
-      set listxp [Preferences::GetTabListDepots $nbk "r"]
-      XTree::reinit $::TreesWidgets([string trim $nbk " "])  {*}$listxp
-
       if {[gets $fid line] >= 0 } {
 
 		$Winfo insert end "$line \n"
@@ -513,7 +508,11 @@ proc Import::GetImportScriptOutputs {fid Winfo win} {
       } else {
                 close $fid
 		if { $Import::SUCCES == 1 } {
-		         Dialogs::show_msgdlg $Dialogs::Imp_Ok  ok info "" $win] 
+		         Dialogs::show_msgdlg $Dialogs::Imp_Ok  ok info "" $win]
+			 # Refresh exp browser window
+			 set nbk [$XpBrowser::notebook raise]
+			 set listxp [Preferences::GetTabListDepots $nbk "r"]
+			 XTree::reinit $::TreesWidgets([string trim $nbk " "])  {*}$listxp
 		} else  {
 		         Dialogs::show_msgdlg $Dialogs::Imp_Ko  ok warning "" $win] 
 		}
