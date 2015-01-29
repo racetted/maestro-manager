@@ -562,7 +562,7 @@ proc Audit::ViewFile {tbl} {
 			set ftype  [exec file $base/$lfile]
 		}
 
-		if {[regexp  "ASCII|Korn|HTML|text" "$ftype"]} {
+		if {[regexp  "ASCII|Korn|HTML|text|empty" "$ftype"]} {
 		      # -- We should check existence of file  before calling text_viewer
                       eval exec "$Preferences::text_viewer $Preferences::text_viewer_args" $fpath1 &
                 } else {
