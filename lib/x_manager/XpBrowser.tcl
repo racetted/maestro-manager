@@ -54,6 +54,8 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
 }
+
+
 #---------------------------------------------------------
 # Having a valid Experiments show Experiment 
 # date and  catchup 
@@ -413,5 +415,19 @@ proc XpBrowser::ExpSelected { source_w } {
        ExpModTreeControl_init ${source_w} $::_XpBrSelected
 }
 
+proc XpBrowser::GetExpSelected {} {
+   global _XpBrSelected
+   return ${_XpBrSelected}
+}
 
+proc XpBrowser::_clearXp {} {
+   global _XpBrSelected
+   global _ExpDate
+   global _ExpCatchup
+   variable confNode
 
+   set _XpBrSelected "";
+   set _ExpDate "";
+   set _ExpCatchup "";
+   set confNode "";
+}
