@@ -186,11 +186,16 @@ proc Import::ImportExp { exp } {
 }
 proc Import::NextButton { } {
 
+      if { $Import::_selected != "" } {
+         set Import::_selected [file nativename $Import::_selected]
+      }
+
       if {[string compare $Import::_selected ""] == 0} {
 		    Dialogs::show_msgdlg "You Must Choose an Experiment"  ok warning "" $Import::ImportW
 		    return
       }
 
+      set Import::Destination [file nativename $Import::Destination]
       if {[regexp {[ \r\n\t]+} $Import::Destination] || [string compare $Import::Destination ""] == 0} {
 		    Dialogs::show_msgdlg "You Must give a Valid Destination path"  ok warning "" $Import::ImportW
 		    return
