@@ -297,7 +297,7 @@ proc XpBrowser::create { frm } {
       pack $XpBfrmCb  -fill x
 
       pack $notebook -fill both -expand yes -padx 4 -pady 4
-      pack $XpBfrm -fill both
+      pack $XpBfrm -fill both -expand yes
 
       $notebook raise [$notebook page 0]
       
@@ -344,6 +344,7 @@ proc XpBrowser::create { frm } {
 #---------------------------------
 proc XpBrowser::validateAndShowExp { sel_xp } {
    
+      set sel_xp [file nativename $sel_xp]
       set kris [catch {file type $sel_xp/EntryModule} ftype]
       if { $kris != 0 || $ftype ne "link"  } {
                  Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $XpBrowser::XpBfrm
