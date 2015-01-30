@@ -43,7 +43,7 @@ proc ResourceControl_retrieveData { _expPath _moduleNode _flowNodeRecord {refres
 
 proc ResourceControl_retrieveBatchData { _expPath _moduleNode _flowNode _resourceXmlDoc } {
    set batchFrameWidget [ResourceView_getBatchFrameWidget ${_expPath} ${_moduleNode} ${_flowNode}]
-   foreach resAttribute { machine queue cpu memory wallclock catchup mpi soumet_args} {
+   foreach resAttribute { machine queue cpu cpu_multiplier memory wallclock catchup mpi soumet_args} {
       set savedValue [ResourceXml_getBatchAttribute ${_resourceXmlDoc} ${resAttribute}]
       set attributeVariable [ResourceView_getAttrVariable ${batchFrameWidget} ${resAttribute}]
       global ${attributeVariable}
@@ -128,6 +128,7 @@ proc ResourceControl_saveBatchData { _expPath _moduleNode _flowNode _resourceXml
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} queue [ResourceView_getEntryQUEUE ${batchFrameWidget}]
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} machine [ResourceView_getEntryMACHINE ${batchFrameWidget}]
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} cpu [ResourceView_getEntryCPU ${batchFrameWidget}]
+   ResourceXml_saveBatchAttribute ${_resourceXmlDoc} cpu_multiplier [ResourceView_getEntryCPU_MULTIPLIER ${batchFrameWidget}]
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} memory [ResourceView_getEntryMEMORY ${batchFrameWidget}]
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} wallclock [ResourceView_getEntryWALLCLOCK ${batchFrameWidget}]
    ResourceXml_saveBatchAttribute ${_resourceXmlDoc} catchup [ResourceView_getEntryCATCHUP ${batchFrameWidget} true]

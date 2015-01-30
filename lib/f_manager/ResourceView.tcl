@@ -72,11 +72,12 @@ proc ResourceView_createBatchWidget { _batchFrame _expPath _moduleNode _flowNode
    ResourceView_addEntryMACHINE ${_batchFrame} 1
    ResourceView_addEntryQUEUE ${_batchFrame} 2
    ResourceView_addEntryCPU ${_batchFrame} 3
-   ResourceView_addEntryMEMORY ${_batchFrame} 4
-   ResourceView_addEntryWALLCLOCK ${_batchFrame} 5
-   ResourceView_addEntryCATCHUP ${_batchFrame} 6
-   ResourceView_addEntryMPI ${_batchFrame} 7
-   ResourceView_addEntrySOUMET_ARGS ${_batchFrame} 8
+   ResourceView_addEntryCPU_MULTIPLIER ${_batchFrame} 4
+   ResourceView_addEntryMEMORY ${_batchFrame} 5
+   ResourceView_addEntryWALLCLOCK ${_batchFrame} 6
+   ResourceView_addEntryCATCHUP ${_batchFrame} 7
+   ResourceView_addEntryMPI ${_batchFrame} 8
+   ResourceView_addEntrySOUMET_ARGS ${_batchFrame} 9
 
    grid columnconfigure ${_batchFrame} 1 -weight 1
 }
@@ -443,7 +444,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    set dependsTableW [
       tablelist::tablelist ${_depFrame}.table -selectmode extended -columns ${columns} \
          -arrowcolor white -spacing 1 -resizablecolumns 1 -movablecolumns 0 \
-         -stretch all -relief flat -labelrelief flat -showseparators 0 -borderwidth 0 \
+         -stretch all -relief flat -labelrelief flat -showseparators 1 -borderwidth 0 \
          -labelcommand tablelist::sortByColumn -labelpady 5 \
          -stripebg #e4e8ec -labelbd 1 -labelrelief raised \
          -yscrollcommand [list ${yscrollW} set] -xscrollcommand [list ${xscrollW} set] \
@@ -470,7 +471,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    set nodeDependsTableW [
       tablelist::tablelist ${_depFrame}.node_table -selectmode extended -columns ${columns} \
          -arrowcolor white -spacing 1 -resizablecolumns 1 -movablecolumns 0 \
-         -stretch all -relief flat -labelrelief flat -showseparators 0 -borderwidth 0 \
+         -stretch all -relief flat -labelrelief flat -showseparators 1 -borderwidth 0 \
          -labelcommand tablelist::sortByColumn -labelpady 5 \
          -stripebg #e4e8ec  -labelbd 1 -labelrelief raised \
          -yscrollcommand [list ${yScrollNodeW} set] -xscrollcommand [list ${xScrollNodeW} set] \
@@ -912,6 +913,65 @@ proc ResourceView_addEntryCPU {_batchFrame _row {_value ""}} {
       ::tooltip::tooltip ${entryW} "number of cpus ex: \"1\" \"1x3\" \"1x3x4\""
    }
 
+}
+
+proc ResourceView_addEntryCPU_MULTIPLIER {_batchFrame _row {_value ""}} {
+   
+   set labelW ${_batchFrame}.cpu_mult
+   set entryW ${_batchFrame}.cpu_mult_entry
+   if { ! [winfo exists ${labelW}] } {
+      label ${labelW} -text "Cpu Multiplier:"
+      set attrVariable [ResourceView_getAttrVariable ${_batchFrame} cpu_multiplier]
+      global ${attrVariable}
+      Entry ${entryW} -textvariable ${attrVariable}
+      trace add variable ${attrVariable} write "ResourceView_setDataChanged ${_batchFrame} true"
+      ResourceView_registerVariable [winfo toplevel ${_batchFrame}] ${attrVariable}
+      ResourceView_registerStateChangeWidgets [winfo toplevel ${_batchFrame}] "${entryW} configure -state "
+      grid ${labelW} -row ${_row} -column 0 -padx 2 -pady 2 -sticky w
+      grid ${entryW} -row ${_row} -column 1 -padx 2 -pady 2 -sticky nsew
+      ::tooltip::tooltip ${entryW} "cpu multiplier"
+   }
+}
+
+proc ResourceView_getEntryCPU_MULTIPLIER {_batchFrame} {
+   
+   set entryW ${_batchFrame}.cpu_mult_entry
+   set value [string trim [${entryW} cget -text]]
+   set errorFlag false
+   if { ${value} != "" && [string index ${value} 0] != "$" } {
+      # validate entry value
+      switch [llength [split ${value} x]] {
+         1 {
+	    # integer value cpu
+	    if { [scan ${value} %d var1] != 1 || ! [expr ${var1} > 0] } {
+	       set errorFlag true
+	    }
+	 }
+	 2 {
+	    # n x m format
+	    if { [scan ${value} %dx%d var1 var2] != 2
+	         || ! [expr ${var1} > 0] || ! [expr ${var2} > 0] } {
+	       set errorFlag true
+	    }
+	 }
+	 3 {
+	    # n x m x p format
+	    if { [scan ${value} %dx%dx%d var1 var2 var3] != 3 
+	         || ! [expr ${var1} > 0] || ! [expr ${var2} > 0] || ! [expr ${var3} > 0] } {
+	       set errorFlag true
+	    }
+	 }
+	 default {
+	    # unsupported format
+	    set errorFlag true
+	 }
+      }
+   }
+   if { ${errorFlag} == true } {
+      error "Invalid cpu multiplier value \"${value}\" in batch settings."
+   }
+
+   return ${value}
 }
 
 proc ResourceView_getEntryMPI { _batchFrame } {
