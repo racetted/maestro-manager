@@ -33,12 +33,7 @@ proc ExpModTree_getReferenceName { _expPath _moduleNode } {
    return [${_modTreeNodeRecord} cget -ref_name]
 }
 
-# returns the number of reference instances to a module
-# Using flat modules, this is useful for instance to know before
-# deleting a module from $SEQ_EXP_HOME/modules/ since the
-# experiment tree can have multiple module nodes referencing the same module
-# For example, gem_mod can be referenced at from /enkf_mod/anal_mod/Analysis/gem_mod
-# and /enkf_mod/Trials/gem_loop/gem_mod
+# returns the number of reference instances to a module node record
 #
 # _expPath
 # _moduleNode is full module node name i.e. /enkf_mod/anal_mod/Analysis/gem_mod
@@ -59,6 +54,32 @@ proc ExpModTree_getModInstances { _expPath _moduleNode } {
       ::log::log debug "ExpModTree_getModInstances WARNING: ${errMsg}"
    }
 
+   return ${count}
+}
+
+# returns the number of reference instances to a module
+# Using flat modules, this is useful for instance to know before
+# deleting a module from $SEQ_EXP_HOME/modules/ since the
+# experiment tree can have multiple module nodes referencing the same module
+# For example, gem_mod can be referenced at from /enkf_mod/anal_mod/Analysis/gem_mod
+# and /enkf_mod/Trials/gem_loop/gem_mod
+#
+# _expPath
+# _moduleNode is full module node name i.e. /enkf_mod/anal_mod/Analysis/gem_mod
+proc ExpModTree_getAbsModInstances { _expPath _moduleNode } {
+   set count 0
+   set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
+   set moduleName [${modTreeNodeRecord} cget -name]
+   set modulePath ${_expPath}/modules/${moduleName}
+   set modTruePath [exec true_path ${modulePath}]
+   foreach modTreeNode [record show instances ExpModTreeNode] {
+      set checkModulePath [${modTreeNode} cget -exp_path]/modules/[${modTreeNode} cget -name]
+      set checkModTruePath ""
+      catch { set checkModTruePath [exec true_path ${checkModulePath}] }
+      if { ${modTruePath} == ${checkModTruePath} } {
+         incr count
+      }
+   }
    return ${count}
 }
 

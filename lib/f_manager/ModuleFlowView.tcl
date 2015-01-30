@@ -212,7 +212,7 @@ proc ModuleFlowView_outsideModRefNotify { _expPath _moduleNode _sourceW } {
       set moduleId [ExpLayout_getModuleChecksum ${_expPath} ${_moduleNode}]
       global ${moduleId}_Module_Ref_Notif
       if { ! [info exists ${moduleId}_Module_Ref_Notif] } {
-         set modInstances [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+         set modInstances [ExpModTree_getAbsModInstances ${_expPath} ${_moduleNode}]
          set extraMsg ""
          if { ${modInstances} > 1 } {
             set extraMsg "\n\nNote: The [file tail ${_moduleNode}] module is used in ${modInstances} different locations within the experiment."
@@ -245,7 +245,7 @@ proc ModuleFlowView_multiEditNotify { _expPath _moduleNode _topWidget {ask_once 
    global ${moduleId}_Module_Multi_Instance
    set isContinue true
 
-   set number [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+   set number [ExpModTree_getAbsModInstances ${_expPath} ${_moduleNode}]
    if { ${number} > 1 } {
      
       if { ! [info exists ${moduleId}_Module_Multi_Instance] } {
