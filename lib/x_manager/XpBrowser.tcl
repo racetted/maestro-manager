@@ -54,6 +54,8 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
 }
+
+
 #---------------------------------------------------------
 # Having a valid Experiments show Experiment 
 # date and  catchup 
@@ -342,6 +344,7 @@ proc XpBrowser::create { frm } {
 #---------------------------------
 proc XpBrowser::validateAndShowExp { sel_xp } {
    
+      set sel_xp [file nativename $sel_xp]
       set kris [catch {file type $sel_xp/EntryModule} ftype]
       if { $kris != 0 || $ftype ne "link"  } {
                  Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $XpBrowser::XpBfrm
@@ -413,5 +416,19 @@ proc XpBrowser::ExpSelected { source_w } {
        ExpModTreeControl_init ${source_w} $::_XpBrSelected
 }
 
+proc XpBrowser::GetExpSelected {} {
+   global _XpBrSelected
+   return ${_XpBrSelected}
+}
 
+proc XpBrowser::_clearXp {} {
+   global _XpBrSelected
+   global _ExpDate
+   global _ExpCatchup
+   variable confNode
 
+   set _XpBrSelected "";
+   set _ExpDate "";
+   set _ExpCatchup "";
+   set confNode "";
+}

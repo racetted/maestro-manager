@@ -138,6 +138,7 @@ proc TreeUtil::MpopXPNode {frm tree} {
     $frm.xpopup add separator 
     $frm.xpopup add command -label {Exp Config}                  -command "TreeUtil::EditExpConfig $tree"
     $frm.xpopup add command -label {Exp Resource}                 -command "TreeUtil::EditExpResources $tree"
+    $frm.xpopup add command -label {Delete}                 -command "TreeUtil::DeleteExp $tree"
     $frm.xpopup add command -label {Quit} -command {} 
 
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
@@ -160,6 +161,26 @@ proc TreeUtil::EditExpResources { tree } {
      set data  [$tree itemcget $node -data]
      
      ::ModuleFlowView_goEditor $data/resources/resources.def
+}
+
+#---------------------------------------------------
+# Delete experiment from experiment browser
+#---------------------------------------------------
+proc TreeUtil::DeleteExp { tree } {
+     set node [$tree selection get]
+     set data  [$tree itemcget $node -data]
+     set answer [tk_messageBox -message "$data will be removed from Maestro Manager and permanently deleted. Is it what you want?" -type yesno -icon question]
+     # -- Delete exp from tree browser
+     switch -- $answer {
+        yes {
+	   exec rm -rf $data; 
+	   $tree delete $node
+	   if { [XpBrowser::GetExpSelected] == ${data} } {
+	      XpBrowser::_clearXp
+	   }
+	}
+        no return
+     }
 }
 #---------------------------------------------------
 #

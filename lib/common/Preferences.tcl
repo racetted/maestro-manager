@@ -1595,7 +1595,7 @@ proc Preferences::ParseUserMaestrorc { } {
 			       }
 			       if { $err == 1 } {
 		                         set Preferences::ERROR_NOT_RECOGNIZED_PREF  1
-			                 puts "You Have a non Recognize token ... $line "
+			                 #puts "You Have a non Recognize token ... $line "
 			       }
 			   }
 	   }

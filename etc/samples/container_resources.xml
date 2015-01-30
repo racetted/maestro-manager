@@ -1,7 +1,7 @@
 <NODE_RESOURCES>
 
     <!-- loop definition
-    supported attributes: start, step, set, end
+    supported attributes: start, step, set, end, expression
     -->
     <LOOP start="1" set="48" end="192"/>
 

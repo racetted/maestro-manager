@@ -3,7 +3,7 @@ array set DirFullName {
            hub    "hub"
            mod    "modules"
            seq    "sequencing"
-           log    "log"
+           log    "logs"
            lis    "listings"
            res    "resources"
 }
@@ -16,6 +16,7 @@ namespace eval NewExp {
       variable ExpName
       variable ExpPath
       variable XpPath
+      variable ResFilePath
 }
 
 proc NewExp::New_xp { exp nbk } {
@@ -27,10 +28,13 @@ proc NewExp::New_xp { exp nbk } {
       variable EntryModName 
       variable ExpPath
       variable XpPath
+      variable ResFilePath
 
       if {[winfo exists .newxp]} {
              destroy .newxp
       }
+
+      set ResFilePath ""
 
       set win_new_xp [toplevel .newxp] 
       wm title $win_new_xp $Dialogs::New_ExpTitle 
@@ -53,11 +57,13 @@ proc NewExp::New_xp { exp nbk } {
       set tith [TitleFrame $controlframe.tith -text $Dialogs::New_ExpSubD]
       set titp [TitleFrame $controlframe.titp -text $Dialogs::New_ExpDest]
       set tite [TitleFrame $controlframe.tite -text $Dialogs::New_ExpEnMo]
+      set titr [TitleFrame $controlframe.titr -text $Dialogs::New_ExpResFile]
 
       set subf1 [$titn getframe]
       set subf2 [$tith getframe]
       set subf3 [$titp getframe]
       set subf4 [$tite getframe]
+      set subf5 [$titr getframe]
       
       set ExpName  [Entry $subf1.entryn \
                          -textvariable  NewExp::XPname \
@@ -106,8 +112,31 @@ proc NewExp::New_xp { exp nbk } {
 				        }
 		             }
 
+      Entry $subf5.entryrespath -textvariable NewExp::ResFilePath -width 45 -bg #FFFFFF -helptext "Resource file path"   
 
+      Button $subf5.browseb -text "Browse" -command {
+                                   set dir [tk_getOpenFile -initialdir $env(HOME)/.suites -title "Choose a resource file" -parent .newxp]
+			               if {[string compare x$dir "x"] != 0} {
+				          set NewExp::ResFilePath $dir
+				       }
+		                   }
 
+      Button $subf5.checkres -text "Use default" -command { set NewExp::ResFilePath "$env(HOME)/.suites/default_resources.def" }
+      if { ![file exists $::env(HOME)/.suites/default_resources.def] } {
+         $subf5.checkres configure -state disabled
+      }
+      Button $subf5.createdefb -text "Create/edit default file" -command "
+                                   if { ! [file exists $::env(HOME)/.suites] } {
+                                      [ file mkdir $::env(HOME)/.suites ]
+                                   }
+                                   if { ![file exists $::env(HOME)/.suites/default_resources.def] && [file writable $::env(HOME)/.suites/] } {
+                                      close [open $::env(HOME)/.suites/default_resources.def a]
+                                   }
+                                   ::ModuleFlowView_goEditor $::env(HOME)/.suites/default_resources.def
+                                   
+                                   $subf5.checkres configure -state active
+                          "
+                                   
       frame $controlframe.sep -height 2 -borderwidth 1 -relief sunken
       frame $controlframe.buttons -border 2 -relief groove
 
@@ -159,7 +188,7 @@ proc NewExp::New_xp { exp nbk } {
 				  return
 			}
 
-                        NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName}]
+                        NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName true}]
       
       pack $controlframe.lab -fill x
 
@@ -173,7 +202,13 @@ proc NewExp::New_xp { exp nbk } {
       pack $tite         -anchor w -pady 2 -padx 2 
       pack $ExpEntryMod  -side left -padx 4 
       pack $ButModNotif  -side left -padx 4
-      
+
+      pack $titr -anchor w -pady 2 -padx 2
+      pack $subf5.entryrespath -side top -pady 2
+      pack $subf5.browseb -side left -padx 4 -pady 2
+      pack $subf5.checkres -side left -padx 4 -pady 2
+      pack $subf5.createdefb -side left -padx 4 -pady 2       
+
       pack $controlframe.sep -fill x -pady 4
       
       pack $ButCancel   -side left -padx  4 
@@ -223,19 +258,14 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 	       -bg #FFFFFF \
 	       -padx 0]
 
-     set NElist [text  $sfrm.txt -width 80 -height 20 -bg #FFFFFF -font 10 -wrap none]
+     set NElist [text  $sfrm.txt -width 80 -height 13 -bg #FFFFFF -font 10 -wrap none]
 
      set BFrame [frame $frm.bfrm]
      set Cancel [button $BFrame.cancel -image $XPManager::img_Cancel -command {destroy $NewExp::NextResume}]
+     set Back   [button $BFrame.back -text "Back" -command {\
+                   NewExp::ExpDirectoriesConfig $NewExp::win_new_xp $NewExp::XpPath $NewExp::XPname $NewExp::EntryModName false ;\
+                   destroy $NewExp::NextResume}]
      set Ok     [button $BFrame.next   -text "Proceed" -command [list NewExp::CreateNew $NextResume $path $name $entrymod $arrloc $arrentry]]
-
-     pack $Cancel -side right
-     pack $Ok -side right  -padx 4
-
-     pack $BFrame -side bottom
-     pack $NElist -fill x
-     pack $titre -anchor w
-     pack $frm
 
      # -- Show other Parametres of New experiment:
      $NElist insert end "$Dialogs::New_ExpName:$name\n"     
@@ -244,17 +274,36 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      $NElist insert end "_______________________________________\n"
      $NElist insert end "\n"
 
+     set remote_warning 0
+
      foreach loc {bin hub mod seq res lis log} {
               if {[string compare $arlc($loc) "local"] == 0} {
-                      $NElist insert end  "Directory: $::DirFullName($loc) will be created localy\n"
+                      $NElist insert end  "Directory: $::DirFullName($loc) will be created locally\n"
 	      } else {
+                      if {$loc != "log"} {set remote_warning 1}
                       $NElist insert end  "Directory: $::DirFullName($loc) will be a link to  $arent($loc)\n"
 	      }
      }
+
+     pack $Cancel -side right
+     pack $Back -side right  -padx 4
+     pack $Ok -side right  -padx 4
+
+     pack $BFrame -side bottom
+     pack $NElist -fill x
+
+     if {$remote_warning == 1} {
+        set NEwarning [text  $sfrm.warning -width 80 -height 5 -bg #FFFFFF -font 10 -wrap none -fg red]
+        $NEwarning insert end "$Dialogs::New_ExpRemoteWarning\n"
+        pack $NEwarning -fill x
+     }
+
+     pack $titre -anchor w
+     pack $frm
 }
 
 
-proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
+proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} } {
 
       variable PrefWinDirs
       variable Entrybin
@@ -286,7 +335,8 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       label $frm.lab -text  $Dialogs::New_Dirs -font "ansi 12 "
       set tdirs  [TitleFrame $frm.dirs  -text $Dialogs::New_Dirs]
       set subfdirs  [$tdirs getframe]
-    
+      
+      
       array set ArrayDirLocations {
                bin   "local"
 	       res   "local"
@@ -296,15 +346,17 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
 	       seq   "local"
 	       log   "local"
       }
-      
-      array set ArrayEntryValues {
-               bin   ""
-	       res   ""
-	       hub   ""
-	       lis   ""
-	       mod   ""
-	       seq   ""
-	       log   ""
+
+      if { $first_time == true } {
+         array set ArrayEntryValues {
+                  bin   ""
+	          res   ""
+	          hub   ""
+	          lis   ""
+	          mod   ""
+	          seq   ""
+	          log   ""
+         }
       }
 
       set CtrlButton     [frame  $frm.ctrlbuttons -border 2 -relief flat]
@@ -366,14 +418,20 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
                            $NewExp::Entrymod configure -state normal}]
 
       set radseq_local   [radiobutton $subfdirs.radseql -text "" -variable seq -value local  -command  {\
+                           $NewExp::Entryseq configure -text "" ;\
+			  set NewExp::ArrayDirLocations(seq) "local" ;\
                            $NewExp::Entryseq configure -state disabled}]
       set radseq_remote  [radiobutton $subfdirs.radseqr -text "" -variable seq -value remote -command  {\
+                           set NewExp::ArrayDirLocations(seq) "remote" ;\
                            $NewExp::Entryseq configure -state normal}]
 
       set radlog_local   [radiobutton $subfdirs.radlogl -text "" -variable log -value local  -command  {\
-                           $NewExp::Entryseq configure -state disabled}]
+                           $NewExp::Entrylog configure -text "" ;\
+			  set NewExp::ArrayDirLocations(seq) "local" ;\
+                           $NewExp::Entrylog configure -state disabled}]
       set radlog_remote  [radiobutton $subfdirs.radlogr -text "" -variable log -value remote -command  {\
-                           $NewExp::Entryseq configure -state normal}]
+                           set NewExp::ArrayDirLocations(log) "remote" ;\
+                           $NewExp::Entrylog configure -state normal}]
 
 
       # -- Put default values for entries
@@ -401,11 +459,15 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       set Entrymod        [Entry $subfdirs.emod   -textvariable mod -width 25  -bg #FFFFFF -font 12 -helptext "" \
 		           -command  {}]
 
-      set Entryseq        [Entry $subfdirs.eseq   -textvariable seq -width 25  -bg #FFFFFF -font 12 -helptext "" \
+      set Entryseq        [Entry $subfdirs.eseq   -textvariable eseq -width 25  -bg #FFFFFF -font 12 -helptext "remote sequencing" \
+		           -validate key\
+			   -validatecommand {NewExp::ValidKey "seq" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
       
-      set Entrylog        [Entry $subfdirs.elog   -textvariable log -width 25  -bg #FFFFFF -font 12 -helptext "" \
+      set Entrylog        [Entry $subfdirs.elog   -textvariable elog -width 25  -bg #FFFFFF -font 12 -helptext "remote log" \
+		           -validate key\
+			   -validatecommand {NewExp::ValidKey "log" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
 
@@ -460,6 +522,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
 
       pack $frm
 
+      
       # -- by Default all directories Local
       $radbin_local  select
       $radhub_local  select
@@ -470,9 +533,10 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       $radlog_local  select
 
       $radmod_remote configure -state disabled
-      $radlog_remote configure -state disabled
-      $radseq_remote configure -state disabled 
-       
+      #$radlog_remote configure -state disabled
+      #$radseq_remote configure -state disabled 
+      
+      
       # -- At Entry Disable All Remote Entry 
       $NewExp::Entrybin   configure -state disabled
       $NewExp::Entryhub   configure -state disabled
@@ -481,6 +545,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod} {
       $NewExp::Entrymod   configure -state disabled
       $NewExp::Entryseq   configure -state disabled
       $NewExp::Entrylog   configure -state disabled
+     
 }
 
 proc NewExp::ValidKey { ArgVar arrayent action type str } {
@@ -552,7 +617,7 @@ proc NewExp::FinalCheck { win path name entrmod arlocation arvalues } {
        upvar  $arvalues   arval
 
        set arerror {}
-       foreach loc {bin hub res lis} {
+       foreach loc {bin hub res lis seq log} {
 	       if {[string compare $arloc($loc) "remote"] == 0 && \
 	           [string compare $arval($loc) ""] == 0 } {
 	             lappend arerror "$loc"    
@@ -610,8 +675,6 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        if [catch {
                catch {[exec mkdir -p $path/$name/modules]}
-               catch {[exec mkdir -p $path/$name/sequencing]}
-               catch {[exec mkdir -p $path/$name/logs]}
                catch {[exec mkdir -p $path/$name/modules/$entrymod]}
                catch {[exec ln -s modules/$entrymod $path/$name/EntryModule]}
        } message ] {
@@ -627,7 +690,7 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
        # -- for local and remote directory Creation
        set l_error 0
        set r_error 0
-       foreach loc {bin hub res lis} {
+       foreach loc {bin hub res lis seq log} {
 	       if {[string compare $arloc($loc) "local"] == 0 } {
                            if [catch { exec mkdir -p $path/$name/$::DirFullName($loc) }] {
                                    set l_error 1
@@ -635,22 +698,27 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
                } else {
 	                   if [catch { exec ln -s $arentry($loc) $path/$name/$::DirFullName($loc) }] {
                                    set r_error 1
-			   }
+			   } else {
+		                   exec mkdir -p $arentry($loc)/$::DirFullName($loc)
+                           }
 	       }
        }
 
        # -- see if errors  Note no rollback at this point
        if { $l_error == 1 } {
-             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories (bin|hub|resources|listing)"  ok warning "" $parent 
+             Dialogs::show_msgdlg "Unable to create sub-Experiment Directories (bin|hub|resources|listing|sequencing|logs)"  ok warning "" $parent 
        }
 
        if { $r_error == 1 } {
-             Dialogs::show_msgdlg "Unable to create sub-Experiment links (bin|hub|resources|listing)"  ok warning "" $parent 
+             Dialogs::show_msgdlg "Unable to create sub-Experiment links (bin|hub|resources|listing|sequencing|logs)"  ok warning "" $parent 
        }
 
        # -- under resources create entry mod.
        if [  catch { exec mkdir -p $path/$name/resources/$entrymod } ] {
              Dialogs::show_msgdlg "Unable to create Entry Module:$entrymod under resources"  ok warning "" $parent 
+       }
+       if { $NewExp::ResFilePath != "" } {
+          exec cp $NewExp::ResFilePath $path/$name/resources/resources.def
        }
 
        # -- if every things is ok update. 
