@@ -429,7 +429,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
 # _flowNodeRecord must be record for an instance of a switching node
 # _xmlNode is the xml dom node of the switching record in the flow.xml file
 proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
-   puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:${_flowNodeRecord}"
+   # puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:${_flowNodeRecord}"
    # get the switching mode
    set switchMode [ModuleFlow_getNodeSwitchModeFromXml [${_xmlNode} getAttribute type datestamp_hour]]
    ${_flowNodeRecord} configure -switch_mode ${switchMode}
@@ -443,7 +443,7 @@ proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
          lappend switchItems ${switchItemNodeName}
          set switchItemRecord ${_flowNodeRecord}/${switchItemNodeName}
          FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -flow_path ${flowNode}/${switchItemNodeName}
-         puts "ModuleFlow_parseSwitchingNode FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -flow_path ${flowNode}/${switchItemNodeName}"
+         # puts "ModuleFlow_parseSwitchingNode FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -flow_path ${flowNode}/${switchItemNodeName}"
 
          # process child nodes
          if { ${flowNode} != "" } {
@@ -458,7 +458,7 @@ proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
       }
    }
    ${_flowNodeRecord} configure -switch_items ${switchItems} -curselection [lindex ${switchItems} 0] 
-   puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:[${_flowNodeRecord} configure]"
+   # puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:[${_flowNodeRecord} configure]"
 }
 
 # get the submits relation of an xml node
@@ -1014,7 +1014,7 @@ proc ModuleFlow_getNodeRefCount { _flowNodeRecord {_out_match_record_var ""} } {
 # underneath that node for every switching items
 proc ModuleFlow_getAllSwitchingRecords { _flowNodeRecord _outputVar } {
    upvar #0 ${_outputVar} myOutputVar
-   puts "ModuleFlow_getAllSwitchingRecords _flowNodeRecord:${_flowNodeRecord}"
+   # puts "ModuleFlow_getAllSwitchingRecords _flowNodeRecord:${_flowNodeRecord}"
    lappend myOutputVar ${_flowNodeRecord}
    if { [record exists instance ${_flowNodeRecord}] } {
       if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
@@ -1443,12 +1443,14 @@ proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNode } {
    } else {
       set submitterRecord ${_flowNodeRecord}
    }
-   # detach from submitter
-   set submits [${submitterRecord} cget -submits]
-   set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
-   if { ${submitIndex} != -1 } {
-      set submits [lreplace ${submits} ${submitIndex} ${submitIndex}]
-      ${submitterRecord} configure -submits ${submits}
+   if { [record exists instance ${submitterRecord}] } {
+      # detach from submitter
+      set submits [${submitterRecord} cget -submits]
+      set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
+      if { ${submitIndex} != -1 } {
+         set submits [lreplace ${submits} ${submitIndex} ${submitIndex}]
+         ${submitterRecord} configure -submits ${submits}
+      }
    }
 }
 
@@ -1731,6 +1733,7 @@ proc ModuleFlow_printNode { _domNode } {
 # returns false otherwise
 
 proc ModuleFlow_hasRelativeSyntax { _checkNode } {
+   ::log::log debug "ModuleFlow_hasRelativeSyntax _checkNode:$_checkNode"
    set splittedNode [split ${_checkNode} /]
    set hasRelativeSyntax false
    set count 0
@@ -1759,7 +1762,7 @@ proc ModuleFlow_hasRelativeSyntax { _checkNode } {
 #
 # returns -1 if syntax validation fails
 proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outErrMsg } {
-   puts "ModuleFlow_getFromRelativePath $_expPath $_flowNodeRecord $_checkNode"
+   ::log::log debug "ModuleFlow_getFromRelativePath $_expPath $_flowNodeRecord $_checkNode"
    upvar ${_outErrMsg} myOutputErrMsg
    set myOutputErrMsg "Relative syntax can only appear at start of node definition!"
 
