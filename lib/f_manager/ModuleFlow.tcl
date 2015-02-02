@@ -913,18 +913,18 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    # delete node from module container directory only if the current node belongs to the original module.
    # Nodes that belong to a reference module will be cleared at another level if the module reference count
    # is 0
-   puts "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
+   ::log::log debug "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
    if { ${nodeRefCount} == 0 } {
       # need to check if the node is ready to be deleted from the layout.
       # for nodes belonging to a switch branch, it gets deleted only if it is not used in other
       # branches
       if { ${origModuleNode} == ${moduleLayoutNode} } {
          # delete node and resource
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ::log::log debug "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
          ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}
       } else {
          # delete resource only
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ::log::log debug "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
          ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} true ${keepChildNodes}
       }
    }

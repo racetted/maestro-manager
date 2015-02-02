@@ -348,6 +348,9 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
       return
    }
 
+   if { [ catch { 
+      MiscTkUtils_busyCursor [winfo toplevel ${_canvas}]
+
    if { ${_deleteBranch} != false } {
       ModuleFlowView_highLightBranch ${_flowNodeRecord} ${_canvas} HighLightRestoreCmd
    } else {
@@ -417,6 +420,11 @@ proc ModuleFlowControl_deleteNodeSelected { _expPath _moduleNode _canvas _flowNo
 
       ModuleFlowView_setStatusMsg [winfo toplevel ${_canvas}] "${flowNode} node deleted."
    }
+
+   } errMsg] } {
+      MaestroConsole_addErrorMsg "$::errorInfo"
+   }
+   MiscTkUtils_normalCursor [winfo toplevel ${_canvas}]
 }
 
 proc ModuleFlowControl_cancelWrite { _expPath _moduleNode _failedOp _sourceW } {
@@ -464,17 +472,26 @@ proc ModuleFlowControl_saveSelected { _expPath _moduleNode _topWidget } {
       return
    }
 
-   # clear module working dir
-   ModuleLayout_clearWorkingDir ${_expPath} ${moduleLayoutNode}
+   if { [ catch { 
 
-   # reset module change status
-   ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false
+      MiscTkUtils_busyCursor ${_topWidget}
+      # clear module working dir
+      ModuleLayout_clearWorkingDir ${_expPath} ${moduleLayoutNode}
 
-   # change exp status to changed
-   ExpModTreeControl_setModuleFlowChanged ${_expPath} true
+      # reset module change status
+      ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false
 
-   ModuleFlowControl_refreshSelected ${_expPath} ${_moduleNode} ${_topWidget}
-   ModuleFlowView_setStatusMsg ${_topWidget} "Module ${_moduleNode} saved."
+      # change exp status to changed
+      ExpModTreeControl_setModuleFlowChanged ${_expPath} true
+
+      ModuleFlowControl_refreshSelected ${_expPath} ${_moduleNode} ${_topWidget}
+      ModuleFlowView_setStatusMsg ${_topWidget} "Module ${_moduleNode} saved."
+
+   } errMsg] } {
+      MaestroConsole_addErrorMsg "$::errorInfo"
+   }
+
+   MiscTkUtils_normalCursor ${_topWidget}
 }
 
 proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
@@ -482,35 +499,45 @@ proc ModuleFlowControl_refreshSelected { _expPath _moduleNode _topWidget } {
    if { [ModuleFlowControl_validateModuleNode ${_expPath} ${_moduleNode} ${_topWidget}] == false } {
       return
    }
-
+   # update idletasks
    set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
    set parentNodeRecord [ModuleFlow_getContainer ${modNodeRecord}]
 
 
-   if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
+   if { [ catch { 
+
+      MiscTkUtils_busyCursor ${_topWidget}
+
+      if { [ModuleFlow_isModuleChanged ${_expPath} ${_moduleNode}] == false || 
         [ModuleFlowView_flowChangeNotify ${_expPath} ${_moduleNode} ${_topWidget}] == true  } {
 
-      ModuleFlowView_clearStatusMsg ${_topWidget}
+         ModuleFlowView_clearStatusMsg ${_topWidget}
 
-      # clear module working dir
-      ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
+         # clear module working dir
+         ModuleLayout_clearWorkingDir ${_expPath} ${_moduleNode}
 
-      # clears current node records and reread module flow.xml
-      ModuleFlow_refresh ${_expPath} ${_moduleNode}
+         # clears current node records and reread module flow.xml
+         ModuleFlow_refresh ${_expPath} ${_moduleNode}
 
-      # redraw flow
-      ModuleFlowView_draw ${_expPath} ${_moduleNode}
+         # redraw flow
+         ModuleFlowView_draw ${_expPath} ${_moduleNode}
 
-      # reset save
-      ModuleFlowView_saveStatus ${_expPath} ${_moduleNode} disabled
+         # reset save
+         ModuleFlowView_saveStatus ${_expPath} ${_moduleNode} disabled
 
-      # redraw exp tree from
-      ExpModTreeControl_redraw ${_expPath}
+         # redraw exp tree from
+         ExpModTreeControl_redraw ${_expPath}
 
-      ModuleFlowControl_clearPostSaveCmd ${_expPath} ${_moduleNode}
+         ModuleFlowControl_clearPostSaveCmd ${_expPath} ${_moduleNode}
 
-      ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false
+         ModuleFlow_setModuleChanged ${_expPath} ${_moduleNode} false
+      }
+
+   } errMsg] } {
+      MaestroConsole_addErrorMsg "$::errorInfo"
    }
+
+   MiscTkUtils_normalCursor ${_topWidget}
 }
 
 proc ModuleFlowControl_copyLocalSelected { _expPath _moduleNode } {
