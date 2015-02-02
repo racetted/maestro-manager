@@ -239,7 +239,7 @@ proc ExpLayout_flowBuilder { _expPath } {
    global env
    set flowBuilderExec ""
    set expFlowXml ${_expPath}/flow.xml
-   if { ! [file writable ${expFlowXml}] } {
+   if { [file exists ${expFlowXml}] && ! [file writable ${expFlowXml}] } {
       # MaestroConsole_addErrorMsg "Cannot write ${expFlowXml}."
       error "Cannot write ${expFlowXml}."
    }
