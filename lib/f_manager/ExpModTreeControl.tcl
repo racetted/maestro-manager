@@ -58,8 +58,8 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 
          set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
          global ${expChecksum}_DebugOn
-         set ${expChecksum}_DebugOn true
-         #set ${expChecksum}_DebugOn false
+         #set ${expChecksum}_DebugOn true
+         set ${expChecksum}_DebugOn false
          ExpModTreeControl_debugChanged ${_expPath}
 
          # recursive read of all module flow.xml
