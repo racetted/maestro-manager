@@ -86,7 +86,7 @@ proc ResourceView_addNewDepEntry { _tableListWidget _position } {
    global ResourceTableColumnMap
    set tableVariable [ResourceView_getDepTableVar ${_tableListWidget}]
    global ${tableVariable}
-   set ${tableVariable} [linsert [set ${tableVariable}] ${_position} [list node "" "end" "" "" "" ""]]
+   set ${tableVariable} [linsert [set ${tableVariable}] ${_position} [list "" "end" "" "" "" ""]]
    ${_tableListWidget} cellconfigure ${_position},$ResourceTableColumnMap(ExpColumnNumber) -window [list ResourceView_updateExpEntryWidget] \
       -windowdestroy  [list ResourceView_destroyExpEntryWidget]
    ResourceView_setDataChanged ${_tableListWidget} true
@@ -224,6 +224,7 @@ proc ResourceView_editDepRowEndCallback {  _expPath _flowNode _tableListWidget _
    if { [info exists ResourceTableColumnValidateMap(${_cellColumn})] } {
       set validateProc $ResourceTableColumnValidateMap(${_cellColumn})
       if { [info procs ${validateProc}] != "" } {
+          ::log::log debug "ResourceView_editDepRowEndCallback calling ${validateProc} exp:${_expPath} node:${_flowNode} widget:${_tableListWidget} row:${_cellRow} col: ${_cellColumn} value:${value}"
          set errorFlag [${validateProc} ${_expPath} ${_flowNode} ${_tableListWidget} ${_cellRow}  ${_cellColumn} ${value} errorMsg]
       }
    }
@@ -284,7 +285,7 @@ proc ResourceView_validateDepNode { _expPath _flowNode _tableListWidget _cellRow
 	       # so we forbid it
 	       set errorFlag 1
                set myOutputErrMsg "Relative syntax not supported for remote experiment dependency."
-	    } else { [ModuleFlow_checkNodeExists ${expFieldValue} ${_cellContent}] == false } {
+	    } elseif { [ModuleFlow_checkNodeExists ${expFieldValue} ${_cellContent}] == false } {
                # validate that the node exists within the remote exp
 	       # issue warning
 	       set errorFlag 2
@@ -351,7 +352,7 @@ proc ResourceView_validateDepHour { _expPath _flowNode _tableListWidget _cellRow
    return ${errorFlag}
 }
 
-proc ResourceView_validateDepExp { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent} {
+proc ResourceView_validateDepExp { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg} {
    set errorFlag 0
    if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
       if { ! [file isdirectory ${_cellContent}] } {
@@ -417,13 +418,12 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
 
    if { ! [info exists ResourceTableColumnMap] } {
       array set ResourceTableColumnMap {
-         TypeColumnNumber 0
-         NodeColumnNumber 1
-         StatusColumnNumber 2
-         IndexColumnNumber 3
-         LocalIndexColumnNumber 4
-         HourColumnNumber 5
-         ExpColumnNumber 6
+         NodeColumnNumber 0
+         StatusColumnNumber 1
+         IndexColumnNumber 2
+         LocalIndexColumnNumber 3
+         HourColumnNumber 4
+         ExpColumnNumber 5
       }
       # register ComboBox objects with the table
       tablelist::addBWidgetComboBox
@@ -431,8 +431,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
 
    # set defaultAlign center
    set defaultAlign left
-   set columns [list 0 Type ${defaultAlign} \
-                     0 Node ${defaultAlign} \
+   set columns [list 0 Node ${defaultAlign} \
                      0 Status ${defaultAlign} \
                      0 Index ${defaultAlign} \
                      0 "Local Index" ${defaultAlign} \
@@ -493,8 +492,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
   bind [${dependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${dependsTableW} %X %Y]
   bind [${nodeDependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${nodeDependsTableW} %X %Y]
 
-   # for now don't allow editing of the type field
-   foreach columnIndex [list 1 2 3 4 5 6 ] {
+   foreach columnIndex [list 0 1 2 3 4 5] {
      ${dependsTableW} columnconfigure ${columnIndex} -editable yes
      ${nodeDependsTableW} columnconfigure ${columnIndex} -editable yes
    }

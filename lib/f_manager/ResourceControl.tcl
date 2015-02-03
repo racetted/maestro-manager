@@ -160,16 +160,17 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
       error "Error saving dependency entries for resource.xml. ${errorMsg}"
       return
    }
-
-   foreach depEntry [set ${tableVar}] {
+   # remove duplicate entries
+   set depEntries [lsort -unique [set ${tableVar}] ]
+   foreach depEntry ${depEntries} {
       ::log::log debug "depEntry:${depEntry}"
-      set nameValueList [ list type [lindex ${depEntry} 0] \
-                               dep_name [lindex ${depEntry} 1] \
-                               status [lindex ${depEntry} 2] \
-                               index [lindex ${depEntry} 3] \
-                               local_index [lindex ${depEntry} 4] \
-                               hour [lindex ${depEntry} 5] \
-                               exp [lindex ${depEntry} 6] ]
+      set nameValueList [ list type node \
+                               dep_name [lindex ${depEntry} 0] \
+                               status [lindex ${depEntry} 1] \
+                               index [lindex ${depEntry} 2] \
+                               local_index [lindex ${depEntry} 3] \
+                               hour [lindex ${depEntry} 4] \
+                               exp [lindex ${depEntry} 5] ]
       ResourceXml_addDependency ${_resourceXmlDoc} ${nameValueList}
    }
 
@@ -226,7 +227,7 @@ proc ResourceControl_validateDepsData { _tableVar _outErrMsg } {
    upvar ${_outErrMsg} myOutputErrMsg
  
    foreach depEntry ${myTableVar} {
-      set nameValueList [ list type [lindex ${depEntry} 0] \
+      set nameValueList [ list type node \
                                dep_name [lindex ${depEntry} 1] \
                                status [lindex ${depEntry} 2] \
                                index [lindex ${depEntry} 3] \
@@ -236,7 +237,7 @@ proc ResourceControl_validateDepsData { _tableVar _outErrMsg } {
 
       # check for mandatory fields: type dep_name status
       ::log::log debug "ResourceControl_validateDepsData checking: $depEntry"
-      if { [lindex ${depEntry} 0] == "" || [lindex ${depEntry} 1] == "" || [lindex ${depEntry} 2] == "" } {
+      if { [lindex ${depEntry} 0] == "" || [lindex ${depEntry} 1] == "" } {
          set myOutputErrMsg "Type, Node and Status are mandatory fields." 
 	 return false
       }

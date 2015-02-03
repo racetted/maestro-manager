@@ -135,7 +135,7 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
       #   set attributeValue [${depXmlNode} getAttribute ${attributeName}]
       #   lappend depList ${attributeName} ${attributeValue}
       # }
-      set typeValue [${depXmlNode} getAttribute type ""]
+      # set typeValue [${depXmlNode} getAttribute type ""]
       set depNameValue [${depXmlNode} getAttribute dep_name ""]
       set statusValue [${depXmlNode} getAttribute status ""]
       set indexValue [${depXmlNode} getAttribute index ""]
@@ -143,8 +143,10 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
       set expValue [${depXmlNode} getAttribute exp ""]
       set hourValue [${depXmlNode} getAttribute hour ""]
 
-      lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
+      # lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
+      lappend depsList [list ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
    }
+   # puts "depsList :${depsList}"
    return ${depsList}
 }
 
