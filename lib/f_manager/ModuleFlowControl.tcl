@@ -140,11 +140,10 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       ModuleNode {
          set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
          set modulePath [${modPathEntry} cget -text]
-         set derivedModulePath ${modulePath}
-         # if module path starts with relative syntax, appends the modules directory to the value
-         if { [string first ./ ${modulePath}] == 0 || [string first ../ ${modulePath}] == 0 } {
-            set derivedModulePath ${_expPath}/modules/${modulePath}
-         }
+	 if { [file pathtype ${modulePath}] == "relative" } {
+            set derivedModulePath [file normalize ${modulePath}]
+	 }
+
          if { ${derivedModulePath} != "" && ! [file exists ${derivedModulePath}/flow.xml] } {
             MessageDlg .msg_window -icon error -message "Invalid module path: ${modulePath}. Module flow.xml not found." \
                -aspect 400 -title "Module selection error" -type ok -justify center -parent ${_topWidget}
