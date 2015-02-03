@@ -108,6 +108,7 @@ proc ResourceControl_retrieveLoopData { _expPath _moduleNode _flowNode _resource
    set loopFrame [ResourceView_getLoopFrameWidget  ${_expPath} ${_moduleNode} ${_flowNode}]
 
    # get the global variables for each loop parameter
+   set loopExprVar [ResourceView_getAttrVariable ${loopFrame} loopexpr]
    set loopStartVar [ResourceView_getAttrVariable ${loopFrame} loopstart]
    set loopEndVar [ResourceView_getAttrVariable ${loopFrame} loopend]
    set loopStepVar [ResourceView_getAttrVariable ${loopFrame} loopstep]
@@ -115,6 +116,7 @@ proc ResourceControl_retrieveLoopData { _expPath _moduleNode _flowNode _resource
    global ${loopStartVar} ${loopEndVar} ${loopStepVar} ${loopSetVar}
 
    # set the variables for the loop parameters, automatically updates the GUI entries
+   set ${loopExprVar} [ResourceXml_getLoopAttribute ${_resourceXmlDoc} expression]
    set ${loopStartVar} [ResourceXml_getLoopAttribute ${_resourceXmlDoc} start]
    set ${loopEndVar} [ResourceXml_getLoopAttribute ${_resourceXmlDoc} end]
    set ${loopStepVar} [ResourceXml_getLoopAttribute ${_resourceXmlDoc} step]
@@ -250,21 +252,27 @@ proc ResourceControl_saveLoopData { _expPath _moduleNode _flowNode _resourceXmlD
    ::log::log debug "ResourceControl_saveLoopData $_expPath $_moduleNode $_flowNode ${_resourceXmlDoc}" 
    set loopFrame [ResourceView_getLoopFrameWidget  ${_expPath} ${_moduleNode} ${_flowNode}]
 
-   set loopStartValue [ResourceView_getLoopStartEntry ${loopFrame}]
-   set loopStepValue [ResourceView_getLoopStepEntry ${loopFrame}]
-   set loopEndValue [ResourceView_getLoopEndEntry ${loopFrame}]
-   set loopSetValue [ResourceView_getLoopSetEntry ${loopFrame}]
+   set loopExprValue [ResourceView_getLoopExprEntry ${loopFrame}]
+   ::log::log debug "ResourceControl_saveLoopData loopExprValue:$loopExprValue"
 
-   if { [string is integer ${loopStartValue}] && [string is integer ${loopEndValue}] &&
-        ${loopStartValue} > ${loopEndValue} } {
-      error "Error saving loop settings: Loop start value must be smaller than loop end value."
-      return
+   if { ${loopExprValue} != "" } {
+      ResourceXml_saveLoopAttribute ${_resourceXmlDoc} expression ${loopExprValue}
+   } else {
+      set loopStartValue [ResourceView_getLoopStartEntry ${loopFrame}]
+      set loopStepValue [ResourceView_getLoopStepEntry ${loopFrame}]
+      set loopEndValue [ResourceView_getLoopEndEntry ${loopFrame}]
+      set loopSetValue [ResourceView_getLoopSetEntry ${loopFrame}]
+      if { [string is integer ${loopStartValue}] && [string is integer ${loopEndValue}] &&
+           ${loopStartValue} > ${loopEndValue} } {
+         error "Error saving loop settings: Loop start value must be smaller than loop end value."
+         return
+      }
+      ResourceXml_saveLoopAttribute ${_resourceXmlDoc} start ${loopStartValue}
+      ResourceXml_saveLoopAttribute ${_resourceXmlDoc} end ${loopEndValue}
+      ResourceXml_saveLoopAttribute ${_resourceXmlDoc} step ${loopStepValue}
+      ResourceXml_saveLoopAttribute ${_resourceXmlDoc} set ${loopSetValue}
    }
 
-   ResourceXml_saveLoopAttribute ${_resourceXmlDoc} start ${loopStartValue}
-   ResourceXml_saveLoopAttribute ${_resourceXmlDoc} end ${loopEndValue}
-   ResourceXml_saveLoopAttribute ${_resourceXmlDoc} step ${loopStepValue}
-   ResourceXml_saveLoopAttribute ${_resourceXmlDoc} set ${loopSetValue}
 }
 
 proc ResourceControl_saveSelected { _expPath _moduleNode _flowNodeRecord } {

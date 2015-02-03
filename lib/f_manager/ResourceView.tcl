@@ -542,6 +542,15 @@ proc ResourceView_createLoopWidget { _loopFrame _expPath _moduleNode _flowNode }
    ResourceView_addLoopEndEntry ${_loopFrame} 1
    ResourceView_addLoopStepEntry ${_loopFrame} 2
    ResourceView_addLoopSetEntry ${_loopFrame} 3
+
+   set orLabel [label ${_loopFrame}.label -justify left -text "(NOTE: Use of \"Loop Expresion\" disables Loop attributes above.)"]
+   grid ${orLabel} -row 4 -column 0 -padx 2 -pady {20 2} -sticky w -columnspan 2
+
+   set mySeparatorW [ttk::separator ${_loopFrame}.separator -orient horizontal]
+   grid ${mySeparatorW} -row 5 -column 0 -padx 2 -pady {2 20} -sticky nsew -columnspan 2
+
+   ResourceView_addLoopExprEntry ${_loopFrame} 6
+
    grid columnconfigure ${_loopFrame} 1 -weight 1
 }
 
@@ -609,6 +618,7 @@ proc ResourceView_getLoopStartEntry { _loopFrame } {
         && ! [string is integer ${value}] } {
       error "Invalid loop start value \"${value}\" in loop settings."
    }
+   return ${value}
 }
 
 proc ResourceView_addLoopSetEntry { _loopFrame _row {_value ""}} {
@@ -630,12 +640,14 @@ proc ResourceView_addLoopSetEntry { _loopFrame _row {_value ""}} {
 }
 
 proc ResourceView_getLoopSetEntry { _loopFrame } {
+   puts "ResourceView_getLoopSetEntry _loopFrame:$_loopFrame"
    set entryW ${_loopFrame}.loop_set_entry
    set value [string trim [${entryW} cget -text]]
    if { ${value} != "" && [string index ${value} 0] != "$" 
         && ! [string is integer ${value}] } {
       error "Invalid loop set value \"${value}\" in loop settings."
    }
+   return ${value}
 }
 
 proc ResourceView_addLoopEndEntry { _loopFrame _row {_value ""}} {
@@ -664,6 +676,7 @@ proc ResourceView_getLoopEndEntry { _loopFrame } {
         && ! [string is integer ${value}] } {
       error "Invalid loop start value \"${value}\" in loop settings."
    }
+   return ${value}
 }
 
 proc ResourceView_addLoopStepEntry { _loopFrame _row {_value ""}} {
@@ -691,6 +704,51 @@ proc ResourceView_getLoopStepEntry { _loopFrame } {
         && ! [string is integer ${value}] } {
       error "Invalid loop step value \"${value}\" in loop settings."
    }
+   return ${value}
+}
+
+proc ResourceView_addLoopExprEntry { _loopFrame _row {_value ""}} {
+   
+   set labelW ${_loopFrame}.loop_expr
+   set entryW ${_loopFrame}.loop_expr_entry
+
+   if { ! [winfo exists ${labelW}] } {
+      label ${labelW} -text "Loop Expression:"
+      set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopexpr]
+      global ${attrVariable}
+      Entry ${entryW} -textvariable ${attrVariable}
+      ::tooltip::tooltip ${entryW} "Format start:end:step:set,start:end:step:set\nExample:1:256:1:32,512:768:1:32"
+      trace add variable ${attrVariable} write "ResourceView_setDataChanged ${_loopFrame} true"
+      ResourceView_registerVariable [winfo toplevel ${_loopFrame}] ${attrVariable}
+      ResourceView_registerStateChangeWidgets [winfo toplevel ${_loopFrame}] "${entryW} configure -state "
+      grid ${labelW} -row ${_row} -column 0 -padx 2 -pady 2 -sticky w
+      grid ${entryW} -row ${_row} -column 1 -padx 2 -pady 2 -sticky nsew      
+   }
+}
+
+proc ResourceView_getLoopExprEntry { _loopFrame } {
+   set entryW ${_loopFrame}.loop_expr_entry
+   set value [string trim [${entryW} cget -text]]
+   if { ${value} != "" && [string index ${value} 0] != "$" } {
+      set commaSplittedList [split ${value} ,]
+      foreach loopValue ${commaSplittedList} {
+         set colonSplittedList [split ${loopValue} :]
+         foreach {mystart myend mystep myset} ${colonSplittedList} {}
+	 if { ${mystart} != "" && ! [string is integer ${mystart}] } {
+            error "Invalid loop start value \"${mystart}\" in loop expression \"${value}\" settings."
+	 }
+	 if { ${myend} != "" && ! [string is integer ${myend}] } {
+            error "Invalid loop end value \"${myend}\" in loop expression  \"${value}\" settings."
+	 }
+	 if { ${mystep} != "" && ! [string is integer ${mystep}] } {
+            error "Invalid loop step value \"${mystep}\" in loop expression  \"${value}\" settings."
+	 }
+	 if { ${myset} != "" && ! [string is integer ${myset}] } {
+            error "Invalid loop set value \"${myset}\" in loop expression  \"${value}\" settings."
+	 }
+      }
+   }
+   return ${value}
 }
 
 # this command is called from a variable trace
