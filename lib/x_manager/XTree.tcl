@@ -1,6 +1,11 @@
 set listExp [list]
 global listExp 
+global stopDirList
 interp recursionlimit {} 50
+global listInodes
+
+
+array set stopDirList { "hub" "1" "bin" "1" "src" "1" "listins" "1" "logs" "1" "resources" "1" "sequencing" "1" "modules" "1" "constants" "1" }
 
 namespace eval XTree {
     variable count
@@ -57,7 +62,7 @@ proc XTree::getPath {w node} {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::init { tree args } {
-   # puts "XTree::init tree:${tree} args:${args}"
+    global listInodes CmdList stopDirList
     variable count
     set count 0
 
@@ -69,7 +74,12 @@ proc XTree::init { tree args } {
 	 if { ! [file isdirectory $adir] && [string compare $adir "no-selection"] != 0} {
 	            set Preferences::ERROR_DEPOT_DO_NOT_EXIST 1
 	 } else {
-                    XTree::walkin $tree $adir "" 0 $adir root "" "" directory $i
+                    # -- empty list
+                    array unset listInodes
+                    set CmdList {}
+
+                    #XTree::walkin $tree $adir "" 0 $adir root "" "" directory $i
+                    XTree::FindDrawTree $tree $adir "" 0 $adir root "" "" directory $i
          }
 	 incr i
     }
@@ -214,68 +224,44 @@ proc XTree::expand { tree but } {
     }
 }
 
-#proc XTree::lpop listVar {
-#        upvar 1 $listVar l
-#        set r [lindex $l end]
-#        set l [lreplace $l [set l end] end] ; # Make sure [lreplace] operates on unshared object
-#        return $r
-#}
-
-
 #-----------------------------------------------------------
 #-----------------------------------------------------------
-proc XTree::walkin { tree fromDir branche level listD parent CmdList suffix ftype indice } {
-   # puts "XTree::walkin tree:${tree} fromDir:${fromDir} branche:${branche}"
-    global listExp
-    set matchLink {}
+proc XTree::lshift listVar {
+    upvar 1 $listVar l
+    if {![info exists l]} {
+             # make the error message show the real variable name
+            error "can't read \"$listVar\": no such variable"
+    }
 
-    #XPManager::update_progdlg $XPManager::MCGfrm "" "Finding Experiments in progress"
+    set r [lindex $l 0]
+    set l [lreplace $l [set l 0] 0]
+    return $r
+}
+
+proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffix ftype indice } {
+    global listExp listInodes stopDirList
 
     set basedir [string trimright [file join [file normalize $fromDir] { }]]
 
-    foreach fname [glob -nocomplain -type {l r} -path $basedir *] {
-            set ftype [file type $fname]
-	    if {[string compare $ftype "link"] == 0} {
-		   set PointTo [file readlink $fname]
-		   regsub -all {\.\/} $PointTo "" PointTo
-		   lappend matchLink $PointTo
-	    }
-    }
-
     if { $level >= 12 } {
-        if {[winfo exists .intro]} {
-	      set win .intro
-        } else {
-	      set win .
-	}
-	Dialogs::show_msgdlg "You have reached the maximum recursion levels (12) ... \n
-You may have a link creating recursion in your Experiment:\n
-$fromDir"  ok warning ""  $win
+	 puts  "You have reached the maximum recursion levels (12) ...  You may have a link creating recursion in your Experiment:\n"
 	 return
     }
 
     if { $parent == "root" } {
-           lappend CmdList "catch {$tree  insert end root home$indice -text $fromDir -image [Bitmap::get folder] -data root}"
+           set string ";catch { $tree  insert end root home$indice -text $fromDir -image [Bitmap::get folder] -data root }"
+	   append CmdList $string
 	   set parent home$indice
     } else {
 	   set Ftype [file type $basedir]
            if { $parent == "home$indice" } {
-	          set suffix $branche  
-	          if {[string compare $Ftype "link"] == 0} {
-	                  lappend CmdList "catch {$tree insert end ${parent} ${branche} -text $branche -image [Bitmap::get folder]} -font {times 16}"
-                  } else {
-	                  lappend CmdList "catch {$tree insert end ${parent} ${branche} -text $branche -image [Bitmap::get folder]}"
-		  }
+	          set string ";catch { $tree insert end ${parent} ${branche} -text $branche -image [Bitmap::get folder] }"
 	          set parent ${branche}
-	   } else {
-	          if {[string compare $Ftype "link"] == 0} {
-	              lappend CmdList "catch {$tree insert end ${parent} ${branche}.$suffix -text $branche -image [Bitmap::get folder]} -font {times 16}"
-                  } else {
-	              lappend CmdList "catch {$tree insert end ${parent} ${branche}.$suffix -text $branche -image [Bitmap::get folder]}"
-		  }
-	          set parent ${branche}.$suffix
-	   }
-	   
+	      } else {
+	          set string ";catch { $tree insert end ${parent} ${parent}.${branche} -text $branche -image [Bitmap::get folder] }"
+	          set parent ${parent}.${branche}
+	      }
+	      append CmdList $string
     }
 
     set level [expr $level + 1]
@@ -291,112 +277,121 @@ $fromDir"  ok warning ""  $win
                  set basename [file tail $basedir]
 		 lappend listExp $basedir
 		 set dd [join ${listD}/$basename ""]
-	         set Ftype [file type $basedir]
-		 
-	         if {[string compare $Ftype "link"] == 0} {
-		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
-                 } else {
-		              lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img}"
+		 file stat $basedir statinfo
+		 set inode $statinfo(ino)
+		 set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
+		 append CmdList $string
+	         
+		 eval $CmdList
+                 set CmdList {}
+		 if {[array get listInodes $inode] == "" } {
+		    set listInodes($inode) 1
 		 }
-		 foreach cmd $CmdList {
-		          eval  $cmd
-		 }
-                 #set XPManager::_progress 0
-
 		 return
     }
 
-    # -- if not go deep
-    foreach dname [lsort -dictionary [glob -nocomplain -type {d r} -path $basedir *]] {
-              if {[file isdirectory $dname]} {
-		   # -- discard directories refered to by a link
-		   if {[lsearch $matchLink [file tail $dname]] >= 0 } {
-		           continue
-		   }
-	           set Ftype [file type $dname]
+    # -- if not go deep, the code capture dir and links
+    foreach dname [glob -nocomplain -type {l d r} -path $basedir *] {
+	      set basename [file tail $dname]
+	      set Ftype [file type $dname]
+	      file stat $dname statinfo
+	      set inode $statinfo(ino)
+              if { $Ftype eq "directory" } {
                    set kris [catch {file type $dname/EntryModule} ftype]
-	           if { $kris == 0 && $ftype eq "link" } {
-		       set basename [file tail $dname]
+	           if { $kris == 0 && $ftype eq "link" == 0 } {
 		       lappend listExp $dname
 		      
 		       set dd [join ${listD}/$basename ""]
-	               if {[string compare $Ftype "link"] == 0} {
-		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img} -font {times 16}"
-                       } else {
-		             lappend CmdList "catch {$tree insert end ${parent} ${basename}.$parent -text $basename -data $dd -image $Preferences::exp_icon_img}"
-		       }
-		       foreach cmd $CmdList {
-		             eval  "$cmd" 
+		       set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
+		       
+		       append CmdList $string
+		       eval $CmdList
+                       set CmdList {}
+		       if {[array get listInodes $inode] == "" } {
+		          set listInodes($inode) 1
 		       }
 		   } else {
-		      set basename [file tail $dname]
 		      # -- dont Recurse on hub , bin, src
-		      if { $basename != "hub" && $basename != "bin" && $basename != "src" && \
-		            $basename != "listings" && $basename != "logs" && $basename != "resources" } {
-                                walkin $tree $dname $basename $level $listD $parent $CmdList $suffix $Ftype $indice
+		      if {[array get listInodes $inode] == "" } {
+		         set listInodes($inode) 1
+                         if { [array get stopDirList ${basename}] == "" } {
+                            FindDrawTree $tree $dname $basename $level $listD $parent $CmdList $suffix $Ftype $indice 
+		         }
 		      }
                    }
-              } 
+              } else {
+	        set PointingTo [ exec true_path $dname]
+	        #set PointingTo [file normalize $dname]
+		# -- dont follow link pointing to files|links
+		if {[file isdirectory $PointingTo]} {
+		     file stat $PointingTo statinfo
+		     set inode $statinfo(ino)
+		     if {[array get listInodes $inode] == "" } {
+		        set listInodes($inode) 1
+                        if { [array get stopDirList ${basename}] == "" } {
+                           FindDrawTree $tree $dname $basename $level $listD $parent $CmdList $suffix $Ftype $indice 
+		        }
+		     }
+		}
+	      }
     }
-}
-
-#-----------------------------------------------------------
-#-----------------------------------------------------------
-proc XTree::lshift listVar {
-    upvar 1 $listVar l
-    if {![info exists l]} {
-             # make the error message show the real variable name
-            error "can't read \"$listVar\": no such variable"
-    }
-
-    set r [lindex $l 0]
-    set l [lreplace $l [set l 0] 0]
-    return $r
+    set CmdList {}
 }
 
 #---------------------------------------------
 # -- Find Experiment in a given directory
 # -- Need to detect recursion
 #---------------------------------------------
-proc XTree::FindExps {args} {
-   # puts "XTree::FindExps args:${args}"
-   set files {}
-   set matchLink {}
 
-   # - We need to do a first pass to gather link
-   foreach x [glob -nocomplain [file join $args *]] {
-		   set type [file type $x]
-		   if {[string compare $type "link"] == 0} {
-		         set Flink [file tail $x]
-			 set PointTo [file readlink $x]
-			 regsub -all {\.\/} $PointTo "" PointTo
-			 lappend matchLink $PointTo 
-		   }
-   }
+proc XTree::FindExps {args} {
+   global stopDirList
+   set files {}
+   array set myListInodes {}
 
    while {[set dir [XTree::lshift args]] != ""} {
            foreach x [glob -nocomplain [file join $dir *]] {
-		  if {[file isdir $x]} {
-		           # [file exists $x/EntryModule] && [catch [file link $x/EntryModule]]  
+	          set Ftype [file type $x]
+                  set basename [file tail $x]
+                  if {$Ftype ne "link" } {
+		           # puts "x=$x is a dir"
+			   file stat $x statinfo
+			   set inode $statinfo(ino)
+                           
 			   set kris [catch {file type $x/EntryModule} ftype]
-		           if  {$kris == 0 && $ftype eq "link"}  {
-		                  lappend files $x 
-				  continue
+                           if  {$kris == 0 && $ftype eq "link"}  {
+		                  if { [catch {set Module [exec true_path $x/EntryModule]}] == 0 }  {
+                                        lappend files $x 
+		                        if {[array get myListInodes $inode] == "" } {
+		                           set myListInodes($inode) 1
+                                        }
+				  }
+                                  continue
                            }
 
-		           set basename [file tail $x]
-			 
-			   if {  $basename != "hub" && $basename != "bin" && $basename != "src" && $basename != "listings" && \
-			         $basename != "logs" && $basename != "resources" && $basename != "sequencing" && $basename != "modules" } {
-                                   # -- check  if this is referenced already by a link
-				   if {[lsearch $matchLink $basename] < 0 } {
-                                            lappend args  $x
-                                   }
-			   }
+                         
+                           # -- check  if this is referenced already by a link
+                           if { [array get stopDirList ${basename}] == "" && [array get myListInodes $inode] == "" } {
+                                  lappend args  $x
+		                  set myListInodes($inode) 1
+                           }
+                  } else {
+		      # puts "x=$x is a link"
+		      if { [catch {set PointingTo [exec true_path $x]}] == 0 }  {
+		           if {[file isdirectory $PointingTo]} {
+		               file stat $PointingTo statinfo
+			       set inode $statinfo(ino)
+                               set basename [file tail $PointingTo]
+                               if { [array get stopDirList ${basename}] == "" && [array get myListInodes $inode] == "" } {
+                                  lappend args  $x
+		                  set myListInodes($inode) 1
+			       }
+			    }
+		      }
 		  }
-           }
-  }
+	   }
+   }
 
-  # -- return list of Exps.
-  return $files
+   # -- return list of Exps.
+   return $files
 }
+

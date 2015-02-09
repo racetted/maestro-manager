@@ -142,7 +142,7 @@ proc XPManager::create { } {
    incr prgindic
 
    # -- list of ALL OP exps
-   XPManager::ListExperiments
+    XPManager::ListExperiments
 
    # --Show Name and Version
    set host [exec hostname]
@@ -319,14 +319,14 @@ proc XPManager::ListExperiments {} {
   
     set buf1 {}
     set buf2 {}
-    set buf1 [XTree::FindExps $XPManager::ExpOpsRepository]
-    set buf2 [XTree::FindExps $XPManager::ExpParRepository]
+    # set buf1 [XTree::FindExps $XPManager::ExpOpsRepository]
+    # set buf2 [XTree::FindExps $XPManager::ExpParRepository]
 
     # -- Add user stuf now all
     set buf3 {}
     set user_list [Preferences::GetTabListDepots "none" "r"]
     foreach lusrd $user_list {
-           lappend buf3 {*}[XTree::FindExps $lusrd]
+       lappend buf3 {*}[XTree::FindExps $lusrd]
     }
 
     set ListAllExperiments [concat $buf1 $buf2 $buf3]
