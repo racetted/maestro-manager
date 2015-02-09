@@ -1,12 +1,14 @@
 
 global SEQ_MANAGER_BIN
+global env
 global MUSER 
 global array ExperimentInode
 global array ArrayTabsDepot
 
 
 # -- read args --> Crap this should not be here
-set SEQ_MANAGER_BIN [lindex $argv 0] 
+#set SEQ_MANAGER_BIN [lindex $argv 0] 
+set SEQ_MANAGER_BIN $env(SEQ_MANAGER_BIN)
 
 # -- get user
 set MUSER [exec id -nu]
@@ -87,8 +89,8 @@ namespace eval XPManager {
      namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/f_manager/ExpModTreeView.tcl
 }
 
-proc XPManager::create { } {
-    global SEQ_MANAGER_BIN MUSER
+proc XPManager::create { {startup_exp ""} } {
+    global SEQ_MANAGER_BIN MUSER startupExp
     
     variable _wfont
     variable notebook
@@ -142,7 +144,12 @@ proc XPManager::create { } {
    incr prgindic
 
    # -- list of ALL OP exps
-    XPManager::ListExperiments
+   if { ${startupExp} == "" } {
+       XPManager::ListExperiments
+   } else {
+       global ListAllExperiments
+       set ListAllExperiments {}
+   }
 
    # --Show Name and Version
    set host [exec hostname]
@@ -164,6 +171,9 @@ proc XPManager::create { } {
    
    XpBrowser::create $MCGfrm
 
+   if { ${startupExp} != "" } {
+      XpBrowser::validateAndShowExp ${startupExp}
+   }
 
    set prgtext   "Done"
    incr prgindic
@@ -225,6 +235,46 @@ proc XPManager::_create_intro { } {
     wm deiconify $top
 }
 
+proc XPManager::parseCmdOptions {} {
+   global env argv startupExp
+   set startupExp ""
+   if { [info exists argv] } {
+      puts "argv: $argv"
+      set options {
+         {exp.arg "" "exp to be selected at startup"}
+      }
+   }
+   namespace inscope :: package require cmdline
+   set usage "\[options] \noptions:"
+   if [ catch { array set params [::cmdline::getoptions argv $options $usage] } message ] {
+      # puts "ERROR: XPManager::parseCmdOptions "
+      puts "\n$message"
+      exit 1
+   }
+
+   if { ! ($params(exp) == "") } {
+      puts "Using exp specified at startup: $params(exp)"
+      # user specified an exp, use it
+      set startupExp $params(exp)
+   }
+
+   if { ${startupExp} == "" && [info exists env(SEQ_EXP_HOME)] } {
+      # if exp not defined and seq_exp_home defined use it
+      puts "Using SEQ_EXP_HOME at startup: $env(SEQ_EXP_HOME)"
+      set startupExp $env(SEQ_EXP_HOME)
+   }
+
+   if { ${startupExp} == "" } {
+      set isExpCheckPath [pwd]/EntryModule
+      # at last if pwd is an exp, use it
+      if { [file exists ${isExpCheckPath}] && [file type ${isExpCheckPath}] == "link" && [file readable ${isExpCheckPath}] } {
+         puts "Using current pwd as exp for startup: [pwd]"
+         set startupExp [pwd]
+      }
+   }
+
+}
+
 proc XPManager::main {} {
    
     global SEQ_MANAGER_BIN
@@ -241,6 +291,7 @@ proc XPManager::main {} {
     wm title . $Dialogs::XPM_ApplicationName 
 
     XPManager::create
+
     BWidget::place . 0 0 center
     wm deiconify .
     wm minsize . 700 500
@@ -415,7 +466,7 @@ Dialogs::setDlg
 
 XpOptions::globalOptions
 XpOptions::tablelistOptions
-
+XPManager::parseCmdOptions
 XPManager::main
 wm geom . [wm geom .]
 
