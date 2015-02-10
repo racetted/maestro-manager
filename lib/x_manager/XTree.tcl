@@ -1,4 +1,3 @@
-set listExp [list]
 global listExp 
 global stopDirList
 interp recursionlimit {} 50
@@ -6,6 +5,7 @@ global listInodes
 
 
 array set stopDirList { "hub" "1" "bin" "1" "src" "1" "listins" "1" "logs" "1" "resources" "1" "sequencing" "1" "modules" "1" "constants" "1" }
+array set listExp {}
 
 namespace eval XTree {
     variable count
@@ -62,7 +62,7 @@ proc XTree::getPath {w node} {
 #-----------------------------------------------------------
 #-----------------------------------------------------------
 proc XTree::init { tree args } {
-    global listInodes CmdList stopDirList
+    global listInodes CmdList stopDirList listExp ListAllExperiments
     variable count
     set count 0
 
@@ -80,6 +80,8 @@ proc XTree::init { tree args } {
 
                     #XTree::walkin $tree $adir "" 0 $adir root "" "" directory $i
                     XTree::FindDrawTree $tree $adir "" 0 $adir root "" "" directory $i
+		    set ListAllExperiments [lsort [array names listExp]]
+
          }
 	 incr i
     }
@@ -248,6 +250,24 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
 	 return
     }
 
+    # -- check if this is an expriment
+   set kris [catch {file type $basedir/EntryModule} ftype]
+   if {  $kris == 0 &&  $ftype eq "link" } {
+                 set basename [file tail $basedir]
+		 set listExp($basedir) "1"
+		 set dd [join ${listD}/$basename ""]
+		 file stat $basedir statinfo
+		 set inode $statinfo(ino)
+		 set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
+		 append CmdList $string
+		 eval $CmdList
+                 set CmdList {}
+		 if {[array get listInodes $inode] == "" } {
+		    set listInodes($inode) 1
+		 }
+		 return
+    }
+
     if { $parent == "root" } {
            set string ";catch { $tree  insert end root home$indice -text $fromDir -image [Bitmap::get folder] -data root }"
 	   append CmdList $string
@@ -270,26 +290,6 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
             lappend listD /$branche
     }
 
-
-    # -- check if this is an expriment
-   set kris [catch {file type $basedir/EntryModule} ftype]
-   if {  $kris == 0 &&  $ftype eq "link" } {
-                 set basename [file tail $basedir]
-		 lappend listExp $basedir
-		 set dd [join ${listD}/$basename ""]
-		 file stat $basedir statinfo
-		 set inode $statinfo(ino)
-		 set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
-		 append CmdList $string
-	         
-		 eval $CmdList
-                 set CmdList {}
-		 if {[array get listInodes $inode] == "" } {
-		    set listInodes($inode) 1
-		 }
-		 return
-    }
-
     # -- if not go deep, the code capture dir and links
     foreach dname [glob -nocomplain -type {l d r} -path $basedir *] {
 	      set basename [file tail $dname]
@@ -299,7 +299,7 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
               if { $Ftype eq "directory" } {
                    set kris [catch {file type $dname/EntryModule} ftype]
 	           if { $kris == 0 && $ftype eq "link" == 0 } {
-		       lappend listExp $dname
+		       set listExp($basedir) "1"
 		      
 		       set dd [join ${listD}/$basename ""]
 		       set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
