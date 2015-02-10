@@ -4,7 +4,8 @@ global env
 global MUSER 
 global array ExperimentInode
 global array ArrayTabsDepot
-
+global ListAllExperiments
+set ListAllExperiments {}
 
 # -- read args --> Crap this should not be here
 #set SEQ_MANAGER_BIN [lindex $argv 0] 
@@ -143,14 +144,6 @@ proc XPManager::create { {startup_exp ""} } {
    set  prgtext   "Findind Op, Par Experiments ..."
    incr prgindic
 
-   # -- list of ALL OP exps
-   if { ${startupExp} == "" } {
-       XPManager::ListExperiments
-   } else {
-       global ListAllExperiments
-       set ListAllExperiments {}
-   }
-
    # --Show Name and Version
    set host [exec hostname]
     
@@ -239,7 +232,6 @@ proc XPManager::parseCmdOptions {} {
    global env argv startupExp
    set startupExp ""
    if { [info exists argv] } {
-      puts "argv: $argv"
       set options {
          {exp.arg "" "exp to be selected at startup"}
       }
@@ -374,16 +366,16 @@ proc XPManager::ListExperiments {} {
     # set buf2 [XTree::FindExps $XPManager::ExpParRepository]
 
     # -- Add user stuf now all
-    set buf3 {}
-    set user_list [Preferences::GetTabListDepots "none" "r"]
-    foreach lusrd $user_list {
-       lappend buf3 {*}[XTree::FindExps $lusrd]
-    }
+    # set buf3 {}
+    # set user_list [Preferences::GetTabListDepots "none" "r"]
+    # foreach lusrd $user_list {
+    #    lappend buf3 {*}[XTree::FindExps $lusrd]
+    # }
 
-    set ListAllExperiments [concat $buf1 $buf2 $buf3]
+    # set ListAllExperiments [concat $buf1 $buf2 $buf3]
 
     # -- Now find Experiment Inode
-    set ExperimentInode [TreeUtil::FindExpInode $ListAllExperiments]
+    # set ExperimentInode [TreeUtil::FindExpInode $ListAllExperiments]
 
     # DEBUG
     #dict for {id info} $ExperimentInode {
