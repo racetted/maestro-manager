@@ -46,7 +46,7 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
       if { "$data" != "" } {
-               set _XpBrSelected [string trimright [XTree::getPath $tree $node] "/"]
+               set _XpBrSelected [file normalize [string trimright [XTree::getPath $tree $node] "/"]]
 	       eval $XpBrowser::confNode
 	       $tree itemconfigure $node -fill red
 	       set XpBrowser::confNode "$tree itemconfigure $node -fill black"
@@ -343,7 +343,6 @@ proc XpBrowser::create { frm } {
 # validate string given by entry
 #---------------------------------
 proc XpBrowser::validateAndShowExp { sel_xp } {
-   
       set sel_xp [file nativename $sel_xp]
       set kris [catch {file type $sel_xp/EntryModule} ftype]
       if { $kris != 0 || $ftype ne "link"  } {
