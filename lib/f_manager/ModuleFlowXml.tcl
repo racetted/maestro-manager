@@ -32,6 +32,7 @@ proc ModuleFlowXml_removeDependencies {_xmlDoc _moduleNodeRecord _flowNodeRecord
 #
 proc ModuleFlowXml_addDependency { _xmlDoc _moduleNodeRecord _flowNodeRecord _nameValueList } {
    ::log::log debug "ModuleFlowXml_addDependency _xmlDoc:$_xmlDoc _nameValueList:$_nameValueList"
+   puts "ModuleFlowXml_addDependency _xmlDoc:$_xmlDoc _nameValueList:$_nameValueList"
    # get the query to access the node within the flow.xml
    set xmlQuery [ ModuleFlowXml_getNodeQuery ${_moduleNodeRecord} ${_flowNodeRecord} ]
    set xmlRootNode [${_xmlDoc} documentElement]
@@ -54,32 +55,39 @@ proc ModuleFlowXml_addDependency { _xmlDoc _moduleNodeRecord _flowNodeRecord _na
    ::log::log debug "ModuleFlowXml_addDependency _xmlDoc:$_xmlDoc _nameValueList:$_nameValueList DONE"
 }
 
-proc ModuleFlowXml_getDependencies { _xmlDoc _moduleNodeRecord _flowNodeRecord } {
+proc ModuleFlowXml_getDependencies { _xmlNode _xmlDoc _moduleNodeRecord _flowNodeRecord } {
 
-   # get the query to access the node within the flow.xml
-   set xmlQuery [ ModuleFlowXml_getNodeQuery ${_moduleNodeRecord} ${_flowNodeRecord} ]
-   set xmlRootNode [${_xmlDoc} documentElement]
+   set xmlQuery ""
+   if { ${_xmlNode} == "" } {
+      # query the xml doc
+      # get the query to access the node within the flow.xml
+      set xmlQuery [ ModuleFlowXml_getNodeQuery ${_moduleNodeRecord} ${_flowNodeRecord} ]
+      set xmlRootNode [${_xmlDoc} documentElement]
+      if { ${xmlQuery} != "" } {
+         ::log::log debug "ModuleFlowXml_getDependencies xmlQuery:$xmlQuery"
+         set xmlNode [${xmlRootNode} selectNodes ${xmlQuery}]
+      }
+   } else {
+      set xmlNode ${_xmlNode}
+   }
 
    set depsList {}
-   if { ${xmlQuery} != "" } {
-      ::log::log debug "ModuleFlowXml_getDependencies xmlQuery:$xmlQuery"
-      set xmlNode [${xmlRootNode} selectNodes ${xmlQuery}]
-      ::log::log debug "ModuleFlowXml_getDependencies xmlNode:$xmlNode"
-      set depXmlNodes [${xmlNode} selectNodes DEPENDS_ON]
-      ::log::log debug "ModuleFlowXml_getDependencies depXmlNodes:$depXmlNodes"
-      # list of attributes supported for dependency
-      # set attributeNames [list dep_name status type index local_index hour exp]
-      foreach depXmlNode ${depXmlNodes} {
-         set typeValue [${depXmlNode} getAttribute type ""]
-         set depNameValue [${depXmlNode} getAttribute dep_name ""]
-         set statusValue [${depXmlNode} getAttribute status ""]
-         set indexValue [${depXmlNode} getAttribute index ""]
-         set localIndexValue [${depXmlNode} getAttribute local_index ""]
-         set expValue [${depXmlNode} getAttribute exp ""]
-         set hourValue [${depXmlNode} getAttribute hour ""]
-
-         lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
-      }
+   ::log::log debug "ModuleFlowXml_getDependencies xmlQuery:$xmlQuery"
+   ::log::log debug "ModuleFlowXml_getDependencies xmlNode:$xmlNode"
+   set depXmlNodes [${xmlNode} selectNodes DEPENDS_ON]
+   ::log::log debug "ModuleFlowXml_getDependencies depXmlNodes:$depXmlNodes"
+   # list of attributes supported for dependency
+   # set attributeNames [list dep_name status type index local_index hour valid_dow valid_hour exp]
+   foreach depXmlNode ${depXmlNodes} {
+      set depNameValue [${depXmlNode} getAttribute dep_name ""]
+      set statusValue [${depXmlNode} getAttribute status ""]
+      set indexValue [${depXmlNode} getAttribute index ""]
+      set localIndexValue [${depXmlNode} getAttribute local_index ""]
+      set validDowValue [${depXmlNode} getAttribute valid_dow ""]
+      set validHourValue [${depXmlNode} getAttribute valid_hour ""]
+      set hourValue [${depXmlNode} getAttribute hour ""]
+      set expValue [${depXmlNode} getAttribute exp ""]
+      lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${hourValue} ${validDowValue} ${validHourValue} ${expValue}]
    }
    return ${depsList}
 }

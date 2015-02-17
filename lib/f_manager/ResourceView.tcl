@@ -17,7 +17,7 @@ proc ResourceView_createWidgets { _expPath _moduleNode _flowNodeRecord } {
    set flowCanvas [ModuleFlowView_getCanvas ${_expPath} ${_moduleNode}]
    MiscTkUtils_positionWindow ${flowCanvas} ${topWidget}
 
-   set noteBook [NoteBook ${topWidget}.note_book -height 300 -width 500 -tabbevelsize 2]
+   set noteBook [NoteBook ${topWidget}.note_book -height 400 -width 600 -tabbevelsize 2]
 
    ${noteBook} insert 0 batch -text Batch
    ${noteBook} insert 1 dep -text Dependencies
@@ -86,7 +86,7 @@ proc ResourceView_addNewDepEntry { _tableListWidget _position } {
    global ResourceTableColumnMap
    set tableVariable [ResourceView_getDepTableVar ${_tableListWidget}]
    global ${tableVariable}
-   set ${tableVariable} [linsert [set ${tableVariable}] ${_position} [list "" "end" "" "" "" ""]]
+   set ${tableVariable} [linsert [set ${tableVariable}] ${_position} [list "" "" "" "" "" ""]]
    ${_tableListWidget} cellconfigure ${_position},$ResourceTableColumnMap(ExpColumnNumber) -window [list ResourceView_updateExpEntryWidget] \
       -windowdestroy  [list ResourceView_destroyExpEntryWidget]
    ResourceView_setDataChanged ${_tableListWidget} true
@@ -182,14 +182,20 @@ proc ResourceView_editNodeDepRowStartCallback { _expPath _moduleNode _tableListW
 
 # callback when done starting editing cell
 proc ResourceView_editDepRowStartCallback { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent } {
-   global ResourceTableColumnMap
+   global ResourceTableColumnMap AllHoursList
+   if { ! [info exists AllHoursList] } {
+      set AllHoursList {00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23}
+   }
    ::log::log debug "ResourceView_editDepRowStartCallback _tableListWidget:${_tableListWidget} _cellRow:${_cellRow}  _cellColumn:${_cellColumn} _cellContent:${_cellContent}"
-   if { ${_cellColumn} == $ResourceTableColumnMap(StatusColumnNumber) } {
-      set comboBoxWidget [${_tableListWidget} editwinpath]
-      ${comboBoxWidget} configure -values {begin end}
-   } elseif { ${_cellColumn} == $ResourceTableColumnMap(NodeColumnNumber) } {
+   if { ${_cellColumn} == $ResourceTableColumnMap(NodeColumnNumber) } {
       set comboBoxWidget [${_tableListWidget} editwinpath]
       ${comboBoxWidget} configure -values [lsort [ModuleFlow_getAllInstances ${_expPath}]]
+   } elseif { ${_cellColumn} == $ResourceTableColumnMap(ValidDowColumnNumber) } {
+         set comboBoxWidget [${_tableListWidget} editwinpath]
+      ${comboBoxWidget} configure -values { 0 1 2 3 4 5 6 }
+   } elseif { ${_cellColumn} == $ResourceTableColumnMap(ValidHourColumnNumber) } {
+         set comboBoxWidget [${_tableListWidget} editwinpath]
+      ${comboBoxWidget} configure -values ${AllHoursList}
    }
 
    return ${_cellContent}
@@ -211,10 +217,11 @@ proc ResourceView_editDepRowEndCallback {  _expPath _flowNode _tableListWidget _
    if { ! [array exists ResourceTableColumnValidateMap] } {
       array set ResourceTableColumnValidateMap \
          [list $ResourceTableColumnMap(NodeColumnNumber) ResourceView_validateDepNode \
-               $ResourceTableColumnMap(StatusColumnNumber) ResourceView_validateDepStatus \
                $ResourceTableColumnMap(IndexColumnNumber) ResourceView_validateDepIndex \
                $ResourceTableColumnMap(LocalIndexColumnNumber) ResourceView_validateDepIndex \
                $ResourceTableColumnMap(HourColumnNumber) ResourceView_validateDepHour \
+               $ResourceTableColumnMap(ValidDowColumnNumber) ResourceView_validateDow \
+               $ResourceTableColumnMap(ValidHourColumnNumber) ResourceView_validateValidHour \
                $ResourceTableColumnMap(ExpColumnNumber) ResourceView_validateDepExp]
    }
 
@@ -304,6 +311,7 @@ proc ResourceView_validateDepNode { _expPath _flowNode _tableListWidget _cellRow
    return ${errorFlag}
 }
 
+# not used for now
 proc ResourceView_validateDepStatus { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg } {
    ::log::log debug "ResourceView_validateDepStatus _newValue:$_cellContent"
    set errorFlag 0
@@ -352,6 +360,24 @@ proc ResourceView_validateDepHour { _expPath _flowNode _tableListWidget _cellRow
    return ${errorFlag}
 }
 
+proc ResourceView_validateValidHour { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg } {
+   set errorFlag 0
+   if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
+      if { ! ( [string is digit ${_cellContent}] && ${_cellContent} >= 0 && ${_cellContent} <24 ) } {
+	 set errorFlag 1
+         upvar ${_outErrMsg} myOutputErrMsg
+         set myOutputErrMsg "Invalid valid hour value: ${_cellContent}"
+      }
+      if { ${_cellContent} < 10 && [string length ${_cellContent}] == 1 } {
+         # this is to force padding of values to be 2 digits.
+	 # I can't really set the value in this callback function as it dows not allow modification during the callback
+	 # So I set a delay to force the value
+         after 100 [list ${_tableListWidget} cellconfigure ${_cellRow},${_cellColumn} -text 0${_cellContent}]
+      }
+   }
+   return ${errorFlag}
+}
+
 proc ResourceView_validateDepExp { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg} {
    set errorFlag 0
    if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
@@ -359,6 +385,18 @@ proc ResourceView_validateDepExp { _expPath _flowNode _tableListWidget _cellRow 
 	 set errorFlag 1
          upvar ${_outErrMsg} myOutputErrMsg
          set myOutputErrMsg "Experiment does not exists! ${_cellContent}"
+      }
+   }
+   return ${errorFlag}
+}
+
+proc ResourceView_validateDow { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg } {
+   set errorFlag 0
+   if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
+      if { ! ( [string is integer ${_cellContent}] && ${_cellContent} >= 0 && ${_cellContent} < 7 ) } {
+	 set errorFlag 1
+         upvar ${_outErrMsg} myOutputErrMsg
+         set myOutputErrMsg "Invalid Valid DayOfWeek value: ${_cellContent}"
       }
    }
    return ${errorFlag}
@@ -419,11 +457,12 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    if { ! [info exists ResourceTableColumnMap] } {
       array set ResourceTableColumnMap {
          NodeColumnNumber 0
-         StatusColumnNumber 1
-         IndexColumnNumber 2
-         LocalIndexColumnNumber 3
-         HourColumnNumber 4
-         ExpColumnNumber 5
+         IndexColumnNumber 1
+         LocalIndexColumnNumber 2
+         HourColumnNumber 3
+         ValidDowColumnNumber 4
+         ValidHourColumnNumber 5
+         ExpColumnNumber 6
       }
       # register ComboBox objects with the table
       tablelist::addBWidgetComboBox
@@ -432,10 +471,11 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    # set defaultAlign center
    set defaultAlign left
    set columns [list 0 Node ${defaultAlign} \
-                     0 Status ${defaultAlign} \
                      0 Index ${defaultAlign} \
                      0 "Local Index" ${defaultAlign} \
                      0 Hour ${defaultAlign} \
+                     0 "Valid DayOfWeek" ${defaultAlign} \
+                     0 "Valid Hour" ${defaultAlign} \
                      0 Exp ${defaultAlign}]
    set yscrollW ${_depFrame}.res_sy
    set xscrollW ${_depFrame}.res_sx
@@ -489,18 +529,27 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    ::autoscroll::autoscroll ${yScrollNodeW}
    ::autoscroll::autoscroll ${xScrollNodeW}
 
-  bind [${dependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${dependsTableW} %X %Y]
-  bind [${nodeDependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${nodeDependsTableW} %X %Y]
+   bind [${dependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${dependsTableW} %X %Y]
+   bind [${nodeDependsTableW} bodytag] <Button-3> [list ResourceView_createDependsPopMenu ${nodeDependsTableW} %X %Y]
+   foreach columnIndex [list $ResourceTableColumnMap(NodeColumnNumber) \
+	       $ResourceTableColumnMap(IndexColumnNumber) \
+               $ResourceTableColumnMap(LocalIndexColumnNumber) \
+               $ResourceTableColumnMap(HourColumnNumber) \
+               $ResourceTableColumnMap(ValidDowColumnNumber) \
+               $ResourceTableColumnMap(ValidHourColumnNumber) \
+               $ResourceTableColumnMap(ExpColumnNumber) ] {
 
-   foreach columnIndex [list 0 1 2 3 4 5] {
-     ${dependsTableW} columnconfigure ${columnIndex} -editable yes
-     ${nodeDependsTableW} columnconfigure ${columnIndex} -editable yes
+      ${dependsTableW} columnconfigure ${columnIndex} -editable yes
+      ${nodeDependsTableW} columnconfigure ${columnIndex} -editable yes
    }
-   # configure the interactive editing of the Node and Status columnto be ComboBox
+
+   # configure the interactive editing of the Node columnto be ComboBox
    ${nodeDependsTableW} columnconfigure $ResourceTableColumnMap(NodeColumnNumber) -editwindow ComboBox
+   ${nodeDependsTableW} columnconfigure $ResourceTableColumnMap(ValidDowColumnNumber) -editwindow ComboBox
+   ${nodeDependsTableW} columnconfigure $ResourceTableColumnMap(ValidHourColumnNumber) -editwindow ComboBox
    ${dependsTableW} columnconfigure $ResourceTableColumnMap(NodeColumnNumber) -editwindow ComboBox
-   ${nodeDependsTableW} columnconfigure $ResourceTableColumnMap(StatusColumnNumber) -editwindow ComboBox
-   ${dependsTableW} columnconfigure $ResourceTableColumnMap(StatusColumnNumber) -editwindow ComboBox
+   ${dependsTableW} columnconfigure $ResourceTableColumnMap(ValidDowColumnNumber) -editwindow ComboBox
+   ${dependsTableW} columnconfigure $ResourceTableColumnMap(ValidHourColumnNumber) -editwindow ComboBox
 
    grid ${resourceLabel} -row 0 -column 0 -padx 2 -pady 2 -sticky w
    grid ${dependsTableW} -row 1 -column 0 -padx 2 -pady 2 -sticky nsew

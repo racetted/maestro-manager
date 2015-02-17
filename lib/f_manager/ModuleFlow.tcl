@@ -384,7 +384,8 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
          if { ${parentFlowNode}  != "" } {
             ModuleFlow_addChildNode ${_parentFlowRecord} ${recordName}
          }
-	 ModuleFlow_xmlParseDependencies ${recordName} ${_domNode}
+         set parentModRecord [ModuleFlow_getModuleContainer ${recordName}]
+         ${recordName} configure -deps [ModuleFlowXml_getDependencies ${_domNode} "" ${parentModRecord} ${recordName}]
       }
       default {
       }
