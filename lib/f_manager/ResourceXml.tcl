@@ -105,7 +105,7 @@ proc ResourceXml_saveBatchAttribute { _xmlDoc _attrName _attrValue } {
 
 # returns the list of node dependencies
 # the list contain entries with the following values in order:
-# type dependsNode status index local_index hour exp 
+# dependsNode status index local_index hour valid_dow valid_hour exp 
 #
 #
 # example from shop exp:
@@ -116,11 +116,12 @@ proc ResourceXml_saveBatchAttribute { _xmlDoc _attrName _attrValue } {
 #    <DEPENDS_ON dep_name="/SHOP/GeneratePngWIS86" type="node" status="end"/>
 #
 # returned value from ResourceXml_getDependencyList:
+#  { $node $index $local_index $hour $valid_dow $valid_hour $exp
 #
-# { node /SHOP/GeneratePngWIS84 end "" "" "" "" }
-# { node /SHOP/GeneratePngWIS85a end "" "" "" "" }
-# { node /SHOP/GeneratePngWIS85b end "" "" "" "" }
-# { node /SHOP/GeneratePngWIS86 end "" "" "" "" }
+# { /SHOP/GeneratePngWIS84 "" "" "" "" "" ""}
+# { /SHOP/GeneratePngWIS85a "" "" "" "" "" ""}
+# { /SHOP/GeneratePngWIS85b "" "" "" "" "" ""}
+# { /SHOP/GeneratePngWIS86 "" "" "" "" "" ""}
 #
 proc ResourceXml_getDependencyList { _xmlDoc } {
    set rootNode [${_xmlDoc} documentElement]
@@ -137,14 +138,15 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
       # }
       # set typeValue [${depXmlNode} getAttribute type ""]
       set depNameValue [${depXmlNode} getAttribute dep_name ""]
-      set statusValue [${depXmlNode} getAttribute status ""]
+      # set statusValue [${depXmlNode} getAttribute status ""]
       set indexValue [${depXmlNode} getAttribute index ""]
       set localIndexValue [${depXmlNode} getAttribute local_index ""]
-      set expValue [${depXmlNode} getAttribute exp ""]
       set hourValue [${depXmlNode} getAttribute hour ""]
+      set validDowValue [${depXmlNode} getAttribute valid_dow ""]
+      set validHourValue [${depXmlNode} getAttribute valid_hour ""]
+      set expValue [${depXmlNode} getAttribute exp ""]
 
-      # lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
-      lappend depsList [list ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
+      lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${hourValue} ${validDowValue} ${validHourValue} ${expValue}]
    }
    # puts "depsList :${depsList}"
    return ${depsList}

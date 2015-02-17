@@ -89,9 +89,10 @@ proc ResourceControl_retrieveDepData { _expPath _moduleNode _flowNode _resourceX
    if { ${refresh} == false || [${flowNodeRecord} cget -status] == "new" } {
       set ${nodeTableVar} [${flowNodeRecord} cget -deps]
    } else {
-      set ${nodeTableVar} [ModuleFlowXml_getDependencies ${xmlDoc} ${moduleNodeRecord} ${flowNodeRecord}]
+      set ${nodeTableVar} [ModuleFlowXml_getDependencies "" ${xmlDoc} ${moduleNodeRecord} ${flowNodeRecord}]
    }
 
+   ::log::log debug "ResourceControl_retrieveDepData nodeTableVar: [set nodeTableVar]"
    # change the look of the default entry widgets to more specialised widgets for specific columns
    ResourceView_updateDepTableWidgets ${_expPath} ${_moduleNode} ${_flowNode}
 
@@ -147,7 +148,10 @@ proc ResourceControl_saveActionData { _expPath _moduleNode _flowNode _resourceXm
 }
 
 proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlDoc} {
+   global ResourceTableColumnMap
+
    ::log::log debug "ResourceControl_saveDepsData $_expPath $_moduleNode $_flowNode"
+
 
    set depFrame [ResourceView_getDependsFrameWidget ${_expPath} ${_moduleNode} ${_flowNode}]
    set tableVar [ResourceView_getDepResourceTableVar ${depFrame}]
@@ -167,12 +171,14 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
    foreach depEntry ${depEntries} {
       ::log::log debug "depEntry:${depEntry}"
       set nameValueList [ list type node \
-                               dep_name [lindex ${depEntry} 0] \
-                               status [lindex ${depEntry} 1] \
-                               index [lindex ${depEntry} 2] \
-                               local_index [lindex ${depEntry} 3] \
-                               hour [lindex ${depEntry} 4] \
-                               exp [lindex ${depEntry} 5] ]
+                          status end \
+                          dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
+                          index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
+                          local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
+                          hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \
+                          valid_dow [lindex ${depEntry} $ResourceTableColumnMap(ValidDowColumnNumber)] \
+                          valid_hour [lindex ${depEntry} $ResourceTableColumnMap(ValidHourColumnNumber)] \
+                          exp [file normalize [lindex ${depEntry} $ResourceTableColumnMap(ExpColumnNumber)] ] ]
       ResourceXml_addDependency ${_resourceXmlDoc} ${nameValueList}
    }
 
@@ -204,13 +210,16 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
       ::log::log debug "ResourceControl_saveDepsData nodeTableVar:${nodeTableVar}"
       ::log::log debug "ResourceControl_saveDepsData [set ${nodeTableVar}]"
       foreach depEntry [set ${nodeTableVar}] {
-         set nameValueList [ list type [lindex ${depEntry} 0] \
-                               dep_name [lindex ${depEntry} 1] \
-                               status [lindex ${depEntry} 2] \
-                               index [lindex ${depEntry} 3] \
-                               local_index [lindex ${depEntry} 4] \
-                               hour [lindex ${depEntry} 5] \
-                               exp [lindex ${depEntry} 6] ]
+         set nameValueList [ list type node \
+	                  status end \
+                          dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
+                          index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
+                          local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
+                          hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \
+                          valid_dow [lindex ${depEntry} $ResourceTableColumnMap(ValidDowColumnNumber)] \
+                          valid_hour [lindex ${depEntry} $ResourceTableColumnMap(ValidHourColumnNumber)] \
+                          exp [file normalize [lindex ${depEntry} $ResourceTableColumnMap(ExpColumnNumber)] ] ]
+         ::log::log debug "ResourceControl_saveDepsData nameValueList: $nameValueList" 
          ModuleFlowXml_addDependency ${flowXmlDoc} ${moduleNodeRecord} ${flowNodeRecord} ${nameValueList}
       }
 
@@ -227,20 +236,13 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
 proc ResourceControl_validateDepsData { _tableVar _outErrMsg } {
    upvar ${_tableVar} myTableVar
    upvar ${_outErrMsg} myOutputErrMsg
- 
-   foreach depEntry ${myTableVar} {
-      set nameValueList [ list type node \
-                               dep_name [lindex ${depEntry} 1] \
-                               status [lindex ${depEntry} 2] \
-                               index [lindex ${depEntry} 3] \
-                               local_index [lindex ${depEntry} 4] \
-                               hour [lindex ${depEntry} 5] \
-                               exp [lindex ${depEntry} 6] ]
+   global ResourceTableColumnMap
 
-      # check for mandatory fields: type dep_name status
-      ::log::log debug "ResourceControl_validateDepsData checking: $depEntry"
-      if { [lindex ${depEntry} 0] == "" || [lindex ${depEntry} 1] == "" } {
-         set myOutputErrMsg "Type, Node and Status are mandatory fields." 
+   ::log::log debug "ResourceControl_validateDepsData myTableVar:$myTableVar"
+   foreach depEntry ${myTableVar} {
+      # check for mandatory fields: dep_name
+      if { [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] == "" } {
+         set myOutputErrMsg "Node field is mandatory." 
 	 return false
       }
    }
