@@ -140,6 +140,7 @@ proc ModuleFlowControl_addNodeOk { _topWidget _expPath _moduleNode _parentFlowNo
       ModuleNode {
          set modPathEntry [ModuleFlowView_getWidgetName ${_expPath} ${_moduleNode} addnode_ref_entry]
          set modulePath [${modPathEntry} cget -text]
+	 set derivedModulePath ""
 	 if { [file pathtype ${modulePath}] == "relative" } {
             set derivedModulePath [file normalize ${modulePath}]
 	 }
