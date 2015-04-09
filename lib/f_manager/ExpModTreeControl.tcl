@@ -137,15 +137,6 @@ proc ExpModTreeControl_closeWindow { _expPath _topWidget } {
       }
    }
 
-   if { [ExpModTreeControl_isModuleFlowChanged ${_expPath}] == true } {
-      set answer [MessageDlg .msg_window -icon warning -message "You have changed a module flow but did not re-generate \
-               your experiment flow, are you sure you want to continue?" \
-            -aspect 400 -title "Flow Manager Close Notification" -type okcancel -justify center -parent ${_topWidget}]
-      if { ${answer} == 1 } {
-         return
-      }
-   }
-
    MaestroConsole_addMsg "Closing experiment ${_expPath}."
 
    # recursive delete all module records from the tree of modules
@@ -252,17 +243,6 @@ proc ExpModTreeControl_setModuleFlowChanged { _expPath _isChanged } {
    global ${expChecksum}_FlowHasChanged
    
    set ${expChecksum}_FlowHasChanged ${_isChanged}
-}
-
-proc ExpModTreeControl_isModuleFlowChanged { _expPath } {
-   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
-   global ${expChecksum}_FlowHasChanged
-
-   set isChanged false
-   if { [info exists ${expChecksum}_FlowHasChanged] } {
-      set isChanged [set ${expChecksum}_FlowHasChanged]
-   }
-   return ${isChanged}
 }
 
 proc ExpModTreeControl_debugChanged { _expPath } {

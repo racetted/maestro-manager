@@ -139,11 +139,7 @@ proc ExpModTreeView_addExpToolbar { _expPath _canvas } {
       set vcsButton [button ${expToolbar}.cvs_button -image ${vcsImage}  -relief flat \
          -command [list ExpModTreeView_vcsSelected ${_expPath} ${expToolbar}]]
       bind ${vcsButton} <KeyPress-Return> [list ExpModTreeView_vcsSelected ${_expPath} ${expToolbar}]
-
-      set flowButton [button ${expToolbar}.flow_button -image ${flowImage}  -relief flat \
-         -command [list ExpModTreeControl_newExpFlow ${_expPath} ${topWidget}]]
-      bind ${flowButton} <KeyPress-Return> [list ExpModTreeControl_newExpFlow ${_expPath} ${topWidget}]
-
+      
       set consoleLogButton [button ${expToolbar}.cons_log_button -image ${consoleImage}  -relief flat -command [list MaestroConsole_show]]
       bind ${consoleLogButton} <KeyPress-Return> [list MaestroConsole_show]
 
@@ -151,11 +147,10 @@ proc ExpModTreeView_addExpToolbar { _expPath _canvas } {
          -command [list ExpModTreeControl_closeWindow ${_expPath} ${topWidget}]]
       bind ${quitButton} <KeyPress-Return> [list ExpModTreeControl_closeWindow ${_expPath} ${topWidget}]
 
-      grid ${vcsButton} ${flowButton} ${consoleLogButton} ${quitButton} -padx 2 -sticky w
+      grid ${vcsButton} ${consoleLogButton} ${quitButton} -padx 2 -sticky w
 
       #::tooltip::tooltip ${refreshButton} "Refresh module tree."
       ::tooltip::tooltip ${vcsButton} "version control system - gui"
-      ::tooltip::tooltip ${flowButton} "Re-generate experiment flow.xml file."
       ::tooltip::tooltip ${consoleLogButton} "Show console log window."
       ::tooltip::tooltip ${quitButton} "Close experiment module tree window."
    }
