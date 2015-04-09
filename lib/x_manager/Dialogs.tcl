@@ -183,7 +183,7 @@ proc Dialogs::setDlg {} {
 		  set Imp_NoExpSel "No Experiment Selected!"
 		  set All_experience "Experiment" 
 		  set Imp_Overwrite "An (a family of) experiment(s) already exist with this name. Do you want to overwrite it?"
-		  set Imp_Ok "Import Succesfull"
+		  set Imp_Ok "Import Succesful"
 		  set Imp_Ko "There are Error in the Import action ... Please examine listing"
 		  set Pref_title "Preferences Setting"
 	          set NotB_ExpDepot "Experiments Depot"
