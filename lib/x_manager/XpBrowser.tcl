@@ -46,7 +46,7 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
       if { "$data" != "" } {
-               set _XpBrSelected [string trimright [XTree::getPath $tree $node] "/"]
+               set _XpBrSelected [file normalize [string trimright [XTree::getPath $tree $node] "/"]]
 	       eval $XpBrowser::confNode
 	       $tree itemconfigure $node -fill red
 	       set XpBrowser::confNode "$tree itemconfigure $node -fill black"
@@ -54,6 +54,8 @@ proc XpBrowser::_getXp {frm tree node} {
       }
 
 }
+
+
 #---------------------------------------------------------
 # Having a valid Experiments show Experiment 
 # date and  catchup 
@@ -295,7 +297,7 @@ proc XpBrowser::create { frm } {
       pack $XpBfrmCb  -fill x
 
       pack $notebook -fill both -expand yes -padx 4 -pady 4
-      pack $XpBfrm -fill both
+      pack $XpBfrm -fill both -expand yes
 
       $notebook raise [$notebook page 0]
       
@@ -341,7 +343,7 @@ proc XpBrowser::create { frm } {
 # validate string given by entry
 #---------------------------------
 proc XpBrowser::validateAndShowExp { sel_xp } {
-   
+      set sel_xp [file nativename $sel_xp]
       set kris [catch {file type $sel_xp/EntryModule} ftype]
       if { $kris != 0 || $ftype ne "link"  } {
                  Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $XpBrowser::XpBfrm
@@ -413,5 +415,19 @@ proc XpBrowser::ExpSelected { source_w } {
        ExpModTreeControl_init ${source_w} $::_XpBrSelected
 }
 
+proc XpBrowser::GetExpSelected {} {
+   global _XpBrSelected
+   return ${_XpBrSelected}
+}
 
+proc XpBrowser::_clearXp {} {
+   global _XpBrSelected
+   global _ExpDate
+   global _ExpCatchup
+   variable confNode
 
+   set _XpBrSelected "";
+   set _ExpDate "";
+   set _ExpCatchup "";
+   set confNode "";
+}

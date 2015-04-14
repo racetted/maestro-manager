@@ -172,7 +172,13 @@ proc TreeUtil::DeleteExp { tree } {
      set answer [tk_messageBox -message "$data will be removed from Maestro Manager and permanently deleted. Is it what you want?" -type yesno -icon question]
      # -- Delete exp from tree browser
      switch -- $answer {
-        yes {exec rm -rf $data; $tree delete $node}
+        yes {
+	   exec rm -rf $data; 
+	   $tree delete $node
+	   if { [XpBrowser::GetExpSelected] == ${data} } {
+	      XpBrowser::_clearXp
+	   }
+	}
         no return
      }
 }

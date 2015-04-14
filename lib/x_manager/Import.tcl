@@ -57,16 +57,14 @@ proc Import::ImportExp { exp } {
 
       set ImpExpName [ComboBox $subf1.list -textvariable Import::_selected \
                     -width 60 \
-		    -editable false \
 		    -autocomplete false \
 		    -entrybg  #FFFFFF \
                     -values $ListAllExperiments \
 		    -modifycmd "Import::UpdateIMportWidget $subf1 $subf5" \
-		    -bwlistbox false \
-		    -selectbackground #FFFFFF \
 		    -selectforeground black \
 		    -justify left \
-		    -insertborderwidth 0\
+		    -insertborderwidth 0 \
+		    -hottrack 1 \
 		    -helptext "List of Available Experiments"]
 
       set NewExpName [Entry $subf2.entrys  -textvariable Import::_importname \
@@ -82,11 +80,9 @@ proc Import::ImportExp { exp } {
 		    -entrybg  #FFFFFF \
                     -values $Import::initdir \
 		    -modifycmd {} \
-		    -bwlistbox false \
-		    -selectbackground #FFFFFF \
 		    -selectforeground black \
 		    -justify left \
-		    -insertborderwidth 0\
+		    -insertborderwidth 0 \
 		    -helptext "List of Available Paths"]
 
       set ImportGit [checkbutton $subf5.radgit -text "Import Git" -font 8 -variable Import::_ImportGit -onvalue 1 -offvalue 0]
@@ -106,6 +102,8 @@ proc Import::ImportExp { exp } {
 		      #set xp [XpSelector::selectXp]
 		      set xp [tk_chooseDirectory -initialdir $env(HOME)/ -title "Choose a directory" -parent $Import::ImportW]
 		      if {$xp ne ""} {
+		            # use nativename to resolve tilde expansion
+		            set xp [file nativename ${xp}]
 			    set kris [catch {file type $xp/EntryModule} ftype]
 			    if {$kris != 0} {
 			           Dialogs::show_msgdlg $Dialogs::Dlg_ProvideExpPath ok warning "" $Import::ImportW
@@ -188,11 +186,16 @@ proc Import::ImportExp { exp } {
 }
 proc Import::NextButton { } {
 
+      if { $Import::_selected != "" } {
+         set Import::_selected [file nativename $Import::_selected]
+      }
+
       if {[string compare $Import::_selected ""] == 0} {
 		    Dialogs::show_msgdlg "You Must Choose an Experiment"  ok warning "" $Import::ImportW
 		    return
       }
 
+      set Import::Destination [file nativename $Import::Destination]
       if {[regexp {[ \r\n\t]+} $Import::Destination] || [string compare $Import::Destination ""] == 0} {
 		    Dialogs::show_msgdlg "You Must give a Valid Destination path"  ok warning "" $Import::ImportW
 		    return
@@ -473,15 +476,23 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
       $WinInfoWidget insert end "cmd:import_maestro_exp $cmdargs\n"
 
       update 
-      set fid [open "|$ImportScript $cmdargs 2>@ stdout" r+]
+      if [ catch {
+         ${WinInfoWidget} configure -cursor watch
+      
+         set fid [open "|$ImportScript $cmdargs 2>@ stdout" r+]
 
-      fconfigure $fid -buffering line -translation auto 
-      fileevent  $fid readable "Import::GetImportScriptOutputs $fid $WinInfoWidget $ExeImport"
+         fconfigure $fid -buffering line -translation auto 
+         fileevent  $fid readable "Import::GetImportScriptOutputs $fid $WinInfoWidget $ExeImport"
+      } message ] {
+         ${ExeImport} configure -cursor {}
+         error ${message}
+      }      
 }
 
 proc Import::GetImportScriptOutputs {fid Winfo win} {
 
-      if {[gets $fid line] >= 0 } {
+      if [ catch {
+         if {[gets $fid line] >= 0 } {
 
 		$Winfo insert end "$line \n"
 		$Winfo see end
@@ -505,7 +516,7 @@ proc Import::GetImportScriptOutputs {fid Winfo win} {
 			 return
 		}
 
-      } else {
+         } else {
                 close $fid
 		if { $Import::SUCCES == 1 } {
 		         Dialogs::show_msgdlg $Dialogs::Imp_Ok  ok info "" $win]
@@ -516,8 +527,12 @@ proc Import::GetImportScriptOutputs {fid Winfo win} {
 		} else  {
 		         Dialogs::show_msgdlg $Dialogs::Imp_Ko  ok warning "" $win] 
 		}
+                ${Winfo} configure -cursor {}
+         }
+      } message ] {
+         ${Winfo} configure -cursor {}
+         error ${message}
       }
-      
 }
 
 

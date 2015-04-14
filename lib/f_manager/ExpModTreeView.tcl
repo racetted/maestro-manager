@@ -28,7 +28,7 @@ proc ExpModTreeView_toFront { _expPath } {
    }
 }
 
-proc ExpModTreeView_createWidgets { _expPath } {
+proc ExpModTreeView_createWidgets { _expPath _sourceWidget } {
 
    set topWidget [ExpModTreeView_getTopLevel ${_expPath}]
    if { [winfo exists ${topWidget}] } {
@@ -37,7 +37,8 @@ proc ExpModTreeView_createWidgets { _expPath } {
 
    toplevel ${topWidget}
 
-   MiscTkUtils_InitPosition ${topWidget}
+   # MiscTkUtils_InitPosition ${topWidget}
+   MiscTkUtils_positionWindow  ${_sourceWidget} ${topWidget}
 
    wm title ${topWidget} "Flow Manager Exp=[file tail ${_expPath}]"
 
@@ -418,8 +419,13 @@ proc ExpModTreeView_nodeMenu { _canvas _modTreeNodeRecord x y } {
 
    ::log::log debug "ExpModTreeView_nodeMenu expPath: ${expPath}"
    ${popMenu} add command -label "open" -underline 0 -command \
-      [ list ExpModTreeControl_moduleSelection ${expPath} ${moduleNode} ]
+      [ list ExpModTreeControl_moduleSelection ${expPath} ${moduleNode} ${_canvas}]
    #$popMenu add separator
+   if { [ExpLayout_isModuleOutsideLink ${expPath} ${moduleNode}] == true } {
+      $popMenu add separator
+      ${popMenu} add command -label "copy locally" -underline 0 -command \
+       [list ExpModeTreeControl_copyModule ${expPath} ${moduleNode} ${_canvas}]
+   }
 
    tk_popup $popMenu $x $y
 }

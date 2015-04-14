@@ -87,9 +87,11 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${workingDir}
 
    # get the modules container files
-   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
-   MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
-   exec rsync -r -t ${sourceModule}/ ${workingDir}
+   if { [file exist ${sourceModule}] } {
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
+      MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
+      exec rsync -r -t ${sourceModule}/ ${workingDir}
+   }
 
    # get the module resource files in the exp resource work dir
    set expWorkDir [ExpLayout_getWorkDir ${_expPath}]
@@ -104,9 +106,11 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
    file mkdir ${resourceWorkDir}
 
    # get the resource files
-   ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
-   MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
-   exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
+   if { [file exist ${sourceResources}] } {
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
+      MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
+      exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
+   }
 
    MaestroConsole_addMsg "Creating temp module directory done."
    return ${workingDir}
@@ -402,7 +406,8 @@ proc ModuleLayout_assignNewContainer { _expPath _moduleNode _newContainerNode _a
          if { [file exists ${resourceWorkDir}${relativeAffectedNode}] } {
             ::log::log debug "ModuleLayout_assignNewContainer move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
             MaestroConsole_addMsg "Move ${resourceWorkDir}${relativeAffectedNode} to ${resourceWorkDir}${relativeNewContNode}/"
-            file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
+            # file rename ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
+            ModuleLayout_moveOrCopy ${resourceWorkDir}${relativeAffectedNode} ${resourceWorkDir}${relativeNewContNode}/ ${_assign_mode}
          }
       }
       default {
@@ -426,7 +431,7 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
    switch ${_nodeType} {
       TaskNode -
       NpassTaskNode {
-         if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true && ${_resOnly} == false } {
+         if { ${_resOnly} == false } {
             MaestroConsole_addMsg "delete file ${nodeFullPath}.tsk"
             file delete ${nodeFullPath}.tsk;
             MaestroConsole_addMsg "delete file ${nodeFullPath}.cfg"
@@ -442,7 +447,6 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
          set configFile ${nodeFullPath}/container.cfg;
          set resourceDir ${resourceWorkDir}${relativePath}
          set resourceFile ${resourceWorkDir}${relativePath}/container.xml
-         if { [ExpLayout_isModuleWritable ${_expPath} ${_moduleNode}] == true } {
             if { ${_keepChildren} == true } {
                # delete only container directory... move children files to
                # parent dir
@@ -472,7 +476,6 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                MaestroConsole_addMsg "synchonize delete -force ${nodeFullPath}"
                file delete -force ${nodeFullPath}
             }
-         }
 
          ::log::log debug "ModuleLayout_deleteNode deleting ${resourceDir}"
          MaestroConsole_addMsg "delete ${resourceDir}."
@@ -489,23 +492,38 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
 }
 
 proc ModuleLayout_deleteModule { _expPath _moduleNode _deleteNode } {
+   ::log::log debug "ModuleLayout_deleteModule _expPath:${_expPath} _moduleNode:${_moduleNode} _deleteNode:${_deleteNode}"
 
-   set modulePath [ExpLayout_getModulePath ${_expPath} ${_deleteNode}]
-   set refCount [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]
-   if { [ExpModTree_getModInstances ${_expPath} ${_deleteNode}] == 0 } {
-      set linkTarget ""
-      catch { set linkTarget [file readlink ${modulePath}] }
-      if { [file exists ${modulePath}] && ${linkTarget} != "" } {
-         # module is a link remove the link
-         MaestroConsole_addMsg "delete module link ${modulePath}."
-         file delete ${modulePath}
+   if { [ catch {
+
+      set modulePath [ExpLayout_getModulePath ${_expPath} ${_deleteNode}]
+      ::log::log debug "ModuleLayout_deleteModule modulePath:${modulePath}"
+      set refCount [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]
+      ::log::log debug "ModuleLayout_deleteModule refCount:${refCount}"
+      ::log::log debug "ModuleLayout_deleteModule ExpModTree_getModInstances ${_expPath} ${_deleteNode} ? [ExpModTree_getModInstances ${_expPath} ${_deleteNode}]"
+      if { [ExpModTree_getModInstances ${_expPath} ${_deleteNode}] == 0 } {
+         set linkTarget ""
+         catch { set linkTarget [file readlink ${modulePath}] }
+         if { [file exists ${modulePath}] && ${linkTarget} != "" } {
+            # module is a link remove the link
+            MaestroConsole_addMsg "delete module link ${modulePath}."
+            ::log::log debug "ModuleLayout_deleteModule delete module link ${modulePath}"
+            file delete ${modulePath}
+         } else {
+            MaestroConsole_addMsg "delete module directory ${modulePath}."
+            file delete -force ${modulePath}
+            ::log::log debug "ModuleLayout_deleteModule delete module directory ${modulePath}."
+         }
       } else {
-         MaestroConsole_addMsg "delete module directory ${modulePath}."
-         file delete -force ${modulePath}
+         MaestroConsole_addMsg "Not deleting module ${modulePath}... reference count:${refCount} != 0."
+         ::log::log debug "ModuleLayout_deleteModule Not deleting module ${modulePath}... reference count:${refCount} != 0"
       }
-   } else {
-      MaestroConsole_addMsg "Not deleting module ${modulePath}... reference count:${refCount} != 0."
+
+   } errMsg] } {
+      MaestroConsole_addErrorMsg ${errMsg}
+      ::log::log debug "ModuleLayout_deleteModule ERROR: ${errMsg}"
    }
+
 }
 
 # creates dummy resource files

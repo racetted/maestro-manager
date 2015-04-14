@@ -23,22 +23,38 @@ namespace import ::struct::record::*
 # experiment modules tree.
 #
 # name - name of node (only leaf part)
+# flow_path - value of the full node withouth the record id in front example: /enkf_mod/avg_anal_mod/gem/Transfer 
 # children - contained children (full name).
 #           the parent & children relation allows us to walk down a tree
 #           as the sequencer would see it.
 # type  - string representing node type (FamilyNode, ModuleNode, etc)
-# submits - flow children (full name), nodes submitted by current node
+# submits - flow children, nodes submitted by current node (values is leaf part of node i.e. see name attribute)
 # submitter - node that submits the current node; 
+#                 This value is empty if the submitter is the parent container, it has a value only if the submitter is a task
+#                 and the value of the submitter is then the name of the task node (not the full node)
 #                 if the node is submitted by a task, then the submitter is 
 #                 the submitter task which is different than the parent which must
 #                 be of type container
 #                 The submits & submitter relation allows us to walk down
 #                 a tree as it is shown by the GUI.
 #
+# deps - Stores node internal dependencies coming from module flow.xml
+#        Does not store dependencies from resource.xml file
+#        format is a list of list in the following form {type node status index local_index hour exp}
+#        ex:
+#        { node /SHOP/GeneratePngWIS84 end "" "" "" "" }
+#        { node /SHOP/GeneratePngWIS85a end "" "" "" "" }
+#        { node /SHOP/GeneratePngWIS85b end "" "" "" "" }
+#        { node /SHOP/GeneratePngWIS86 end "" "" "" "" }
+#
 # status - i'm using this to know whether a node has just been created by the user
 #          or not; current possible values "normal" | "new"
 # is_work_unit - true means the container is a work_unit, all child nodes will be submitted
 #                as single reservation i.e. supertask
+# switch_mode   - switching_mode for switch nodes "DatestampHour" or "DayOfWeek"
+# 
+# switch_items - for switching node, defines the switching items
+#
 # curselection - for a switch node, this is the current selected switch items
 #                for other nodes, it is used to know if the node belongs to a switching branch
 record define FlowNode {
@@ -48,6 +64,7 @@ record define FlowNode {
    type
    submits
    submitter
+   { deps {} }
    { status normal }
    { work_unit false }
    { switch_mode "" }
@@ -212,6 +229,9 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode _mod
       ${xmlDomNode} setAttribute work_unit 1
    }
 
+   # save internal dependencies
+   ModuleFlow_dependencies2Xml ${_xmlDoc} ${xmlDomNode} ${_flowNodeRecord}
+
    if { ${nodeType} == "SwitchNode" } {
       ${xmlDomNode} setAttribute type [ModuleFlow_getXmlSwitchModeFromNode [${_flowNodeRecord} cget -switch_mode]]
       foreach switchItem [${_flowNodeRecord} cget switch_items] {
@@ -255,6 +275,25 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode _mod
             ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${_xmlParentNode} ${_modRootFlowNode} 
          }
       }
+   }
+}
+
+# converts the dependencies of the node to xml
+#
+proc ModuleFlow_dependencies2Xml { _xmlDoc _xmlDomNode _flowNodeRecord } {
+   set dependencyList [${_flowNodeRecord} cget -deps]
+   set nameList {type dep_name status index local_index hour exp}
+   foreach dependEntry ${dependencyList} {
+      set xmlDependsNode [${_xmlDoc} createElement DEPENDS_ON]
+      set count 0
+      foreach attrName ${nameList} {
+         set attrValue [lindex ${dependEntry} ${count}]
+         if { ${attrValue} != "" } {
+            ${xmlDependsNode} setAttribute ${attrName} ${attrValue}
+         }
+	 incr count
+      }
+      ${_xmlDomNode} appendChild ${xmlDependsNode}
    }
 }
 
@@ -345,6 +384,8 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
          if { ${parentFlowNode}  != "" } {
             ModuleFlow_addChildNode ${_parentFlowRecord} ${recordName}
          }
+         set parentModRecord [ModuleFlow_getModuleContainer ${recordName}]
+         ${recordName} configure -deps [ModuleFlowXml_getDependencies ${_domNode} "" ${parentModRecord} ${recordName}]
       }
       default {
       }
@@ -389,7 +430,7 @@ proc ModuleFlow_parseXmlNode { _expPath _domNode _parentFlowRecord {_isXmlRootNo
 # _flowNodeRecord must be record for an instance of a switching node
 # _xmlNode is the xml dom node of the switching record in the flow.xml file
 proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
-   puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:${_flowNodeRecord}"
+   # puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:${_flowNodeRecord}"
    # get the switching mode
    set switchMode [ModuleFlow_getNodeSwitchModeFromXml [${_xmlNode} getAttribute type datestamp_hour]]
    ${_flowNodeRecord} configure -switch_mode ${switchMode}
@@ -402,8 +443,8 @@ proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
       if { ${switchItemNodeName} != "" } {
          lappend switchItems ${switchItemNodeName}
          set switchItemRecord ${_flowNodeRecord}/${switchItemNodeName}
-         FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -submitter ${_flowNodeRecord} -flow_path ${flowNode}/${switchItemNodeName}
-         puts "ModuleFlow_parseSwitchingNode FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -submitter ${_flowNodeRecord} -flow_path ${flowNode}/${switchItemNodeName}"
+         FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -flow_path ${flowNode}/${switchItemNodeName}
+         # puts "ModuleFlow_parseSwitchingNode FlowNode ${switchItemRecord} -name ${switchItemNodeName} -type SwitchItem -flow_path ${flowNode}/${switchItemNodeName}"
 
          # process child nodes
          if { ${flowNode} != "" } {
@@ -418,7 +459,7 @@ proc ModuleFlow_parseSwitchingNode { _expPath _flowNodeRecord _xmlNode } {
       }
    }
    ${_flowNodeRecord} configure -switch_items ${switchItems} -curselection [lindex ${switchItems} 0] 
-   puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:[${_flowNodeRecord} configure]"
+   # puts "ModuleFlow_parseSwitchingNode _flowNodeRecord:[${_flowNodeRecord} configure]"
 }
 
 # get the submits relation of an xml node
@@ -427,7 +468,7 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
    set submitNodes [${_xmlNode} selectNodes SUBMITS]
    set flowChildren ""
    if { [ModuleFlow_isContainer ${_flowNodeRecord}] == false } {
-      set submitParent [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+      set submitParent [ModuleFlow_getContainer ${_flowNodeRecord}]
    } else {
       set submitParent ${_flowNodeRecord}
    }
@@ -441,6 +482,28 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
    ${_flowNodeRecord} configure -submits ${flowChildren}
 }
 
+proc ModuleFlow_xmlParseDependencies { _flowNodeRecord _xmlNode } {
+   set depXmlNodes [${_xmlNode} selectNodes DEPENDS_ON]
+   set depsList {}
+   # list of attributes supported for dependency
+   # set attributeNames [list dep_name status type index local_index hour exp]
+   foreach depXmlNode ${depXmlNodes} {
+      set depList {}
+      set typeValue [${depXmlNode} getAttribute type ""]
+      set depNameValue [${depXmlNode} getAttribute dep_name ""]
+      set statusValue [${depXmlNode} getAttribute status ""]
+      set indexValue [${depXmlNode} getAttribute index ""]
+      set localIndexValue [${depXmlNode} getAttribute local_index ""]
+      set expValue [${depXmlNode} getAttribute exp ""]
+      set hourValue [${depXmlNode} getAttribute hour ""]
+
+      lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
+   }
+   ::log::log debug "ModuleFlow_xmlParseDependencies _flowNodeRecord:${_flowNodeRecord} _xmlNode:${_xmlNode} depsList:$depsList"
+   ${_flowNodeRecord} configure -deps ${depsList}
+   return ${depsList}
+}
+
 # refreshes the module flow by deleting all records
 # belonging to the node and rereading the xml flow
 # This is required for instance when a user refreshes or exits
@@ -449,7 +512,7 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
 proc ModuleFlow_refresh { _expPath _moduleNode } {
    ::log::log debug "ModuleFlow_refresh _expPath:${_expPath} _moduleNode:${_moduleNode}"
    set modNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
-   set parentNodeRecord [ModuleFlow_getParentContainer ${modNodeRecord}]
+   set parentNodeRecord [ModuleFlow_getContainer ${modNodeRecord}]
 
    # delete all module node records in the module flow
    ModuleFlow_deleteRecord ${_expPath} ${_moduleNode}
@@ -485,12 +548,12 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 
    # if parent is not container, get the container
    if { ${_insertPosition} == "parent" } {
-      set containerNodeRecord [ModuleFlow_getParentContainer ${_currentNodeRecord}]
+      set containerNodeRecord [ModuleFlow_getContainer ${_currentNodeRecord}]
    } else {
       if { [ModuleFlow_isContainer ${_currentNodeRecord}] == true } {
          set containerNodeRecord ${_currentNodeRecord}
       } else {
-         set containerNodeRecord [ModuleFlow_getParentContainer ${_currentNodeRecord}]
+         set containerNodeRecord [ModuleFlow_getContainer ${_currentNodeRecord}]
       }
    }
 
@@ -513,18 +576,22 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 
 
    # create new node
-   ::log::log debug "ModuleFlow_createNewNode flow node record:${newNodeRecord} -name ${_newName} -type ${_nodeType} -submitter ${_currentNodeRecord} -flow_path ${newNode}"
+   ::log::log debug "ModuleFlow_createNewNode flow node record:${newNodeRecord} -name ${_newName} -type ${_nodeType} -flow_path ${newNode}"
    FlowNode ${newNodeRecord} -name ${_newName} -type ${_nodeType} -status new -work_unit ${isWorkUnit} -flow_path ${newNode}
+   # special case for SwitchNode: switch_items must also be created
    if { ${_nodeType} == "SwitchNode" } {
       set switchMode $extraArgs(switch_mode)
       set switchItems $extraArgs(switch_items)
       ::log::log debug "ModuleFlow_createNewNode ${newNodeRecord} configure -switch_mode ${switchMode} -switch_items ${switchItems}"
       ${newNodeRecord} configure -switch_mode ${switchMode} -switch_items ${switchItems}
+      if { ${switchItems} != "" } {
+         ${newNodeRecord} configure curselection [lindex  ${switchItems} 0]
+      }
       foreach switchItem ${switchItems} {
          # I create a node for each switch item
          set switchItemRecord ${newNodeRecord}/${switchItem}
          ::log::log debug "ModuleFlow_createNewNode FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}"
-         FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}
+         FlowNode ${switchItemRecord} -name ${switchItem} -type SwitchItem -flow_path ${newNode}/${switchItem}
       }
    }
 
@@ -533,7 +600,6 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
 
    # create node in modules directory
    set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true } {
       set useModLink false
       set modPath ""
       if { [ModuleFlow_getNodeRefCount ${newNodeRecord}] == 0 } {
@@ -551,9 +617,9 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
       } else {
          ::log::log debug "ModuleFlow_createNewNode not creating layout for node: ${newNodeRecord}"
       }
-   }
    # attach to submitter
    set insertParentPos ${_insertPosition}
+   set nodeRecordsToDelete {}
 
    switch ${_insertPosition} {
       serial {
@@ -563,9 +629,23 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # - assign all submits of the current node to the new node
          set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_currentNodeRecord}]
          set childPosition 0
-         foreach submitNodeRecord ${submittedNodeRecords} {
-            ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} ${childPosition}
-            incr childPosition
+         if { [${newNodeRecord} cget -type] == "SwitchNode" } {
+            # get all switching items
+            set switchingItemsNodeRecords [ModuleFlow_getAllSwitchItemFlowNodeRecord ${newNodeRecord}]
+            ::log::log debug "ModuleFlow_createNewNode switchingItemsNodeRecords: ${switchingItemsNodeRecords}"
+            # assign the nodes to each one of the switching items
+            foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_addSubmitNode ${switchingItemsNodeRecord} ${submitNodeRecord} ${childPosition}
+                  incr childPosition
+               }
+            }
+         } else {
+            foreach submitNodeRecord ${submittedNodeRecords} {
+               ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} ${childPosition}
+               incr childPosition
+            }
          }
 
          # - assign the new node as the only submitted node of current node
@@ -585,11 +665,30 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # because the record name is built using the experiment containment tree (not submit tree)
          if { [ModuleFlow_isContainer ${newNodeRecord}] == true } {
             # I have to go down the submits path until the end or until bumping another container
-            set childPosition 0
-            foreach submitNodeRecord ${submittedNodeRecords} {
-               ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
-               ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
-               incr childPosition
+            if { [${newNodeRecord} cget -type] == "SwitchNode" } {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
+                  incr childPosition
+               }
+               # get all switching items
+               set switchingItemsNodeRecords [ModuleFlow_getAllSwitchItemFlowNodeRecord ${newNodeRecord}]
+               ::log::log debug "ModuleFlow_createNewNode switchingItemsNodeRecords: ${switchingItemsNodeRecords}"
+               # assign the nodes to each one of the switching items
+               foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
+                  set childPosition 0
+                  foreach submitNodeRecord ${submittedNodeRecords} {
+                     ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${switchingItemsNodeRecord} ${childPosition} nodeRecordsToDelete
+                     incr childPosition
+                  }
+               }
+            } else {
+               set childPosition 0
+               foreach submitNodeRecord ${submittedNodeRecords} {
+                  ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
+                  ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition} nodeRecordsToDelete
+                  incr childPosition
+               }
             }
          }
       }
@@ -608,9 +707,9 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          # if new node is container need to re-assign children at the container level
          if { [ModuleFlow_isContainer ${newNodeRecord}] == true } {
             ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${_currentNodeRecord} ${newNodeRecord}
-            ModuleFlow_assignNewContainer ${_expPath} ${_currentNodeRecord} ${newNodeRecord} 0
+            ModuleFlow_assignNewContainer ${_expPath} ${_currentNodeRecord} ${newNodeRecord} 0 nodeRecordsToDelete
          }
-         set containerNodeRecord [ModuleFlow_getParentContainer ${_currentNodeRecord}]
+         set containerNodeRecord [ModuleFlow_getContainer ${_currentNodeRecord}]
          set insertParentPos end
       }
       default {
@@ -622,14 +721,8 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    # attach to parent container
    ModuleFlow_addChildNode ${containerNodeRecord} ${newNodeRecord} ${insertParentPos}
 
-   proc out {} {
-   if { [ModuleFlow_getNodeRefCount ${containerNodeRecord} matchFlowRecords] != 0 } {
-      # if container is part of switching node, copy the new created node in other branch
-      foreach matchFlowRecord ${matchFlowRecords} {
-         puts "ModuleFlow_createNewNode() ModuleFlow_copySubmitTree ${containerNodeRecord} ${matchFlowRecord}"
-         ModuleFlow_copySubmitTree ${containerNodeRecord} ${matchFlowRecord}
-      }
-   }
+   foreach recordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${recordToDelete}
    }
 }
 
@@ -637,7 +730,7 @@ proc ModuleFlow_copySubmitTree { _sourceFlowNodeRecord _targetFlowNodeRecord } {
    if { ! [record exists instance ${_targetFlowNodeRecord}] } {
       FlowNode ${_targetFlowNodeRecord}
    }
-   set parentContainerRecord [ModuleFlow_getParentContainer ${_targetFlowNodeRecord}]
+   set parentContainerRecord [ModuleFlow_getContainer ${_targetFlowNodeRecord}]
    set flowPath [${parentContainerRecord} cget -flow_path]/[${_sourceFlowNodeRecord} cget -name]
    ${_targetFlowNodeRecord} configure -children [${_sourceFlowNodeRecord} cget -children] \
       -name [${_sourceFlowNodeRecord} cget -name] \
@@ -686,6 +779,8 @@ proc ModuleFlow_getLayoutNode { _recordName } {
          set workedNode ${workedNode}/${token}
          # puts "workedNode:$workedNode"
          if { [${workedNode} cget -type] != "SwitchItem" } {
+            # switch items are not visible within the container directories 
+            # only exists in the flow.xml
             set layoutNode ${layoutNode}/${token}
          }
          incr count
@@ -707,7 +802,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
    set flowNodePosition [ModuleFlow_getSubmitPosition ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
-   set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+   set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
    set parentModRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
    set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
    set origModuleNodeRecord [ModuleFlow_getModuleContainer ${_origFlowNodeRecord}]
@@ -728,37 +823,63 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
 
       return
    }
+   set nodeRecordsToDelete {}
 
    if { ${_deleteBranch} == true } {
-      # remove submitted nodes first
-      foreach submitNodeRecord ${submittedNodeRecords} {
-         ModuleFlow_deleteNode ${_expPath} ${_origFlowNodeRecord} ${submitNodeRecord} ${_deleteBranch}
+      # special case for SwitchNode
+      if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
+         foreach switchItem [${_flowNodeRecord} cget -switch_items] {
+            set switchItemRecord ${_flowNodeRecord}/${switchItem}
+            ModuleFlow_deleteNode ${_expPath} ${_origFlowNodeRecord} ${switchItemRecord} ${_deleteBranch}
+         }
+      } else {
+         # remove submitted nodes first
+         foreach submitNodeRecord ${submittedNodeRecords} {
+            ModuleFlow_deleteNode ${_expPath} ${_origFlowNodeRecord} ${submitNodeRecord} ${_deleteBranch}
+         }
       }
       set keepChildNodes false
    } else {
 
-      # if deleted node is a container, need to re-assign children at the container level
-      # - all submitted nodes until the next container become child nodes of
-      #   their grandparent container (mmm...programming concepts!)
-      # - All nodes that are children (to the right) of the deleted container nodes needs to be renamed
-      # because the record name is build using the experiment containment tree
-      if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
-         # I have to go down the submits path until the end or until bumping another container
-         set childPosition 0
-         foreach submitNodeRecord ${submittedNodeRecords} {
-            ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition}
-            incr childPosition
+      # special case for switch node
+      if { ${nodeType} == "SwitchNode" } {
+         # the code iterates through all switch items but the GUI only allows deletion
+         # of the node when there is only one item
+         foreach switchItem [${_flowNodeRecord} cget -switch_items] {
+            set switchItemRecord ${_flowNodeRecord}/${switchItem}
+            set childPosition 0
+            foreach itemSubmitRecord [ModuleFlow_getSubmitRecords ${switchItemRecord}] {
+               # assign new submitter: node that was submitted by switch item to the submitter of the switch node
+               ModuleFlow_addSubmitNode ${submitter} ${itemSubmitRecord} ${childPosition}
+               # assign new container
+               ModuleFlow_assignNewContainer ${_expPath} ${itemSubmitRecord} ${parentContainerRecord} ${childPosition} nodeRecordsToDelete
+               incr childPosition
+            }
          }
-      }
+      } else {
+         # if deleted node is a container, need to re-assign children at the container level
+         # - all submitted nodes until the next container become child nodes of
+         #   their grandparent container (mmm...programming concepts!)
+         # - All nodes that are children (to the right) of the deleted container nodes needs to be renamed
+         # because the record name is build using the experiment containment tree
+         if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
+            # I have to go down the submits path until the end or until bumping another container
+            set childPosition 0
+            foreach submitNodeRecord ${submittedNodeRecords} {
+               ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition} nodeRecordsToDelete
+               incr childPosition
+            }
+         }
 
-      # if the current node is submitting other nodes, assign those to the submitter of the current node
-      set submittedNames [${_flowNodeRecord} cget -submits]
-      # assign the new nodes at the same position as the current
-      foreach submitName ${submittedNames} {
-         set submitNode ${parentContainerRecord}/${submitName}
-         ::log::log debug "ModuleFlow_deleteNode ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}"
-         ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}
-         incr flowNodePosition
+         # if the current node is submitting other nodes, assign those to the submitter of the current node
+         set submittedNames [${_flowNodeRecord} cget -submits]
+         # assign the new nodes at the same position as the current
+         foreach submitName ${submittedNames} {
+            set submitNode ${parentContainerRecord}/${submitName}
+            ::log::log debug "ModuleFlow_deleteNode ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}"
+            ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}
+            incr flowNodePosition
+         }
       }
    }
 
@@ -775,24 +896,36 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
    # get the layout node as seen within the module directory
    set layoutNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}]
 
+   foreach recordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${recordToDelete}
+   }
+   
+   if { ${nodeType} == "SwitchNode" } {
+      # need to delete switch items first
+      foreach switchItem [${_flowNodeRecord} cget -switch_items] {
+         set switchItemRecord ${_flowNodeRecord}/${switchItem}
+         record delete instance ${switchItemRecord}
+      }
+   }
+
    # delete single node
    record delete instance ${_flowNodeRecord}
 
    # delete node from module container directory only if the current node belongs to the original module.
    # Nodes that belong to a reference module will be cleared at another level if the module reference count
    # is 0
-   puts "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
-   if { [ExpLayout_isModuleWritable ${_expPath} ${moduleLayoutNode}] == true && ${nodeRefCount} == 0 } {
+   ::log::log debug "ModuleFlow_deleteNode nodeRefCount:${nodeRefCount}"
+   if { ${nodeRefCount} == 0 } {
       # need to check if the node is ready to be deleted from the layout.
       # for nodes belonging to a switch branch, it gets deleted only if it is not used in other
       # branches
       if { ${origModuleNode} == ${moduleLayoutNode} } {
          # delete node and resource
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ::log::log debug "ModuleFlow_deleteNode ModuleLayout_deleteNode 1 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
          ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}
       } else {
          # delete resource only
-         puts "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
+         ::log::log debug "ModuleFlow_deleteNode ModuleLayout_deleteNode 2 ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} false ${keepChildNodes}"
          ModuleLayout_deleteNode ${_expPath} ${moduleLayoutNode} ${layoutNode} ${nodeType} true ${keepChildNodes}
       }
    }
@@ -882,7 +1015,7 @@ proc ModuleFlow_getNodeRefCount { _flowNodeRecord {_out_match_record_var ""} } {
 # underneath that node for every switching items
 proc ModuleFlow_getAllSwitchingRecords { _flowNodeRecord _outputVar } {
    upvar #0 ${_outputVar} myOutputVar
-   puts "ModuleFlow_getAllSwitchingRecords _flowNodeRecord:${_flowNodeRecord}"
+   # puts "ModuleFlow_getAllSwitchingRecords _flowNodeRecord:${_flowNodeRecord}"
    lappend myOutputVar ${_flowNodeRecord}
    if { [record exists instance ${_flowNodeRecord}] } {
       if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
@@ -904,7 +1037,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
    set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_flowNodeRecord}]
 
-   set containerNodeRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+   set containerNodeRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
    set newNodeRecord ${containerNodeRecord}/${_newName}
    set newNode [${containerNodeRecord} cget -flow_path]/${_newName}
    
@@ -924,16 +1057,18 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    }
 
    # create new node
-   ::log::log debug "ModuleFlow_renameNode FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType} -submitter ${submitter}"
+   ::log::log debug "ModuleFlow_renameNode FlowNode ${newNodeRecord} -name ${_newName} -type ${nodeType}"
    FlowNode ${newNodeRecord} -name ${_newName} -flow_path ${newNode} -type ${nodeType} -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
       -submitter [${_flowNodeRecord} cget -submitter] -status new -switch_mode [${_flowNodeRecord} cget -switch_mode] -switch_items [${_flowNodeRecord} cget -switch_items] \
-      -curselection [${_flowNodeRecord} cget -curselection]
+      -curselection [${_flowNodeRecord} cget -curselection] -deps [${_flowNodeRecord} cget -deps]
 
    # the node reference count will help us know wheter we can rename node layout files (.tsk, .cfg) or if we need to make a copy of those
    set nodeRefCount [ModuleFlow_getNodeRefCount ${_flowNodeRecord}]
 
    # get the layout node as seen within the module directory
    set layoutNode [ModuleFlow_getLayoutNode ${_flowNodeRecord}]
+
+   set nodeRecordsToDelete {}
 
    # if new node is a container, need to re-assign children at the container level
    # - all submitted nodes until the next container is a new child
@@ -948,13 +1083,13 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
             # recreate the switching items
             set newSwitchItemRecord ${newNodeRecord}/${switchItem}
             set oldSwitchItemRecord ${_flowNodeRecord}/${switchItem}
-            FlowNode ${newSwitchItemRecord} -name ${switchItem} -flow_path ${newNode}/${switchItem} -type [${oldSwitchItemRecord} cget -type] -submits [${oldSwitchItemRecord} cget -submits] -children [${oldSwitchItemRecord} cget -children] \
-               -submitter ${newNodeRecord} -status new
+            FlowNode ${newSwitchItemRecord} -name ${switchItem} -flow_path ${newNode}/${switchItem} -type [${oldSwitchItemRecord} cget -type] -submits [${oldSwitchItemRecord} cget -submits] \
+               -children [${oldSwitchItemRecord} cget -children] -status new
             # handle the submit of each switching items
             set submitRecords [ModuleFlow_getSubmitRecords ${oldSwitchItemRecord}]
             set childPosition 0
             foreach submitRecord ${submitRecords} {
-               ModuleFlow_assignNewContainer ${_expPath} ${submitRecord} ${newSwitchItemRecord} ${childPosition}
+               ModuleFlow_assignNewContainer ${_expPath} ${submitRecord} ${newSwitchItemRecord} ${childPosition} nodeRecordsToDelete
                incr childPosition
             }
             # remove old switching item record
@@ -963,7 +1098,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
       } else {
          foreach submitNodeRecord ${submittedNodeRecords} {
             # ModuleFlow_assignNewContainerDir  ${_expPath} ${moduleNode} ${submitNodeRecord} ${newNodeRecord}
-            ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition}
+            ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${newNodeRecord} ${childPosition} nodeRecordsToDelete
             incr childPosition
          }
       }
@@ -974,6 +1109,11 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
          ModuleFlow_setSubmitter ${submitRecord} ${newNodeRecord}
       }
    }
+
+   foreach nodeRecordToDelete ${nodeRecordsToDelete} {
+      record delete instance ${nodeRecordToDelete}
+   }
+
    # set all child nodes status to new
    ModuleFlow_changeStatus ${_expPath} ${newNode} new true
 
@@ -1009,43 +1149,56 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
 # - newly given child nodes must be removed from existing parent container
 # It follows the submit tree of the starting node but does not change the submits relation
 #
-proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecord _childPosition } {
+proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecord _childPosition _out_delete_list_var } {
+   upvar ${_out_delete_list_var} localDeleteListVar
+
    ::log::log debug "ModuleFlow_assignNewContainer _flowNodeRecord:${_flowNodeRecord} _newContainerRecord:${_newContainerRecord}"
 
    # first the node needs to be removed from its current container node
-   ModuleFlow_removeChild [ModuleFlow_getParentContainer ${_flowNodeRecord}] ${_flowNodeRecord}
+   ModuleFlow_removeChild [ModuleFlow_getContainer ${_flowNodeRecord}] ${_flowNodeRecord}
 
    # the node gets the new container parent node
    # since the name of the node is build within the experiment tree, it needs to be changed
    # to take into account the new container in the way
+   set newNode [${_newContainerRecord} cget -flow_path]/[${_flowNodeRecord} cget -name]
    set recordName [ModuleFlow_getRecordName ${_expPath} ${_newContainerRecord}/[${_flowNodeRecord} cget -name]]
    FlowNode ${recordName} -name [${_flowNodeRecord} cget -name] -type [${_flowNodeRecord} cget -type] \
       -submits [${_flowNodeRecord} cget -submits] -children [${_flowNodeRecord} cget -children] \
-      -submitter [${_flowNodeRecord} cget -submitter]
+      -submitter [${_flowNodeRecord} cget -submitter] -flow_path ${newNode} -switch_mode [${_flowNodeRecord} cget -switch_mode] \
+      -switch_items [${_flowNodeRecord} cget -switch_items] -work_unit [${_flowNodeRecord} cget -work_unit] \
+      -curselection [${_flowNodeRecord} cget -curselection] 
 
    # satisfy same relation on the new container parent node
    # the new child is added to the parent container node
    ModuleFlow_addChildNode ${_newContainerRecord} ${_flowNodeRecord} ${_childPosition}
 
-   # continue down the submit path if not container
-   set submits [${_flowNodeRecord} cget -submits]
-   set childPosition 0
-   foreach submitNode ${submits} {
-      #set submitNodeName [ModuleFlow_getParentContainer ${_flowNodeRecord}]/${submitNode}
-      if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
-         set submitNodeName ${_flowNodeRecord}/${submitNode}
-         set parentContainerRecord ${recordName}
-      } else {
-         set parentContainerRecord ${_newContainerRecord}
-         set submitNodeName [ModuleFlow_getParentContainer ${_flowNodeRecord}]/${submitNode}
+   # special case for SwitchNode
+   if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
+      foreach switchItem [${_flowNodeRecord} cget -switch_items] {
+         set switchItemRecord ${_flowNodeRecord}/${switchItem}
+         ModuleFlow_assignNewContainer ${_expPath} ${switchItemRecord} ${recordName} 0 localDeleteListVar       
       }
-      ModuleFlow_assignNewContainer ${_expPath} ${submitNodeName} ${parentContainerRecord} ${childPosition}
-      incr childPosition
+   } else {
+      # continue down the submit path if not container
+      set submits [${_flowNodeRecord} cget -submits]
+      set childPosition 0
+      foreach submitNode ${submits} {
+         if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
+            set submitNodeRecord ${_flowNodeRecord}/${submitNode}
+            set parentContainerRecord ${recordName}
+         } else {
+            set parentContainerRecord ${_newContainerRecord}
+            set submitNodeRecord [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
+         }
+         ModuleFlow_assignNewContainer ${_expPath} ${submitNodeRecord} ${parentContainerRecord} ${childPosition} localDeleteListVar
+         incr childPosition
+      }
    }
 
    # delete previous record of the node
    ::log::log debug "ModuleFlow_assignNewContainer deleting record ${_flowNodeRecord}"
-   record delete instance ${_flowNodeRecord}
+   # record delete instance ${_flowNodeRecord}
+   lappend localDeleteListVar ${_flowNodeRecord}
 }
 
 # 
@@ -1070,7 +1223,7 @@ proc ModuleFlow_assignNewContainerDir { _expPath _moduleNode _flowNodeRecord _ne
    if { ! [ModuleFlow_isContainer ${_flowNodeRecord}] } {
       set submits [${_flowNodeRecord} cget -submits]
       foreach submitNode ${submits} {
-         set submitNodeName [ModuleFlow_getParentContainer ${_flowNodeRecord}]/${submitNode}
+         set submitNodeName [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
          ModuleFlow_assignNewContainerDir ${_expPath} ${_moduleNode} ${submitNodeName} ${_newContainerRecord}
       }
    }
@@ -1168,7 +1321,7 @@ proc ModuleFlow_getNewNode { _flowNodeRecord _newNodeName } {
    } elseif { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
       set newNode [${_flowNodeRecord} cget -flow_path]/${_newNodeName}
    } else {
-      set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+      set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
       set newNode [${parentContainerRecord} cget -flow_path]/${_newNodeName}
    }
    return ${newNode}
@@ -1181,7 +1334,7 @@ proc ModuleFlow_getModuleContainer { _flowNodeRecord } {
    set done false
    set foundNode ""
    while { ${done} == false && ${node} != "" } {
-      set parentNode [ModuleFlow_getParentContainer ${node}]
+      set parentNode [ModuleFlow_getContainer ${node}]
       if { ${parentNode} != "" && [${parentNode} cget -type] == "ModuleNode" } {
          set done true  
          set foundNode ${parentNode}
@@ -1198,7 +1351,7 @@ proc ModuleFlow_getModuleContainer { _flowNodeRecord } {
 proc ModuleFlow_getSubmitPosition { _flowNodeRecord } {
    set position 0
    if { [ModuleFlow_isExpRootNode ${_flowNodeRecord}] == false } {
-      set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+      set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
       if { [${_flowNodeRecord} cget -submitter] == "" && [${parentContainerRecord} cget -type] == "SwitchItem" } {
          set submitterNode ${parentContainerRecord}
       } else {
@@ -1251,7 +1404,7 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
    if { [ModuleFlow_isContainer ${_flowNodeRecord}] } {
       set parentContainerRecord ${_flowNodeRecord}
    } else {
-      set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+      set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
    }
    foreach submitNode ${submits} {
       lappend newSubmits ${parentContainerRecord}/${submitNode}
@@ -1261,13 +1414,13 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
    return ${newSubmits}
 }
 
-
 # add node _submitNodeRecord to the list of nodes submitted by _flowNodeRecord at position _position
 # _flowNodeRecord & _submitNode are FlowNode records
 proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position end } } {
    ::log::log debug "ModuleFlow_addSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord} _position:${_position}"
    # attach to submitter
    # submits are stored as relative path to the parent container
+# SUA TO BE DONE, this switch logic should be done at the caller maybe... check it out
    if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
       set submitterRecord [ModuleFlow_getCurrentSwitchItemRecord ${_flowNodeRecord}]
    } else {
@@ -1291,12 +1444,14 @@ proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNode } {
    } else {
       set submitterRecord ${_flowNodeRecord}
    }
-   # detach from submitter
-   set submits [${submitterRecord} cget -submits]
-   set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
-   if { ${submitIndex} != -1 } {
-      set submits [lreplace ${submits} ${submitIndex} ${submitIndex}]
-      ${submitterRecord} configure -submits ${submits}
+   if { [record exists instance ${submitterRecord}] } {
+      # detach from submitter
+      set submits [${submitterRecord} cget -submits]
+      set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
+      if { ${submitIndex} != -1 } {
+         set submits [lreplace ${submits} ${submitIndex} ${submitIndex}]
+         ${submitterRecord} configure -submits ${submits}
+      }
    }
 }
 
@@ -1311,13 +1466,12 @@ proc ModuleFlow_setSubmitter { _flowNodeRecord _submitterNodeRecord } {
    }
 }
 
-# returns the node submitting the given _flowNodeRecord
+# returns the node record submitting the given _flowNodeRecord
 proc ModuleFlow_getSubmitter { _flowNodeRecord } {
-   set parentContainerRecord [ModuleFlow_getParentContainer ${_flowNodeRecord}]
+   set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
    if { ${parentContainerRecord} == "" } {
       return ""
    }
-
    set submitter [file dirname ${_flowNodeRecord}]
    if { [${_flowNodeRecord} cget -submitter] != "" } {
       # submitter is relative to parent container
@@ -1325,7 +1479,7 @@ proc ModuleFlow_getSubmitter { _flowNodeRecord } {
    }
    # if the submitter is empty, it means that it is submitted by the container...
    # if the container is a switch_item, need to shift it to the SwitchNode
-   if { [${_flowNodeRecord} cget -submitter] == "" && [[ModuleFlow_getParentContainer ${_flowNodeRecord}] cget -type] == "SwitchItem" } {
+   if { [${_flowNodeRecord} cget -submitter] == "" && [[ModuleFlow_getContainer ${_flowNodeRecord}] cget -type] == "SwitchItem" } {
       set submitter [file dirname [file dirname ${_flowNodeRecord}]]
    }
 
@@ -1342,7 +1496,7 @@ proc ModuleFlow_addChildNode { _flowNodeRecord _childNodeRecord { _position end 
    }
 }
 
-proc ModuleFlow_getParentContainer { _flowNodeRecord } {
+proc ModuleFlow_getContainer { _flowNodeRecord } {
    if { [ModuleFlow_isExpRootNode ${_flowNodeRecord}] == true } {
       return ""
    }
@@ -1428,14 +1582,9 @@ proc ModuleFlow_getRecordName { _expPath _nodeName } {
 # i.e. mnode_123456_/enkf_mod/assim/gem_mod
 # would return /enkf_mod/assim/gem_mod
 proc ModuleFlow_record2NodeName { _recordName } {
-   ::log::log debug "ModuleFlow_record2NodeName _recordName:${_recordName}"
-
    set value [${_recordName} cget -flow_path]
-   puts "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
+   ::log::log debug "ModuleFlow_record2NodeName _recordName:$_recordName value:$value"
    return ${value}
-}
-
-proc ModuleFlow_getFlowPath { _recordName } {
 }
 
 proc ModuleFlow_record2RealNode { _recordName } {
@@ -1549,7 +1698,7 @@ proc ModuleFlow_isModuleChanged { _expPath _moduleNode } {
    return false
 }
 
-# returns true if module node i being created and has not been saved yet
+# returns true if module node is being created and has not been saved yet
 # returns false otherwise
 proc ModuleFlow_isModuleNew { _expPath _moduleNode } {
    set flowNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
@@ -1578,3 +1727,154 @@ proc ModuleFlow_printNode { _domNode } {
    #puts "nodeType: [${_domNode} nodeType]"
    #puts "nodeType: [${_domNode} nodeType]"
 }
+
+# returns true if one of
+# "./" "../" ".../" is found in the given _checkValue
+#
+# returns false otherwise
+
+proc ModuleFlow_hasRelativeSyntax { _checkNode } {
+   ::log::log debug "ModuleFlow_hasRelativeSyntax _checkNode:$_checkNode"
+   set splittedNode [split ${_checkNode} /]
+   set hasRelativeSyntax false
+   set count 0
+   while { ${count} < [llength ${splittedNode}] && ${hasRelativeSyntax} == false } {
+      set splitPart [lindex ${splittedNode} ${count}]
+      foreach checkToken { . .. ... } {
+         if { ${splitPart} == ${checkToken} } {
+	    set hasRelativeSyntax true
+	    break
+         }
+      }
+      incr count
+   }
+   return ${hasRelativeSyntax}
+}
+
+# checks a node that potentially has relative syntaxing
+# and computes the resulting node relative
+# to the _flowNodeRecord
+#
+# relative path syntax:
+# .    : Used to signify the current container.
+# ..   : Used to target the parent container (container of your container).
+# ...  : Used to target the module start. If the current node is a module, ... refers to the
+#        container module and not the current node.
+#
+# returns -1 if syntax validation fails
+proc ModuleFlow_getFromRelativePath { _expPath _flowNodeRecord _checkNode _outErrMsg } {
+   ::log::log debug "ModuleFlow_getFromRelativePath $_expPath $_flowNodeRecord $_checkNode"
+   upvar ${_outErrMsg} myOutputErrMsg
+   set myOutputErrMsg "Relative syntax can only appear at start of node definition!"
+
+   set splittedNode [split ${_checkNode} /]
+   set relativeSyntaxEndReached false
+
+   set hasRelativeSyntax false
+   set baseNodeRecord ${_flowNodeRecord}
+   set errorFlag false
+   set count 0
+   foreach checkToken { . .. ... } {
+      if { [llength [lsearch -exact -all ${splittedNode} ${checkToken}]] > 1 } {
+         set myOutputErrMsg "Relative syntax \"${checkToken}\" can only appear once!"
+	 return -1
+      }
+   }
+
+   while { ${errorFlag} == false && ${count} < [llength ${splittedNode}] } {
+      set splitPart [lindex ${splittedNode} ${count}]
+      puts "splitPart:${splitPart}"
+      switch ${splitPart} {
+         "." {
+            set hasRelativeSyntax true
+	    # get immediate container
+	    if { ${relativeSyntaxEndReached} == true } {
+	       set errorFlag true
+	    } else {
+	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
+            }
+	 }
+         ".." {
+            set hasRelativeSyntax true
+	    # get container of container
+	    if { ${relativeSyntaxEndReached} == true } {
+	       set errorFlag true
+	    } else {
+	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
+	       set baseNodeRecord [ModuleFlow_getContainer ${baseNodeRecord}]
+            }
+	 }
+         "..." {
+            set hasRelativeSyntax true
+	    if { ${relativeSyntaxEndReached} == true } {
+	       set errorFlag true
+	    } else {
+	       # get the module container
+               set baseNodeRecord [ModuleFlow_getModuleContainer ${baseNodeRecord}]
+            }
+	 }
+         "" -
+         "/" {
+	    # let this one through
+	 }
+	 default {
+	    puts "got ${splitPart}"
+	    # relative syntaxing is only supported at the beginning of the node definition so 
+	    # once we detect anything that is not relative, we don't allow relative anymore
+	    # i.e. syntext ./dummy_node/../whatever is not allowed
+	    set relativeSyntaxEndReached true
+	    set baseNodeRecord ${baseNodeRecord}/${splitPart}
+	 }
+      }
+
+      incr count
+   }
+
+   puts "ModuleFlow_getFromRelativePath errorFlag:${errorFlag} hasRelativeSyntax:${hasRelativeSyntax} baseNodeRecord:${baseNodeRecord}"
+   if { ${errorFlag} == true } {
+      return -1
+   }
+
+   if { ${hasRelativeSyntax} == true } {
+      return ${baseNodeRecord}
+   }
+
+   # no relative syntax... return original node
+   set recordName [ModuleFlow_getRecordName ${_expPath} ${_checkNode}]
+   return ${recordName}
+}
+
+# does node info on the node to make sure that it exists
+# returns true if node exists, false otherwise
+proc ModuleFlow_checkNodeExists { _expPath _node } {
+   global env
+   set nodeinfoExec nodeinfo
+   set isExists false
+   # get nodeinfo from SEQ_BIN if exists
+   if { [info exists env(SEQ_BIN)] } {
+      set nodeinfoExec $env(SEQ_BIN)/nodeinfo
+   }
+   if { [ catch { 
+      set execArgs "export SEQ_EXP_HOME=${_expPath} ; ${nodeinfoExec} -n ${_node} -f type > /dev/null 2>&1"
+      puts "ModuleFlow_checkNodeExists ksh -c ${execArgs}"
+      MaestroConsole_addMsg "${nodeinfoExec} ksh -c ${execArgs}"
+      exec -ignorestderr ksh -c ${execArgs}
+      set isExists true
+   } errMsg options ] } {
+   }
+   return ${isExists}
+}
+
+proc ModuleFlow_getAllInstances { _expPath } {
+   set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
+   set prefix ::mnode_${expChecksum}_
+   set nodeList {}
+   set rawList [record show instance FlowNode]
+   set myListIndex [lsearch -all ${rawList} ${prefix}*]
+   foreach nodeIndex ${myListIndex} {
+      set node [lindex ${rawList} ${nodeIndex}]
+      lappend nodeList [${node} cget -flow_path]
+   }
+   return ${nodeList}
+}
+

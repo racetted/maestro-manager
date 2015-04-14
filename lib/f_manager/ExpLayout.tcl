@@ -31,6 +31,12 @@ proc ExpLayout_getModulePath { _expPath _moduleNode } {
    return ${modulePath}
 }
 
+proc ExpLayout_getModuleTruepath { _expPath _moduleNode } {
+   set modulePath ${_expPath}/modules/[file tail ${_moduleNode}]
+   set modTruePath [exec true_path ${modulePath}]
+   return ${modTruePath}
+}
+
 # the exp working dir is located at $TMPDIR/maestro_center/(checksum exp_path)_expname
 # something like TMPDIR/maestro_center/715733325_e206
 # It is a place holder for module container changes (deleting adding nodes) and 
@@ -164,31 +170,6 @@ proc ExpLayout_newModule { _expPath _moduleNode } {
    file mkdir ${modulePath}
 }
 
-# checks if a module is writable by the user.
-# The module is writable if the path of the module is local with respect
-# to the current experiment
-proc ExpLayout_isModuleWritable { _expPath _moduleNode } {
-   set isWritable false
-
-   # module is only writable if the module directory is local
-   set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
-   set linkTarget ""
-   catch { set linkTarget [file readlink ${modulePath}] }
-   if { [file isdirectory ${modulePath}] } {
-      if { ${linkTarget} == "" } {
-         # the file is a directory and it is not a link, it is local
-         set isWritable true
-      } elseif { [ExpLayout_getModulePath ${_expPath} ${linkTarget}] == ${linkTarget} } {
-         # target is local
-         set isWritable true
-      }
-   }
-
-   ::log::log debug "ExpLayout_isModuleWritable _expPath:${_expPath} _moduleNode:${_moduleNode} ? ${isWritable}"
-
-   return ${isWritable}
-}
-
 proc ExpLayout_isModuleLink { _expPath _moduleNode } {
    set isLink false
    set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
@@ -207,6 +188,22 @@ proc ExpLayout_getModLinkTarget { _expPath _moduleNode } {
    return ${linkTarget}
 }
 
+proc ExpLayout_isModuleOutsideLink { _expPath _moduleNode } {
+   set isOutsideLink false
+   if { [ExpLayout_isModuleLink ${_expPath} ${_moduleNode}] == true } {
+      set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
+      set moduleTruePath [exec true_path ${modulePath}]
+      set expTruePath [exec true_path ${_expPath}]
+
+      # the module is an outside link if the expTruePath is not contained within the moduleTruePath
+      # or the module is a local link only if the path of experiment is contained within the path of the module
+      if { [string first ${expTruePath} ${moduleTruePath}] != 0 } {
+         set isOutsideLink true
+      }
+   }
+   return ${isOutsideLink}
+}
+
 # copies a reference module locally in $SEQ_EXP_HOME/modules
 # - first deletes the link locally
 # - then copies the module using rsync
@@ -220,15 +217,19 @@ proc ExpLayout_copyModule { _expPath _moduleNode } {
    if { [ExpLayout_isModuleLink ${_expPath} ${_moduleNode}] == true } {
       set referenceModule [ExpLayout_getModLinkTarget ${_expPath} ${_moduleNode}]
       set modulePath [ExpLayout_getModulePath ${_expPath} ${_moduleNode}]
+      set moduleTruePath [exec true_path ${modulePath}]
+
       # first delete link
       ::log::log debug "ExpLayout_copyModule deleting link ${modulePath}"
       MaestroConsole_addMsg "delete module link: ${modulePath}."
       file delete ${modulePath}
 
       # then copy the module locally
-      ::log::log debug "ExpLayout_copyModule rsync -r ${referenceModule}/ ${modulePath}"
-      MaestroConsole_addMsg "copy module locally: rsync -r ${referenceModule}/ ${modulePath}"
-      exec rsync -r ${referenceModule}/ ${modulePath}
+      # ::log::log debug "ExpLayout_copyModule rsync -r ${referenceModule}/ ${modulePath}"
+      ::log::log debug "ExpLayout_copyModule rsync -r ${moduleTruePath}/ ${modulePath}"
+      #MaestroConsole_addMsg "copy module locally: rsync -r ${referenceModule}/ ${modulePath}"
+      MaestroConsole_addMsg "copy module locally: rsync -r ${moduleTruePath}/ ${modulePath}"
+      exec rsync -r ${moduleTruePath}/ ${modulePath}
       
       # if the resource dir does not exists create it, else do nothing
    }
@@ -238,7 +239,7 @@ proc ExpLayout_flowBuilder { _expPath } {
    global env
    set flowBuilderExec ""
    set expFlowXml ${_expPath}/flow.xml
-   if { ! [file writable ${expFlowXml}] } {
+   if { [file exists ${expFlowXml}] && ! [file writable ${expFlowXml}] } {
       # MaestroConsole_addErrorMsg "Cannot write ${expFlowXml}."
       error "Cannot write ${expFlowXml}."
    }

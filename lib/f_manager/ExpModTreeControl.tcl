@@ -58,16 +58,16 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 
          set expChecksum [ExpLayout_getExpChecksum ${_expPath}]
          global ${expChecksum}_DebugOn
-         # set ${expChecksum}_DebugOn true
+         #set ${expChecksum}_DebugOn true
          set ${expChecksum}_DebugOn false
-         # ExpModTreeControl_debugChanged ${_expPath}
+         ExpModTreeControl_debugChanged ${_expPath}
 
          # recursive read of all module flow.xml
          # the exp module tree is created at the same time
          ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
 
          # create the exp modules tree gui
-         ExpModTreeView_createWidgets ${_expPath}
+         ExpModTreeView_createWidgets ${_expPath} ${_sourceWidget}
 
          # get exp first module
          set entryModTreeNode [ExpModTree_getEntryModRecord ${_expPath}]
@@ -80,8 +80,8 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
       ::log::log error ${errorInfo}
       MessageDlg .msg_window -icon error -message "${errMsg} See console log window for more details." -aspect 400 \
          -title "Application Error" -type ok -justify center -parent ${_sourceWidget}
-      # MaestroConsole_addErrorMsg ${errMsg}
       MaestroConsole_addErrorMsg ${errorInfo}
+      MaestroConsole_show
    }
 }
 
@@ -91,15 +91,24 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
 #
 proc ExpModTreeControl_moduleSelection { _expPath _moduleNode {_sourceW .} } {
    ::log::log debug "ExpModTreeControl_moduleSelection _expPath:${_expPath} _moduleNode:${_moduleNode}"
-   set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
-   set moduleColor [ExpModTreeView_getModuleColor ${_expPath} ${_moduleNode}]
-   DrawUtil_setShadowColor ${modTreeNodeRecord} [ExpModTreeView_getCanvas ${_expPath}] ${moduleColor}
-   if { [ModuleFlow_isModuleNew ${_expPath} ${_moduleNode}] == false } {
-      ModuleFlowView_initModule ${_expPath} ${_moduleNode} ${_sourceW}
-      ExpModTreeControl_addOpenedModule ${_expPath} ${_moduleNode}
-   } else {
-      ::log::log debug "ExpModTreeControl_moduleSelection new module"
+   MiscTkUtils_busyCursor [winfo toplevel ${_sourceW}]
+   if { [ catch { 
+      set modTreeNodeRecord [ExpModTree_getRecordName ${_expPath} ${_moduleNode}]
+      set moduleColor [ExpModTreeView_getModuleColor ${_expPath} ${_moduleNode}]
+      DrawUtil_setShadowColor ${modTreeNodeRecord} [ExpModTreeView_getCanvas ${_expPath}] ${moduleColor}
+      if { [ModuleFlow_isModuleNew ${_expPath} ${_moduleNode}] == false } {
+         ModuleFlowView_initModule ${_expPath} ${_moduleNode} ${_sourceW}
+         ExpModTreeControl_addOpenedModule ${_expPath} ${_moduleNode}
+      } else {
+         ::log::log debug "ExpModTreeControl_moduleSelection new module"
+      }
+   } errMsg ] } {
+      MaestroConsole_addErrorMsg ${errMsg}
+      MessageDlg .msg_window -icon error -message "An error happened opening the module flow. Check the maestro console for more details." \
+         -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
+      MaestroConsole_show
    }
+   MiscTkUtils_normalCursor [winfo toplevel ${_sourceW}]
 }
 
 proc ExpModTreeControl_moduleClosing { _expPath _moduleNode } {
@@ -110,6 +119,33 @@ proc ExpModTreeControl_moduleClosing { _expPath _moduleNode } {
    ExpModTreeControl_removeOpenedModule ${_expPath} ${_moduleNode}
 }
 
+proc ExpModeTreeControl_copyModule { _expPath _moduleNode _sourceW } {
+
+   set modInstances [ExpModTree_getModInstances ${_expPath} ${_moduleNode}]
+   set extraMsg ""
+   if { ${modInstances} > 1 } {
+      set extraMsg "\n\nNote: The [file tail ${_moduleNode}] module is used in ${modInstances} different locations within the experiment."
+   }
+   set sourceTopWidget [winfo toplevel ${_sourceW}]
+   set modTruePath [ExpLayout_getModuleTruepath ${_expPath} ${_moduleNode}]
+   set answer [MessageDlg .msg_window -icon warning -message "Are you sure you want to copy the referenced module locally?${extraMsg} \
+            \n\nReferenced module:\n${modTruePath}" -aspect 800 -title "Copy Module Confirmation" -type yesno -justify center -parent ${sourceTopWidget}]
+   if { ${answer} == 0 } {
+      ::log::log debug "ExpModeTreeControl_copyModule yes copy"
+         # copy local
+         set isCopied true
+         if { [ catch { ModuleFlowControl_copyLocalSelected ${_expPath} ${_moduleNode} } errMsg ] } {
+            MessageDlg .msg_window -icon error -message "${errMsg}" \
+               -title "Module Copy Error" -type ok -justify center -parent ${sourceTopWidget}
+            return false
+         }
+         MessageDlg .msg_window -icon info -message "The module has been copied locally." \
+            -aspect 400 -title "Module Copy Notification" -type ok -justify center -parent ${sourceTopWidget}
+   } else {
+      ::log::log debug "ExpModeTreeControl_copyModule cancel copy"
+   }
+}
+
 proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
    
    if { [ catch { 
@@ -117,7 +153,8 @@ proc ExpModTreeControl_newExpFlow { _expPath _topWidget } {
    } errMsg ] } {
       MaestroConsole_addErrorMsg ${errMsg}
       MessageDlg .msg_window -icon error -message "An error happend generating the exp flow.xml file. Check the maestro console for more details." \
-         -title "Failed Operation" -type ok -justify center -parent ${_sourceW}
+         -title "Failed Operation" -type ok -justify center -parent ${_topWidget}
+      MaestroConsole_show
       return
    }
    ExpModTreeControl_setModuleFlowChanged ${_expPath} false

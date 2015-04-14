@@ -48,5 +48,9 @@ fi
 #eval "`ssmuse sh -d /home/ordenv/ssm-domains/ssm-development -p git_1.7.1.1_linux24-i386`"
 
 arguments=$*
+eval `cclargs -D "" $0 "[xm]" \
+  -exp          ""      ""      "[experiment path]" \
+  ++ $arguments`
 
-$TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl ${SEQ_MANAGER_BIN} &
+# $TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl ${SEQ_MANAGER_BIN} $* &
+$TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl $arguments &
