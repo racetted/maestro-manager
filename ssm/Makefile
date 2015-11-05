@@ -1,7 +1,3 @@
-# ATTENTION!
-# YOU NEED TO USE THE GMAKE IN /users/dor/afsi/sul/ovbin/gmake for this
-# Makefile to work, other versions installed are currently too old!
-#
 # common section definition
 include config.mk
 
@@ -13,6 +9,7 @@ ssm: profile.sh
 	cp -r $(SWDEST)/bin $(SSMPACKAGE); 
 	cp -r $(SWDEST)/lib $(SSMPACKAGE); 
 	cp -r $(SWDEST)/etc $(SSMPACKAGE); 
+	cp -r ../LICENSE.txt $(SSMPACKAGE); 
 	mkdir -p $(SSMPACKAGE)/.ssm.d;
 	cp -r post-install $(SSMPACKAGE)/.ssm.d;
 	cp -r profile.sh $(SSMPACKAGE)/.ssm.d;

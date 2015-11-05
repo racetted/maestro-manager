@@ -1,11 +1,30 @@
 #!/bin/ksh
+#/* Part of the Maestro sequencer software package.
+# * Copyright (C) 2011-2015  Operations division of the Canadian Meteorological Centre
+# *                          Environment Canada
+# *
+# * Maestro is free software; you can redistribute it and/or
+# * modify it under the terms of the GNU Lesser General Public
+# * License as published by the Free Software Foundation,
+# * version 2.1 of the License.
+# *
+# * Maestro is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# * Lesser General Public License for more details.
+# *
+# * You should have received a copy of the GNU Lesser General Public
+# * License along with this library; if not, write to the
+# * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+# * Boston, MA 02111-1307, USA.
+# */
+
 
 [[ "$1" = --help || "$1" = -h ]] && set -h
 
 arch=`uname -s`
 
 if [[ "$arch" = "Linux" ]]; then
-      #TCLSH=/home/binops/afsi/ssm/domain2/tcl-tk_8.5.11_linux26-i686/bin/wish8.5
       TCLSH=$(which maestro_wish8.5)
       if [[ "${TCLSH}" == "" ]] ; then
          echo "ERROR: executable \"maestro_wish8.5\" not found! Cannot start application..."
@@ -28,7 +47,6 @@ fi
 #fi
 
 # -- export SEQ_MANAGER_BIN
-#export SEQ_MANAGER_BIN=/users/dor/afsi/sul/tmp/maestro/maestro-center.rol/bin
 test "${SEQ_MANAGER_BIN}" == "" && print "\nSEQ_MANAGER_BIN not defined! Exiting...\n" && exit 1
 
 # create default depot if not exist
@@ -44,13 +62,9 @@ if [ ! -s $HOME/.maestrorc ];then
    cp ${SEQ_MANAGER_BIN}/../etc/config/maestrorc $HOME/.maestrorc
 fi
 
-#-- git
-#eval "`ssmuse sh -d /home/ordenv/ssm-domains/ssm-development -p git_1.7.1.1_linux24-i386`"
-
 arguments=$*
 eval `cclargs -D "" $0 "[xm]" \
   -exp          ""      ""      "[experiment path]" \
   ++ $arguments`
 
-# $TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl ${SEQ_MANAGER_BIN} $* &
 $TCLSH ${SEQ_MANAGER_BIN}/../lib/x_manager/XPManager.tcl $arguments &
