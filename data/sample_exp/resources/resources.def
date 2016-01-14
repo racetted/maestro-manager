@@ -1,0 +1,5 @@
+
+FRONTEND=castor
+BACKEND=spica
+IDL=idl
+SEQ_DEFAULT_MACHINE=castor

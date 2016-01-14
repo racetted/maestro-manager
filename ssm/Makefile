@@ -1,5 +1,5 @@
 # common section definition
-include config.mk
+include ../config/config.mk
 
 ssm: profile.sh
 	echo "Creating SSM package $(SSMPACKAGE)..."
@@ -9,6 +9,7 @@ ssm: profile.sh
 	cp -r $(SWDEST)/bin $(SSMPACKAGE); 
 	cp -r $(SWDEST)/lib $(SSMPACKAGE); 
 	cp -r $(SWDEST)/etc $(SSMPACKAGE); 
+	cp -r $(SWDEST)/data $(SSMPACKAGE); 
 	cp -r ../LICENSE.txt $(SSMPACKAGE); 
 	mkdir -p $(SSMPACKAGE)/.ssm.d;
 	cp -r post-install $(SSMPACKAGE)/.ssm.d;
@@ -21,7 +22,7 @@ ssm: profile.sh
 	echo "Description: Maestro Manager" >> $(SSMPACKAGE)/.ssm.d/control; \
 	tar cvf - $(SSMPACKAGE) | gzip -> $(SSMPACKAGE).ssm
 
-profile.sh: Makefile config.mk
+profile.sh: Makefile ../config/config.mk
 	echo "export SEQ_MANAGER_VERSION=${VERSION}" >$@
 
 clean:
