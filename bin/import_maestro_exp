@@ -113,23 +113,35 @@ echo "Retrieving $exp...\n
 SOURCE=$src\n
 DESTINATION=$dest\n"
 
-rsync -rlpv --exclude ".git/" --exclude "hub/" --exclude "logs/" --exclude "sequencing/" --exclude "listings/" $src/ $dest/${final_exp}/
-
-cd $src
-# copy only the first level of logs, listings and sequencing
-find . \( -name logs -o -name listings -o -name sequencing \) \( -type d -o -type l \) -exec rsync -dlpRv {} $dest/${final_exp}/ \;
-# copy directories/links under hub
-if [[ $ctag -eq 1 ]]; then
-  find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv --exclude "constants/" {} $dest/${final_exp}/ \;
+# deal with suites with sub-modules
+cd $src && has_submodule=$(git config --list | grep \^submodule)
+if [[ -n ${has_submodule} ]]; then
+ git clone --no-hardlinks $src $dest/${final_exp}
+ cd $dest/${final_exp} && git submodule update --init && git submodule foreach 'set -e; branch=$(git config -f ${toplevel}/.gitmodules submodule.${name}.branch); git checkout ${branch}'
 else
-  find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv {} $dest/${final_exp}/ \;
+ rsync -rlpv --exclude ".git/" --exclude "hub/" --exclude "logs/" --exclude "sequencing/" --exclude "listings/" $src/ $dest/${final_exp}/
+ # copy directories/links under hub
+ if [[ $ctag -eq 1 ]]; then
+   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv --exclude "constants/" {} $dest/${final_exp}/ \;
+ else
+   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv {} $dest/${final_exp}/ \;
+ fi
+ if [ $gtag -eq 1 ]; then
+  echo "\nEnabling git tag..."
+  # tell git to ignore its operations under logs/listings/sequencing
+  echo "*" > $TMPDIR/.gitignore
+  find $dest/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
+  # setup a local git repository
+  cd $dest/${final_exp} && setup_git_repository
+ fi
 fi
+
+# copy only the first level of logs, listings and sequencing
+cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type d -o -type l \) -exec rsync -dlpRv {} $dest/${final_exp}/ \;
 
 # special case for afsisio when group permission is required to run as afsiops
 if [ "$(id -nu)" = "afsisio" ]; then
   find $dest/${final_exp}/* \( -name logs -o -name sequencing -o -name listings -o -name ExpDate -o -name ExpOptions.xml -o -name ExpTimings -o -name flow.xml \) \( -type d -o -type f \) -exec chmod -R 775 {} \;
-else
-  chmod -R 755 $dest/${final_exp}
 fi
 
 if [ $rtag -eq 1 ]; then
@@ -150,12 +162,4 @@ if [ $rtag -eq 1 ]; then
   fi
 fi
 
-if [ $gtag -eq 1 ]; then
-  echo "\nEnabling git tag..."
-  # tell git to ignore its operations under logs/listings/sequencing
-  echo "*" > $TMPDIR/.gitignore
-  find $dest/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
-  # setup a local git repository
-  cd $dest/${final_exp} && setup_git_repository
-fi
 echo "\nDone importing ${final_exp}\n"
