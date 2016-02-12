@@ -675,24 +675,13 @@ proc NewExp::CreateNew {parent path name entrymod arrloc arrentry} {
 
        if [catch { 
                catch {[exec mkdir -p $path/$name]}
-               catch {[exec echo -n "${dateExp}" > $path/$name/ExpDate]} 
-               catch {[exec touch $path/$name/ExpTimings]} 
        } message ] {
              Dialogs::show_msgdlg "Unable to create Experiment Directory"  ok warning "" $parent 
 	     return
        }
 
-       set header  "<?xml version=\"1.0\" ?>"
-       set footer  "</MODULE>" 
-       set header1 "<MODULE date=\"$date\" name=\"$entrymod\" version_number=\"1.0\">"
        set header2 "<MODULE name=\"$entrymod\" version_number=\"1.0\" date=\"$date\">"
-
-       #  -- Open file 
-       set fo [open "$path/$name/flow.xml" "w"] 
-       puts  $fo "$header"  
-       puts  $fo "$header1" 
-       puts  $fo "$footer"  
-       close $fo
+       set footer  "</MODULE>" 
 
        if [catch {
                catch {[exec mkdir -p $path/$name/modules]}
