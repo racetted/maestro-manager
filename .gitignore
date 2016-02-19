@@ -7,3 +7,4 @@
 ssm/*.ssm
 ssm/maestro-manager_* 
 ssm/profile*
+.nfs*
