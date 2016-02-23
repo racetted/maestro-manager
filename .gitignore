@@ -1,10 +1,2 @@
-*~
-*.o
-*.a
-*.so
-*.ssm
-*.swp
-ssm/*.ssm
-ssm/maestro-manager_* 
 ssm/profile*
-.nfs*
+ssm/maestro-manager*
