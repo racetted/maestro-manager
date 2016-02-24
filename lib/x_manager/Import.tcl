@@ -234,9 +234,9 @@ proc Import::NextButton { } {
 			    return
        }
 
-
+NewExp::ExpDirectoriesConfig $Import::ImportW path name entrymod true false $Import::_selected
       # -- ok Execute Import
-      Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
+      # Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
 }
 
 
@@ -287,8 +287,13 @@ proc Import::UpdateIMportWidget { wid1 wid2 } {
       set Import::_Importsize ""
 }
 
-proc Import::ImportNext { win newname srcexp dest git cte} {
+proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues } {
       
+       upvar  $arlocation arloc
+       upvar  $arvalues   arval
+
+       puts "Import::ImportNext: arloc(bin) = $arloc(bin)"
+       puts "Import::ImportNext: arval(bin) = $arval(bin)"
       variable ImportW2
      
       if {[winfo exists $win]} {
@@ -377,6 +382,29 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       if {[string compare "$newname" ""] != 0} {
              $dpexp insert end "Name" -text "Experiment Name will be : $newname " 
       }
+
+      # -- Linking info
+      
+      $dpexp insert end "link" -text "Directory information"
+      array set namesWithTabs {
+            bin "bin \t\t"
+            res "resources\t"
+            hub "hub \t\t"
+            lis "listings\t\t"
+            mod "modules\t"
+            seq "sequencing\t"
+            log "logs\t\t"
+         }
+      foreach dir {bin hub res lis seq log} {
+         set dirInfo "   $namesWithTabs($dir): "
+         if { [string equal $arloc($dir) "local" ] } {
+            append dirInfo "Empty directory will be created"
+         } else {
+            append dirInfo "Link to $arval($dir)"
+         }
+         $dpexp insert end "$dir linking" -text $dirInfo
+      }
+
       
       # -- Warn if User will have dangling links in his xp.
       set i 0

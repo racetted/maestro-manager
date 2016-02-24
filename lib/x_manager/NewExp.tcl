@@ -323,8 +323,18 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
      pack $frm
 }
 
-
-proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} } {
+# ExpDirectoriesConfig: Creates a dialog for deciding whether to create a
+# directory or create a link to another existing directory.
+# In the case of importing, the choices will be the same, but if the experiment
+# has a link, the link target will be shown in the text entry box by default.
+#
+# parent: Parent window calling this function
+# path: target path of the experiment
+# name : name of the new experiment
+# first_time : boolean used to decide to clear the text entry boxes
+# new : boolean value used to distinguish between importation and creation of a
+#       new experiment.
+proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {new true} {srcPath ""}} {
 
       variable PrefWinDirs
       variable Entrybin
@@ -368,9 +378,10 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} }
 	       log   "local"
       }
 
-      if { $first_time == true } {
+      # array unset ArrayEntryValues
+      # if { $first_time == true } {
          array set ArrayEntryValues {
-                  bin   ""
+             bin   ""
 	          res   ""
 	          hub   ""
 	          lis   ""
@@ -378,14 +389,33 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} }
 	          seq   ""
 	          log   ""
          }
+      # }
+      puts "ArrayEntryValues(bin): $ArrayEntryValues(bin)"
+
+
+      # In case of importation, set default values for text boxes.
+      if { $new == false && $first_time == true} {
+         # If one of the directories is a link, put the target of the link in
+         # the corresponding text box as the default value.
+         foreach loc {bin res mod} {
+            set theFile $Import::_selected/$::DirFullName($loc)
+            if { [file exists $theFile]} {
+               if { [file type $theFile] == "link" } {
+                  set ArrayEntryValues($loc) [file join $srcPath [file readlink $theFile ]]
+               } else {
+                  set ArrayEntryValues($loc) $theFile
+               }
+            }
+         }
       }
 
       set CtrlButton     [frame  $frm.ctrlbuttons -border 2 -relief flat]
       set CancelB        [button $CtrlButton.ok     -image $XPManager::img_Cancel -command {destroy $NewExp::PrefWinDirs}]
       set HelpB          [button $CtrlButton.bhelp  -image $XPManager::img_Help   -command {}]
       set NextB          [button $CtrlButton.next   -image $XPManager::img_Next   -command [\
-                          list NewExp::FinalCheck $NewExp::PrefWinDirs $path $name $entrymod \
-		          NewExp::ArrayDirLocations NewExp::ArrayEntryValues]]
+                                                                                       list NewExp::FinalCheck $NewExp::PrefWinDirs $path $name $entrymod \
+                                                                                       NewExp::ArrayDirLocations NewExp::ArrayEntryValues $new
+                                                                                    ]]
 
       set dir_bin        [label $subfdirs.bin     -text "bin "            -font "10"]
       set dir_resources  [label $subfdirs.res     -text "resources "      -font "10"]
@@ -404,7 +434,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} }
       set radbin_local   [radiobutton $subfdirs.radbinl -text "" -variable bin -value local  -command  {\
 			  $NewExp::Entrybin configure -text "" ;\
 			  set NewExp::ArrayDirLocations(bin) "local" ;\
-                          $NewExp::Entrybin configure -state disabled}]
+                          $NewExp::Entrybin configure -state disabled -text $ArrayEntryValues(bin)}]
       set radbin_remote  [radiobutton $subfdirs.radbinr -text "" -variable bin -value remote -command  {\
 			  set NewExp::ArrayDirLocations(bin) "remote" ;\
                           $NewExp::Entrybin configure -state normal}]
@@ -457,40 +487,39 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} }
 
       # -- Put default values for entries
 
-      set Entrybin        [Entry $subfdirs.ebin   -textvariable ebin -width 25  -bg #FFFFFF -font 12 -helptext "remote bin" \
+      set Entrybin        [Entry $subfdirs.ebin -text $ArrayEntryValues(bin)  -textvariable ArrayEntryValues(bin) -width 25  -bg #FFFFFF -font 12 -helptext "remote bin" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "bin" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
-      set Entryhub        [Entry $subfdirs.ehub   -textvariable ehub -width 25  -bg #FFFFFF -font 12 -helptext "remote hub" \
+      set Entryhub        [Entry $subfdirs.ehub -textvariable ehub -width 25  -bg #FFFFFF -font 12 -helptext "remote hub" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "hub" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
       
-      set Entryres        [Entry $subfdirs.eres   -textvariable eres -width 25  -bg #FFFFFF -font 12 -helptext "remote resources" \
+      set Entryres        [Entry $subfdirs.eres -text $ArrayEntryValues(res) -textvariable eres -width 25  -bg #FFFFFF -font 12 -helptext "remote resources" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "res" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
-      set Entrylist       [Entry $subfdirs.elist  -textvariable elist -width 25 -bg #FFFFFF -font 12 -helptext "remote listings" \
+      set Entrylist       [Entry $subfdirs.elist -textvariable elist -width 25 -bg #FFFFFF -font 12 -helptext "remote listings" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "lis" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
       
-      set Entrymod        [Entry $subfdirs.emod   -textvariable mod -width 25  -bg #FFFFFF -font 12 -helptext "" \
+      set Entrymod        [Entry $subfdirs.emod -text $ArrayEntryValues(mod) -textvariable mod -width 25  -bg #FFFFFF -font 12 -helptext "" \
 		           -command  {}]
 
-      set Entryseq        [Entry $subfdirs.eseq   -textvariable eseq -width 25  -bg #FFFFFF -font 12 -helptext "remote sequencing" \
+      set Entryseq        [Entry $subfdirs.eseq -textvariable eseq -width 25  -bg #FFFFFF -font 12 -helptext "remote sequencing" \
 		           -validate key\
 			   -validatecommand {NewExp::ValidKey "seq" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
       
-      set Entrylog        [Entry $subfdirs.elog   -textvariable elog -width 25  -bg #FFFFFF -font 12 -helptext "remote log" \
+      set Entrylog        [Entry $subfdirs.elog -textvariable elog -width 25  -bg #FFFFFF -font 12 -helptext "remote log" \
 		           -validate key\
 			   -validatecommand {NewExp::ValidKey "log" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
-
 
       # -- pack Ok/Cancel butt.
       pack $CtrlButton -side bottom
@@ -566,6 +595,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} }
       $NewExp::Entrymod   configure -state disabled
       $NewExp::Entryseq   configure -state disabled
       $NewExp::Entrylog   configure -state disabled
+      
      
 }
 
@@ -632,13 +662,18 @@ proc NewExp::ValueName {widg} {
 # Check if remote dirs have values
 # Note : check here if an exp with the same name exist!!!1
 #------------------------------------------------------
-proc NewExp::FinalCheck { win path name entrmod arlocation arvalues } {
+proc NewExp::FinalCheck { win path name entrmod arlocation arvalues new} {
        
        upvar  $arlocation arloc
        upvar  $arvalues   arval
 
+
        set arerror {}
+       # PHIL: REMOVE NEXT LINE:
+       puts "NewExp::FinalCheck: arrays:"
        foreach loc {bin hub res lis seq log} {
+          # PHIL: REMOVE NEXT LINE:
+          puts "$arloc($loc)  :  $arval($loc)"
 	       if {[string compare $arloc($loc) "remote"] == 0 && \
 	           [string compare $arval($loc) ""] == 0 } {
 	             lappend arerror "$loc"    
@@ -650,8 +685,14 @@ proc NewExp::FinalCheck { win path name entrmod arlocation arvalues } {
              Dialogs::show_msgdlg $Dialogs::New_NoRemoteDirs:[join $arerror " "]  ok warning "" $win 
 	     return
       } else {
-             # --Ok create
-	     NewExp::Next_resume $win $path $name $entrmod $arlocation $arvalues
+         # OK, ready to create new or import 
+         if { $new == true } {
+            NewExp::Next_resume $win $path $name $entrmod $arlocation $arvalues
+         } else {
+            Import::ImportNext $NewExp::PrefWinDirs $Import::_importname \
+               $Import::_selected $Import::Destination $Import::_ImportGit \
+               $Import::_ImportCte NewExp::ArrayDirLocations NewExp::ArrayEntryValues
+         }
       }
 }
 
