@@ -86,7 +86,7 @@ browser = firefox
 navtabs=My_experiments
 
 # background image for overview and flow windows
-background_image = /home/binops/afsi/sio/datafiles/images/MaestroExpManager/artist-canvas_2.gif 
+# background_image = /home/binops/afsi/sio/datafiles/images/MaestroExpManager/artist-canvas_2.gif 
 
 # size of xflow window
 flow_geometry = 800x600
