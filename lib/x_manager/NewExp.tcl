@@ -390,8 +390,6 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 	          log   ""
          }
       # }
-      puts "ArrayEntryValues(bin): $ArrayEntryValues(bin)"
-
 
       # In case of importation, set default values for text boxes.
       if { $new == false && $first_time == true} {
@@ -669,11 +667,7 @@ proc NewExp::FinalCheck { win path name entrmod arlocation arvalues new} {
 
 
        set arerror {}
-       # PHIL: REMOVE NEXT LINE:
-       puts "NewExp::FinalCheck: arrays:"
        foreach loc {bin hub res lis seq log} {
-          # PHIL: REMOVE NEXT LINE:
-          puts "$arloc($loc)  :  $arval($loc)"
 	       if {[string compare $arloc($loc) "remote"] == 0 && \
 	           [string compare $arval($loc) ""] == 0 } {
 	             lappend arerror "$loc"    

@@ -1,2 +1,7 @@
 ssm/profile*
 ssm/maestro-manager*
+*.swo
+*.swp
+*.swm
+*.swn
+.nfs*
