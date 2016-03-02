@@ -334,6 +334,8 @@ proc NewExp::Next_resume {parent path name entrymod arrloc arrentry} {
 # first_time : boolean used to decide to clear the text entry boxes
 # new : boolean value used to distinguish between importation and creation of a
 #       new experiment.
+# srcPath : used when importing to put the path to the original directory 
+#           as a default value in the text entry field.
 proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {new true} {srcPath ""}} {
 
       variable PrefWinDirs
@@ -347,6 +349,9 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 
       variable ArrayDirLocations
       variable ArrayEntryValues
+
+      set maxEntryLength 60
+      set minEntryLength 30
 
       if {[winfo exists .prefwindirs]} {
               destroy .prefwindirs
@@ -378,23 +383,22 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 	       log   "local"
       }
 
-      # array unset ArrayEntryValues
-      # if { $first_time == true } {
-         array set ArrayEntryValues {
-             bin   ""
-	          res   ""
-	          hub   ""
-	          lis   ""
-	          mod   ""
-	          seq   ""
-	          log   ""
-         }
-      # }
+      if { $first_time == true } {
+       array set ArrayEntryValues {
+           bin   ""
+	        res   ""
+	        hub   ""
+	        lis   ""
+	        mod   ""
+	        seq   ""
+	        log   ""
+       }
+      }
 
-      # In case of importation, set default values for text boxes.
+      # In case of importation, set initial values for text boxes.
       if { $new == false && $first_time == true} {
          # If one of the directories is a link, put the target of the link in
-         # the corresponding text box as the default value.
+         # the corresponding text box as the initial value.
          foreach loc {bin res mod} {
             set theFile $Import::_selected/$::DirFullName($loc)
             if { [file exists $theFile]} {
@@ -461,10 +465,13 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 			  set NewExp::ArrayDirLocations(lis) "remote" ;\
                            $NewExp::Entrylist configure -state normal}]
 
-      set radmod_local   [radiobutton $subfdirs.radmodl -text "" -variable mod -value local  -command  {\
-                           $NewExp::Entrymod configure -state disabled}]
-      set radmod_remote  [radiobutton $subfdirs.radmodr -text "" -variable mod -value remote -command  {\
-                           $NewExp::Entrymod configure -state normal}]
+      set radmod_local   [radiobutton $subfdirs.radmodl -text "" -variable mod -value local  \
+                           -command  { $NewExp::Entrymod configure -text "" ;\
+                                       set NewExp::ArrayDirLocations(mod) "local" ;\
+                                       $NewExp::Entrymod configure -state disabled}]
+      set radmod_remote  [radiobutton $subfdirs.radmodr -text "" -variable mod -value remote \
+                           -command  { set NewExp::ArrayDirLocations(mod) "remote" ;\
+                                       $NewExp::Entrymod configure -state normal}] 
 
       set radseq_local   [radiobutton $subfdirs.radseql -text "" -variable seq -value local  -command  {\
                            $NewExp::Entryseq configure -text "" ;\
@@ -485,7 +492,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 
       # -- Put default values for entries
 
-      set Entrybin        [Entry $subfdirs.ebin -text $ArrayEntryValues(bin)  -textvariable ArrayEntryValues(bin) -width 25  -bg #FFFFFF -font 12 -helptext "remote bin" \
+      set Entrybin        [Entry $subfdirs.ebin -textvariable ArrayEntryValues(bin) -width 25  -bg #FFFFFF -font 12 -helptext "remote bin" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "bin" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
@@ -495,7 +502,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 			   -validatecommand {NewExp::ValidKey "hub" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
       
-      set Entryres        [Entry $subfdirs.eres -text $ArrayEntryValues(res) -textvariable eres -width 25  -bg #FFFFFF -font 12 -helptext "remote resources" \
+      set Entryres        [Entry $subfdirs.eres -textvariable eres -width 25  -bg #FFFFFF -font 12 -helptext "remote resources" \
                            -validate key\
 			   -validatecommand {NewExp::ValidKey "res" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
@@ -505,8 +512,10 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 			   -validatecommand {NewExp::ValidKey "lis" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
       
-      set Entrymod        [Entry $subfdirs.emod -text $ArrayEntryValues(mod) -textvariable mod -width 25  -bg #FFFFFF -font 12 -helptext "" \
-		           -command  {}]
+      set Entrymod        [Entry $subfdirs.emod  -textvariable emod -width 25  -bg #FFFFFF -font 12 -helptext "" \
+                            -validate key\
+		                        -validatecommand {NewExp::ValidKey "mod" NewExp::ArrayEntryValues %d %V %P}\
+                            -command  {}]
 
       set Entryseq        [Entry $subfdirs.eseq -textvariable eseq -width 25  -bg #FFFFFF -font 12 -helptext "remote sequencing" \
 		           -validate key\
@@ -519,6 +528,18 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
 			   -validatecommand {NewExp::ValidKey "log" NewExp::ArrayEntryValues %d %V %P}\
 		           -command  {}]
 
+      # Configure initial text and width of entry fields
+      if { $first_time == true } {
+         set length [string length $ArrayEntryValues(mod)]
+         if { [expr $length < $minEntryLength] } { set length $minEntryLength }
+         if { [expr $maxEntryLength < $length] } { set length $maxEntryLength }
+         array set entryFields "bin $Entrybin res $Entryres mod $Entrymod lis $Entrylist seq $Entryseq log $Entrylog hub $Entryhub"
+         foreach dir {bin res mod lis seq log hub} {
+            $entryFields($dir)  configure -text $ArrayEntryValues($dir) -width $length
+         }
+      }
+      
+      
       # -- pack Ok/Cancel butt.
       pack $CtrlButton -side bottom
       pack $NextB -side right -padx 4
@@ -580,7 +601,7 @@ proc NewExp::ExpDirectoriesConfig {parent path name entrymod {first_time true} {
       $radseq_local  select
       $radlog_local  select
 
-      $radmod_remote configure -state disabled
+      if { $new == true } { $radmod_remote configure -state disabled }
       #$radlog_remote configure -state disabled
       #$radseq_remote configure -state disabled 
       
