@@ -61,12 +61,12 @@ namespace import ::struct::record::*
 #
 # deps - Stores node internal dependencies coming from module flow.xml
 #        Does not store dependencies from resource.xml file
-#        format is a list of list in the following form {type node status index local_index hour exp}
+#        format is a list of list in the following form -ORDER IS IMPORTANT- {node index local_index valid_dow valid_hour hour exp}
 #        ex:
-#        { node /SHOP/GeneratePngWIS84 end "" "" "" "" }
-#        { node /SHOP/GeneratePngWIS85a end "" "" "" "" }
-#        { node /SHOP/GeneratePngWIS85b end "" "" "" "" }
-#        { node /SHOP/GeneratePngWIS86 end "" "" "" "" }
+#        { /SHOP/GeneratePngWIS84 "" "" "" "" "" "" }
+#        { /SHOP/GeneratePngWIS85a "gem_loop=2" "" "" "" "" "" }
+#        { /SHOP/GeneratePngWIS85b "" "" "6" "" "" "" }
+#        { /SHOP/GeneratePngWIS86 "" "" "" "" "" "" }
 #
 # status - i'm using this to know whether a node has just been created by the user
 #          or not; current possible values "normal" | "new"
@@ -302,14 +302,23 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode _mod
 # converts the dependencies of the node to xml
 #
 proc ModuleFlow_dependencies2Xml { _xmlDoc _xmlDomNode _flowNodeRecord } {
+   ::log::log debug "ModuleFlow_dependencies2Xml _flowNodeRecord:${_flowNodeRecord}"
+
    set dependencyList [${_flowNodeRecord} cget -deps]
-   set nameList {type dep_name status index local_index hour exp}
+   ::log::log debug "ModuleFlow_dependencies2Xml dependencyList:${dependencyList}"
+   set nameList {dep_name index local_index valid_dow valid_hour hour exp}
    foreach dependEntry ${dependencyList} {
       set xmlDependsNode [${_xmlDoc} createElement DEPENDS_ON]
+
+      # the type=node and status=end are the only ones supported for now
+      # so we hardcode it
+      ${xmlDependsNode} setAttribute type node
+      ${xmlDependsNode} setAttribute status end
       set count 0
       foreach attrName ${nameList} {
          set attrValue [lindex ${dependEntry} ${count}]
          if { ${attrValue} != "" } {
+            ::log::log debug "ModuleFlow_dependencies2Xml saving attribute  ${attrName}=${attrValue}"
             ${xmlDependsNode} setAttribute ${attrName} ${attrValue}
          }
 	 incr count
@@ -507,18 +516,19 @@ proc ModuleFlow_xmlParseDependencies { _flowNodeRecord _xmlNode } {
    set depXmlNodes [${_xmlNode} selectNodes DEPENDS_ON]
    set depsList {}
    # list of attributes supported for dependency
-   # set attributeNames [list dep_name status type index local_index hour exp]
    foreach depXmlNode ${depXmlNodes} {
       set depList {}
-      set typeValue [${depXmlNode} getAttribute type ""]
+      # set typeValue [${depXmlNode} getAttribute type ""]
       set depNameValue [${depXmlNode} getAttribute dep_name ""]
-      set statusValue [${depXmlNode} getAttribute status ""]
+      # set statusValue [${depXmlNode} getAttribute status ""]
       set indexValue [${depXmlNode} getAttribute index ""]
       set localIndexValue [${depXmlNode} getAttribute local_index ""]
-      set expValue [${depXmlNode} getAttribute exp ""]
+      set validDowValue [${depXmlNode} getAttribute valid_dow ""]
+      set validHourValue [${depXmlNode} getAttribute valid_hour ""]
       set hourValue [${depXmlNode} getAttribute hour ""]
+      set expValue [${depXmlNode} getAttribute exp ""]
 
-      lappend depsList [list ${typeValue} ${depNameValue} ${statusValue} ${indexValue} ${localIndexValue} ${hourValue} ${expValue}]
+      lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${validDowValue} ${validHourValue} ${hourValue} ${expValue}]
    }
    ::log::log debug "ModuleFlow_xmlParseDependencies _flowNodeRecord:${_flowNodeRecord} _xmlNode:${_xmlNode} depsList:$depsList"
    ${_flowNodeRecord} configure -deps ${depsList}

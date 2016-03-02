@@ -70,6 +70,11 @@ proc ModuleFlowXml_addDependency { _xmlDoc _moduleNodeRecord _flowNodeRecord _na
             ${depXmlNode} setAttribute ${attrName} ${attrValue}
          }
       }
+      # the type=node and status=end are the only ones supported for now
+      # so we hardcode it
+      ${depXmlNode} setAttribute type node
+      ${depXmlNode} setAttribute status end
+ 
       ${xmlNode} appendChild ${depXmlNode}
    }
    ::log::log debug "ModuleFlowXml_addDependency _xmlDoc:$_xmlDoc _nameValueList:$_nameValueList DONE"
@@ -97,10 +102,8 @@ proc ModuleFlowXml_getDependencies { _xmlNode _xmlDoc _moduleNodeRecord _flowNod
    set depXmlNodes [${xmlNode} selectNodes DEPENDS_ON]
    ::log::log debug "ModuleFlowXml_getDependencies depXmlNodes:$depXmlNodes"
    # list of attributes supported for dependency
-   # set attributeNames [list dep_name status type index local_index hour valid_dow valid_hour exp]
    foreach depXmlNode ${depXmlNodes} {
       set depNameValue [${depXmlNode} getAttribute dep_name ""]
-      set statusValue [${depXmlNode} getAttribute status ""]
       set indexValue [${depXmlNode} getAttribute index ""]
       set localIndexValue [${depXmlNode} getAttribute local_index ""]
       set validDowValue [${depXmlNode} getAttribute valid_dow ""]
@@ -109,6 +112,8 @@ proc ModuleFlowXml_getDependencies { _xmlNode _xmlDoc _moduleNodeRecord _flowNod
       set expValue [${depXmlNode} getAttribute exp ""]
       lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${hourValue} ${validDowValue} ${validHourValue} ${expValue}]
    }
+   ::log::log debug "ModuleFlowXml_getDependencies _flowNodeRecord:${_flowNodeRecord}"
+   ::log::log debug "ModuleFlowXml_getDependencies depsList: ${depsList}"
    return ${depsList}
 }
 

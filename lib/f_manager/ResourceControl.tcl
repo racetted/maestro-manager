@@ -190,9 +190,7 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
    set depEntries [lsort -unique [set ${tableVar}] ]
    foreach depEntry ${depEntries} {
       ::log::log debug "depEntry:${depEntry}"
-      set nameValueList [ list type node \
-                          status end \
-                          dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
+      set nameValueList [ list dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
                           index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
                           local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
                           hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \
@@ -230,9 +228,7 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
       ::log::log debug "ResourceControl_saveDepsData nodeTableVar:${nodeTableVar}"
       ::log::log debug "ResourceControl_saveDepsData [set ${nodeTableVar}]"
       foreach depEntry [set ${nodeTableVar}] {
-         set nameValueList [ list type node \
-	                  status end \
-                          dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
+         set nameValueList [ list dep_name [lindex ${depEntry} $ResourceTableColumnMap(NodeColumnNumber)] \
                           index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
                           local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
                           hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \

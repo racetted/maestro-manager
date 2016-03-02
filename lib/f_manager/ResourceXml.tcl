@@ -156,9 +156,7 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
       #   set attributeValue [${depXmlNode} getAttribute ${attributeName}]
       #   lappend depList ${attributeName} ${attributeValue}
       # }
-      # set typeValue [${depXmlNode} getAttribute type ""]
       set depNameValue [${depXmlNode} getAttribute dep_name ""]
-      # set statusValue [${depXmlNode} getAttribute status ""]
       set indexValue [${depXmlNode} getAttribute index ""]
       set localIndexValue [${depXmlNode} getAttribute local_index ""]
       set hourValue [${depXmlNode} getAttribute hour ""]
@@ -189,6 +187,11 @@ proc ResourceXml_addDependency { _xmlDoc _nameValueList } {
             ${xmlDependsNode} setAttribute ${attrName} ${attrValue}
          }
       }
+      # the type=node and status=end are the only ones supported for now
+      # so we hardcode it
+      ${xmlDependsNode} setAttribute type node
+      ${xmlDependsNode} setAttribute status end
+
       ${resourcesXmlNode} appendChild ${xmlDependsNode}
    }
 }
