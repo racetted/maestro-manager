@@ -63,7 +63,7 @@ if [ ! -s $HOME/.maestrorc ];then
 fi
 
 arguments=$*
-eval `cclargs -D "" $0 "[xm]" \
+eval `cclargs $0 "[xm]" \
   -exp          ""      ""      "[experiment path]" \
   ++ $arguments`
 

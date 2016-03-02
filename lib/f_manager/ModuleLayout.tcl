@@ -108,9 +108,9 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
 
    # get the modules container files
    if { [file exist ${sourceModule}] } {
-      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceModule}/ ${workingDir}"
-      MaestroConsole_addMsg "synchronize module: rsync -r -t ${sourceModule}/ ${workingDir}"
-      exec rsync -r -t ${sourceModule}/ ${workingDir}
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t -l ${sourceModule}/ ${workingDir}"
+      MaestroConsole_addMsg "synchronize module: rsync -r -t -l ${sourceModule}/ ${workingDir}"
+      exec rsync -r -t -l ${sourceModule}/ ${workingDir}
    }
 
    # get the module resource files in the exp resource work dir
@@ -127,9 +127,9 @@ proc ModuleLayout_createWorkingDir { _expPath _moduleNode } {
 
    # get the resource files
    if { [file exist ${sourceResources}] } {
-      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t ${sourceResources}/ ${resourceWorkDir}"
-      MaestroConsole_addMsg "synchronize resources: rsync -r -t ${sourceResources}/ ${resourceWorkDir}/"
-      exec rsync -r -t ${sourceResources}/ ${resourceWorkDir}/
+      ::log::log debug "ModuleLayout_createWorkingDir rsync -r -t -l ${sourceResources}/ ${resourceWorkDir}"
+      MaestroConsole_addMsg "synchronize resources: rsync -r -t -l ${sourceResources}/ ${resourceWorkDir}/"
+      exec rsync -r -t -l ${sourceResources}/ ${resourceWorkDir}/
    }
 
    MaestroConsole_addMsg "Creating temp module directory done."
@@ -162,16 +162,16 @@ proc ModuleLayout_saveWorkingDir { _expPath _moduleNode } {
 
    # sync the module changes in the work dir with the module within the experiment
    if { [file exists ${sourceModule}] } {
-      ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/"
-      MaestroConsole_addMsg "synchronize module: rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/"
-      exec rsync --delete --update -r -t ${sourceModule}/ ${targetModule}/
+      ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete --update -r -t -l ${sourceModule}/ ${targetModule}/"
+      MaestroConsole_addMsg "synchronize module: rsync --delete --update -r -t -l ${sourceModule}/ ${targetModule}/"
+      exec rsync --delete --update -r -t -l ${sourceModule}/ ${targetModule}/
    }
 
    # sync the module resource files in the exp resource work dir with the experiment
    set resourceWorkDir [ModuleLayout_getWorkResourceDir ${_expPath} ${_moduleNode}]
-   ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete -r -t ${resourceWorkDir}/ ${targetResource}/"
-   MaestroConsole_addMsg "synchronize resources: rsync --delete -r -t ${resourceWorkDir}/ ${targetResource}/"
-   exec rsync --delete --update -r -t ${resourceWorkDir}/ ${targetResource}/
+   ::log::log debug "ModuleLayout_saveWorkingDir: rsync --delete -r -t -l ${resourceWorkDir}/ ${targetResource}/"
+   MaestroConsole_addMsg "synchronize resources: rsync --delete -r -t -l ${resourceWorkDir}/ ${targetResource}/"
+   exec rsync --delete --update -r -t -l ${resourceWorkDir}/ ${targetResource}/
    MaestroConsole_addMsg "Saving module ${_moduleNode} done."
 }
 
@@ -477,8 +477,8 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                   file delete ${configFile}
                   #MaestroConsole_addMsg "synchonize module...rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
                   #exec rsync --exclude '/container.cfg' -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
-                  MaestroConsole_addMsg "synchonize module...rsync -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
-                  exec rsync -r ${nodeFullPath}/ [file dirname ${nodeFullPath}]
+                  MaestroConsole_addMsg "synchonize module...rsync -r -t -l ${nodeFullPath}/ [file dirname ${nodeFullPath}]"
+                  exec rsync -r -t -l ${nodeFullPath}/ [file dirname ${nodeFullPath}]
                }
 
                # do the same with the resources files
@@ -487,8 +487,8 @@ proc ModuleLayout_deleteNode { _expPath _moduleNode _deleteNode _nodeType _resOn
                file delete ${resourceFile}
                # MaestroConsole_addMsg "synchonize resources rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]"
                # exec rsync --exclude '/container.xml' -r ${resourceDir}/ [file dirname ${resourceDir}]
-               MaestroConsole_addMsg "synchonize resources rsync -r ${resourceDir}/ [file dirname ${resourceDir}]"
-               exec rsync -r ${resourceDir}/ [file dirname ${resourceDir}]
+               MaestroConsole_addMsg "synchonize resources rsync -r -t -l ${resourceDir}/ [file dirname ${resourceDir}]"
+               exec rsync -r -t -l ${resourceDir}/ [file dirname ${resourceDir}]
             }
 
             if { ${_resOnly} == false } {
