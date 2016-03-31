@@ -612,7 +612,7 @@ proc ResourceView_createLoopWidget { _loopFrame _expPath _moduleNode _flowNode }
    ResourceView_addLoopStepEntry ${_loopFrame} 2
    ResourceView_addLoopSetEntry ${_loopFrame} 3
 
-   set orLabel [label ${_loopFrame}.label -justify left -text "(NOTE: Use of \"Loop Expresion\" disables Loop attributes above.)"]
+   set orLabel [label ${_loopFrame}.label -justify left -text "(NOTE: Use of loop expression disables loop attributes above.)"]
    grid ${orLabel} -row 4 -column 0 -padx 2 -pady {20 2} -sticky w -columnspan 2
 
    set mySeparatorW [ttk::separator ${_loopFrame}.separator -orient horizontal]
@@ -668,7 +668,7 @@ proc ResourceView_addLoopStartEntry { _loopFrame _row {_value ""}} {
    set entryW ${_loopFrame}.loop_start_entry
 
    if { ! [winfo exists ${labelW}] } {
-      label ${labelW} -text "Loop Start:"
+      label ${labelW} -text "Loop start:"
       set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopstart]
       global ${attrVariable}
       Entry ${entryW} -textvariable ${attrVariable}
@@ -696,7 +696,7 @@ proc ResourceView_addLoopSetEntry { _loopFrame _row {_value ""}} {
    set entryW ${_loopFrame}.loop_set_entry
 
    if { ! [winfo exists ${labelW}] } {
-      label ${labelW} -text "Loop Set:"
+      label ${labelW} -text "Loop set:"
       set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopset]
       global ${attrVariable}
       Entry ${entryW} -textvariable ${attrVariable}
@@ -725,7 +725,7 @@ proc ResourceView_addLoopEndEntry { _loopFrame _row {_value ""}} {
    set entryW ${_loopFrame}.loop_end_entry
 
    if { ! [winfo exists ${labelW}] } {
-      label ${labelW} -text "Loop End:"
+      label ${labelW} -text "Loop end:"
       set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopend]
       global ${attrVariable}
       Entry ${entryW} -textvariable ${attrVariable}
@@ -754,7 +754,7 @@ proc ResourceView_addLoopStepEntry { _loopFrame _row {_value ""}} {
    set entryW ${_loopFrame}.loop_step_entry
 
    if { ! [winfo exists ${labelW}] } {
-      label ${labelW} -text "Loop Step:"
+      label ${labelW} -text "Loop step:"
       set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopstep]
       global ${attrVariable}
       Entry ${entryW} -textvariable ${attrVariable}
@@ -782,7 +782,7 @@ proc ResourceView_addLoopExprEntry { _loopFrame _row {_value ""}} {
    set entryW ${_loopFrame}.loop_expr_entry
 
    if { ! [winfo exists ${labelW}] } {
-      label ${labelW} -text "Loop Expression:"
+      label ${labelW} -text "Loop expression:"
       set attrVariable [ResourceView_getAttrVariable ${_loopFrame} loopexpr]
       global ${attrVariable}
       Entry ${entryW} -textvariable ${attrVariable}

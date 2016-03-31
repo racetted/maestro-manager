@@ -155,7 +155,7 @@ proc Dialogs::setDlg {} {
 		  set Dlg_Error_parsing_user_file "There is an Error in your ~/.maestrorc file ... please check"
 		  set Dlg_PathNotOwned "You dont have permissions to write into this path"
 		  set Dlg_BrowserUpdated "Experiment Browser Updated !"
-		  set Dlg_NotUnderHOME "Expriment depot must not be directly under \$HOME"
+		  set Dlg_NotUnderHOME "Experiment depot must not be directly under \$HOME"
 		  set Dlg_DepotNotExist "Your Experiment depot does not exist!"
 		  set Dlg_ExpInvalidName "Invalid caracters in Exp. name.\nAccpeted are: a-zA-Z0-9-_."
 		  set Dlg_NameEntryMod "You must provide the name of the Entry Module"
