@@ -29,6 +29,7 @@ namespace eval Import {
       variable _ExpDir "no-selection" 
       variable _FromWhere "browser" 
       variable initdir 
+      variable post_import
 }
 
 proc Import::ImportExp { exp } {
@@ -234,9 +235,11 @@ proc Import::NextButton { } {
 			    return
        }
 
-
+      # Take a detour through the ExpDirectoriesConfig dialog
+      NewExp::ExpDirectoriesConfig $Import::ImportW path name entrymod true false $Import::_selected
+      # ^^^^^^^^^^^^^^^^^^^^^^^^^ This function will call ImportNext because ^^^ is false
       # -- ok Execute Import
-      Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
+      # Import::ImportNext $Import::ImportW $Import::_importname $Import::_selected $Import::Destination $Import::_ImportGit $Import::_ImportCte
 }
 
 
@@ -287,8 +290,10 @@ proc Import::UpdateIMportWidget { wid1 wid2 } {
       set Import::_Importsize ""
 }
 
-proc Import::ImportNext { win newname srcexp dest git cte} {
+proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues } {
       
+      upvar  $arlocation arloc
+      upvar  $arvalues   arval
       variable ImportW2
      
       if {[winfo exists $win]} {
@@ -377,7 +382,50 @@ proc Import::ImportNext { win newname srcexp dest git cte} {
       if {[string compare "$newname" ""] != 0} {
              $dpexp insert end "Name" -text "Experiment Name will be : $newname " 
       }
-      
+
+      # -- Put linking info in the information dialog
+      $dpexp insert end "link" -text "Directory information"
+      array set namesWithTabs {
+            bin "bin \t\t"
+            res "resources\t"
+            hub "hub \t\t"
+            lis "listings\t\t"
+            mod "modules\t"
+            seq "sequencing\t"
+            log "logs\t\t"
+      }
+      foreach dir {bin hub res lis seq log} {
+         set dirInfo "   $namesWithTabs($dir): "
+         if { [string equal $arloc($dir) "local" ] } {
+            append dirInfo "Empty directory will be created"
+         } else {
+            append dirInfo "Link to $arval($dir)"
+         }
+         $dpexp insert end "$dir linking" -text $dirInfo
+      }
+
+      # -- Write post import script to make the links
+      set Import::post_import $::env(TMPDIR)/post_import.sh
+      set outfile [open $Import::post_import w+ 0766]
+      puts $outfile "#!/bin/ksh"
+      puts $outfile "echo \"Redirecting linked directories\""
+      foreach dir {bin res mod hub lis log seq} {
+         if { [string equal $arloc($dir) "remote" ] } {
+            puts $outfile "\necho \"Redirecting $::DirFullName($dir) to $arval($dir)\""
+            variable destExpName
+            if { [string equal $newname "" ] } {
+               set destExpName $Import::_selected
+            } else {
+               set destExpName $newname
+            }
+            # Remove directory in new experiment
+            puts $outfile "rm -rf $dest/$destExpName/$::DirFullName($dir)"
+            # Replace by a link to the path supplied by the user
+            puts $outfile "ln -s $arval($dir) $dest/$destExpName/$::DirFullName($dir)"
+         }
+      }
+      close $outfile
+
       # -- Warn if User will have dangling links in his xp.
       set i 0
       set tsrcexp [exec true_path -n $srcexp]
@@ -508,6 +556,9 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
          ${ExeImport} configure -cursor {}
          error ${message}
       }      
+
+      
+ 
 }
 
 proc Import::GetImportScriptOutputs {fid Winfo win} {
@@ -541,6 +592,11 @@ proc Import::GetImportScriptOutputs {fid Winfo win} {
                 close $fid
 		if { $Import::SUCCES == 1 } {
 		         Dialogs::show_msgdlg $Dialogs::Imp_Ok  ok info "" $win]
+
+         # Run post import script
+         # (Replace some directories by links)
+         set postFid [open "|$Import::post_import 2>@ stdout" r+]
+
 			 # Refresh exp browser window
 			 set nbk [$XpBrowser::notebook raise]
 			 set listxp [Preferences::GetTabListDepots $nbk "r"]
@@ -554,6 +610,7 @@ proc Import::GetImportScriptOutputs {fid Winfo win} {
          ${Winfo} configure -cursor {}
          error ${message}
       }
+
 }
 
 
