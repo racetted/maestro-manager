@@ -394,15 +394,22 @@ proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues } 
             seq "sequencing\t"
             log "logs\t\t"
       }
-      foreach dir {bin hub res lis seq log} {
+      foreach dir {bin hub res lis log} {
          set dirInfo "   $namesWithTabs($dir): "
          if { [string equal $arloc($dir) "local" ] } {
-            append dirInfo "Empty directory will be created"
+            append dirInfo "Directory will be copied"
          } else {
             append dirInfo "Link to $arval($dir)"
          }
          $dpexp insert end "$dir linking" -text $dirInfo
       }
+      set dirInfo "   $namesWithTabs(seq): "
+      if { [string equal $arloc($dir) "local"] } {
+         append dirInfo "Empty directory will be created"
+      } else {
+         append dirInfo "Link to $arval($dir)"
+      }
+      $dpexp insert end "seq linking" -text $dirInfo
 
       # -- Write post import script to make the links
       set Import::post_import $::env(TMPDIR)/post_import.sh
