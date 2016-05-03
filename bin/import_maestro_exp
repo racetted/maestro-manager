@@ -34,7 +34,7 @@ USAGE="\nUSAGE: import_maestro_exp [-h] [-cgn] -s source -d destination\n
  Example: import_maestro_exp -s ~afsiops/maestro_suites/ensemble/forecast/e100 -d /tmp -g\n"
 
 if [ "$(uname -s)" != "Linux" ]; then
-  echo "ERROR: import_maestro_exp only runs on Linux" && exit 1
+  echo "ERROR: import_maestro_exp only runs on Linux" 1>&2 && exit 1
 fi
 
 ntag=0
@@ -47,7 +47,7 @@ dest=""
 while getopts hcgnrs:d:y options 2> /dev/null; do
   case $options in
     h)
-      echo $USAGE && exit 0;;
+      echo $USAGE 1>&2 && exit 0;;
     c)
       ctag=1;;
     g)
@@ -63,24 +63,24 @@ while getopts hcgnrs:d:y options 2> /dev/null; do
     y)
       answer=y;;
     *)
-      echo $USAGE && exit 1;;
+      echo $USAGE 1>&2 && exit 1;;
   esac
 done
 #move to the next argument
 shift `expr $OPTIND - 1`
 if [ "$*" != "" ]; then
-  echo $USAGE && exit 1
+  echo $USAGE 1>&2 && exit 1
 fi
 
 if [ "$src" = "" ]; then
-  echo "ERROR: -s option required!" && exit 1
+  echo "ERROR: -s option required!" 1>&2 && exit 1
 fi
 if [ "$dest" = "" ]; then
-  echo "ERROR: -d option required!" && exit 1
+  echo "ERROR: -d option required!" 1>&2 && exit 1
 fi    
 
 if (touch $dest/.import_maestro_exp 2>&1 | grep -q "Permission denied"); then
-    echo "ERROR: No permission under destination=$dest!" && exit 1
+    echo "ERROR: No permission under destination=$dest!" 1>&2 && exit 1
   else
     rm -f $dest/.import_maestro_exp
 fi
@@ -96,22 +96,22 @@ else
 fi
 
 if [[ -d $dest/${final_exp} || -f $dest/${final_exp} || -L $dest/${final_exp} ]]; then
-  echo "$dest/${final_exp} exists. Overwrite? (y/n) "
+  echo "$dest/${final_exp} exists. Overwrite? (y/n) " 1>&2
   if [[ -z $answer ]]; then
     read answer
   fi
   if [[ "$answer" = "Y" || "$answer" = "y" ]]; then
-    echo "Removing $dest/${final_exp}..."
+    echo "Removing $dest/${final_exp}..." 1>&2
     rm -rf $dest/${final_exp}
   else
-    echo "Skip importing!"
+    echo "Skip importing!" 1>&2
     exit 0
   fi
 fi
 
 echo "Retrieving $exp...\n
 SOURCE=$src\n
-DESTINATION=$dest\n"
+DESTINATION=$dest\n" 1>&2
 
 # deal with suites with sub-modules
 cd $src && has_submodule=$(git config --list | grep \^submodule)
@@ -127,7 +127,7 @@ else
    find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv {} $dest/${final_exp}/ \;
  fi
  if [ $gtag -eq 1 ]; then
-  echo "\nEnabling git tag..."
+  echo "\nEnabling git tag..." 1>&2
   # tell git to ignore its operations under logs/listings/sequencing
   echo "*" > $TMPDIR/.gitignore
   find $dest/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
@@ -146,10 +146,11 @@ if [ "$(id -nu)" = "afsisio" ]; then
 fi
 
 if [ $rtag -eq 1 ]; then
-  echo "\nEnabling reference implementation tag..."
+  echo "\nEnabling reference implementation tag..." 1>&2
   if [[ -z "${MAESTRO_CURRENT_REF}" ]] ; then
-    echo "ERROR: MAESTRO_CURRENT_REF undefined!"
-    echo "Load a Maestro module before continuing. Skip loading reference implementation..."
+    echo "ERROR: MAESTRO_CURRENT_REF undefined!" 1>&2
+    echo "Load a Maestro module before continuing. Skip loading reference
+    implementation..." 1>&2
   else
     # Inject experiment documentation
     docfile=$dest/${final_exp}/.ref_info
@@ -163,4 +164,4 @@ if [ $rtag -eq 1 ]; then
   fi
 fi
 
-echo "\nDone importing ${final_exp}\n"
+echo "\nDone importing ${final_exp}\n" 1>&2
