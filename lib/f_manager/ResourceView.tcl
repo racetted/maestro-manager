@@ -240,6 +240,7 @@ proc ResourceView_editDepRowEndCallback {  _expPath _flowNode _tableListWidget _
                $ResourceTableColumnMap(IndexColumnNumber) ResourceView_validateDepIndex \
                $ResourceTableColumnMap(LocalIndexColumnNumber) ResourceView_validateDepIndex \
                $ResourceTableColumnMap(HourColumnNumber) ResourceView_validateDepHour \
+               $ResourceTableColumnMap(TimeDeltaColumnNumber) ResourceView_validateTimeDelta \
                $ResourceTableColumnMap(ValidDowColumnNumber) ResourceView_validateDow \
                $ResourceTableColumnMap(ValidHourColumnNumber) ResourceView_validateValidHour \
                $ResourceTableColumnMap(ExpColumnNumber) ResourceView_validateDepExp]
@@ -372,9 +373,36 @@ proc ResourceView_validateDepHour { _expPath _flowNode _tableListWidget _cellRow
    set errorFlag 0
    if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
       if { ! [string is integer ${_cellContent}] } {
-	 set errorFlag 1
+         set errorFlag 1
          upvar ${_outErrMsg} myOutputErrMsg
          set myOutputErrMsg "Invalid hour value: ${_cellContent}"
+      }
+   }
+   return ${errorFlag}
+}
+
+################################################################################
+# ResourceView_validateTimeDelta
+# Validates input given in the "Time Delta" column of the dependency table of
+# the resource GUI.
+# Validation is done by matching against the regex ^[-+]?([0-9]+[dhms][^0-9]*)+$
+# ^       Beginning of line then ...
+# [-+]?   One or zero of '+' or '-' then ...
+# (...)+  One or more unit groups then ...
+# $       the end of the line/string
+# where a unit group [0-9]+[dhms][^0-9]* is a number (one or more digits)
+# followed by 'd', 'h', 'm' or 's' and 0 or more non-digits.
+################################################################################
+proc ResourceView_validateTimeDelta { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg } {
+   set errorFlag 0
+   if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
+      set time_delta_regex {^[-+]?([0-9]+[dhms][^0-9]*)+$}
+      if { ! [regexp $time_delta_regex ${_cellContent}] } {
+         set errorFlag 1
+         upvar ${_outErrMsg} myOutputErrMsg
+         set myOutputErrMsg "Invalid Time Delta: ${_cellContent}.\nAccepted format is
+         ('+' or '-' or '') followed by number-unit pairs.  Units must be 'd', 'h', 'm', 's'\n
+         Example: -1d2h3m4s"
       }
    }
    return ${errorFlag}
@@ -480,9 +508,10 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
          IndexColumnNumber 1
          LocalIndexColumnNumber 2
          HourColumnNumber 3
-         ValidDowColumnNumber 4
-         ValidHourColumnNumber 5
-         ExpColumnNumber 6
+         TimeDeltaColumnNumber 4
+         ValidDowColumnNumber 5
+         ValidHourColumnNumber 6
+         ExpColumnNumber 7
       }
       # register ComboBox objects with the table
       tablelist::addBWidgetComboBox
@@ -494,6 +523,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
                      0 Index ${defaultAlign} \
                      0 "Local Index" ${defaultAlign} \
                      0 Hour ${defaultAlign} \
+                     0 "Time Delta" ${defaultAlign} \
                      0 "Valid DayOfWeek" ${defaultAlign} \
                      0 "Valid Hour" ${defaultAlign} \
                      0 Exp ${defaultAlign}]
@@ -555,6 +585,7 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
 	       $ResourceTableColumnMap(IndexColumnNumber) \
                $ResourceTableColumnMap(LocalIndexColumnNumber) \
                $ResourceTableColumnMap(HourColumnNumber) \
+               $ResourceTableColumnMap(TimeDeltaColumnNumber) \
                $ResourceTableColumnMap(ValidDowColumnNumber) \
                $ResourceTableColumnMap(ValidHourColumnNumber) \
                $ResourceTableColumnMap(ExpColumnNumber) ] {

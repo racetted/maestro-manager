@@ -160,11 +160,12 @@ proc ResourceXml_getDependencyList { _xmlDoc } {
       set indexValue [${depXmlNode} getAttribute index ""]
       set localIndexValue [${depXmlNode} getAttribute local_index ""]
       set hourValue [${depXmlNode} getAttribute hour ""]
+      set timeDeltaValue [${depXmlNode} getAttribute time_delta ""]
       set validDowValue [${depXmlNode} getAttribute valid_dow ""]
       set validHourValue [${depXmlNode} getAttribute valid_hour ""]
       set expValue [${depXmlNode} getAttribute exp ""]
 
-      lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${hourValue} ${validDowValue} ${validHourValue} ${expValue}]
+      lappend depsList [list ${depNameValue} ${indexValue} ${localIndexValue} ${hourValue} ${timeDeltaValue} ${validDowValue} ${validHourValue} ${expValue}]
    }
    # puts "depsList :${depsList}"
    return ${depsList}
