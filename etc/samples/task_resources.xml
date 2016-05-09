@@ -6,11 +6,18 @@
   <BATCH machine="saiph" queue="xfer" memory="200M" mpi="0" wallclock="20" catchup="4" cpu="1" soumet_args="-waste 10 -smt -norset"/>
 
   <!-- dependency definition (multiple definitions supported)
-    supported attributes: dep_name, status="end", type="node", hour, index, local_index
-  -->
+    supported attributes: dep_name, status="end", type="node", hour, time_delta, index, local_index, valid_hour, valid_dow
+
   <DEPENDS_ON dep_name="/enkf_mod/anal_mod" status="end" type="node"/>
-  <DEPENDS_ON dep_name="/sample_mod/Family_1/Loop_example/outer_Loop/A_Loop_Task" status="end" type="node" local_index="outer_Loop=CURRENT_INDEX" index="outer_Loop=CURRENT_INDEX"/>
-  <DEPENDS_ON type="node" dep_name="/sample_mod/Family_1/Loop_example/outer_Loop/A_Loop_Task"  index="A_Loop_Task=*" status="end"/>
+
+  <DEPENDS_ON dep_name="/enkf_mod/anal_mod" status="end" type="node" time_delta="-1d4h2m8s" valid_hour="02" valid_dow="01"/>
+
+  <DEPENDS_ON dep_name="/enkf_mod/Forecasts/gem_loop/gem_mod/Transfer" local_index="gem_loop=CURRENT_INDEX" index="gem_loop=CURRENT_INDEX,Transfer=0000000072" status="end" type="node"/>
+
+  <DEPENDS_ON dep_name="/enkf_mod/Forecasts/postproc_mod/gem_loop/e1_debias_reanal_0312" index="gem_loop=*" status="end" type="node"/>
+
+  -->
+
 
   <!-- abort actions definition -->
   <ABORT_ACTION name="rerun"/>
