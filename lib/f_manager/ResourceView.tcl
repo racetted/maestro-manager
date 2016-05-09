@@ -383,17 +383,11 @@ proc ResourceView_validateDepHour { _expPath _flowNode _tableListWidget _cellRow
 
 ################################################################################
 # ResourceView_validateTimeDelta
-# Validates input given in the "Time Delta" column of the dependency table of
-# the resource GUI.
-# Validation is done by matching against the regex ^[-+]?([0-9]+[dhms][^0-9]*)+$
-# ^       Beginning of line then ...
-# [-+]?   One or zero of '+' or '-' then ...
-# (...)+  One or more unit groups then ...
-# $       the end of the line/string
-# where a unit group [0-9]+[dhms][^0-9]* is a number (one or more digits)
-# followed by 'd', 'h', 'm' or 's' and 0 or more non-digits.
+# Validates input given in the "Time Delta" column of the dependency tables of
+# the resource GUI. The input must match time_delta_regex.
 ################################################################################
-proc ResourceView_validateTimeDelta { _expPath _flowNode _tableListWidget _cellRow  _cellColumn _cellContent _outErrMsg } {
+proc ResourceView_validateTimeDelta { _expPath _flowNode _tableListWidget _cellRow
+                                      _cellColumn _cellContent _outErrMsg } {
    set errorFlag 0
    if { ${_cellContent} != "" && [string index ${_cellContent} 0] != "$" } {
       set time_delta_regex {^[-+]?([0-9]+[dhms][^0-9]*)+$}
@@ -496,6 +490,54 @@ proc ResourceView_getDepTableVar { _tableListWidget } {
    return ${_tableListWidget}_var
 }
 
+
+
+
+proc depTableTooltips {tbl row col} {
+   global ResourceTableColumnMap depColumnToolTips
+   if { ![info exists depColumnToolTips ] } {
+      array set depColumnTooltips [list \
+         $ResourceTableColumnMap(NodeColumnNumber) "Relative (used within same
+module) or explicit path to
+target node from experiment’s
+home"\
+         $ResourceTableColumnMap(IndexColumnNumber) "Comma-separated Index of target loop,
+switch or NpassTask. Ex:
+loop1=index1,loop2=index2,switch_dow=1"\
+         $ResourceTableColumnMap(LocalIndexColumnNumber) "Local Index : Index of dependant’s
+loop, switch or NpassTask. Ex:
+loop1=index1,loop2=index2,switch_dow=1"\
+         $ResourceTableColumnMap(HourColumnNumber) "Hour: quantity of hours added
+(or subtracted) to current
+datestamp to calculate the
+datestamp of the target node"\
+         $ResourceTableColumnMap(TimeDeltaColumnNumber) "Time Delta: Generic time
+difference added (or
+subtracted) to current
+datestamp to calculate the
+datestamp of the target node.
+Ex:  1d2h3m4s or -1d or -3600s
+or +12h20m"\
+         $ResourceTableColumnMap(ValidDowColumnNumber) "Valid_dow: Day of the week
+during which the dependency
+relation is valid.  (On other
+days the dependency will be
+ignored). 0=Sunday, 1=Monday,
+etc. "\
+         $ResourceTableColumnMap(ValidHourColumnNumber) "Valid hour: Hour during which
+the dependency is valid.
+(During other hours, the
+dependency will be ignored)."\
+         $ResourceTableColumnMap(ExpColumnNumber) "Exp: Path from root to the
+experiment containing the
+dependency node."\
+   ]
+   }
+   if { $row < 0 } {
+      tooltip::tooltip $tbl $depColumnTooltips($col)
+   }
+}
+
 proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode } {
    ::log::log debug "ResourceView_createDependsWidget $_depFrame $_expPath $_moduleNode $_flowNode"
    global ResourceTableColumnMap
@@ -531,15 +573,17 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
    set xscrollW ${_depFrame}.res_sx
 
    set dependsTableW [
-      tablelist::tablelist ${_depFrame}.table -selectmode extended -columns ${columns} \
-         -arrowcolor white -spacing 1 -resizablecolumns 1 -movablecolumns 0 \
-         -stretch all -relief flat -labelrelief flat -showseparators 1 -borderwidth 0 \
-         -labelcommand tablelist::sortByColumn -labelpady 5 \
-         -stripebg #e4e8ec -labelbd 1 -labelrelief raised \
-         -yscrollcommand [list ${yscrollW} set] -xscrollcommand [list ${xscrollW} set] \
-	 -editstartcommand [list ResourceView_editDepRowStartCallback ${_expPath} ${_flowNode}] \
-	 -editendcommand [list ResourceView_editDepRowEndCallback ${_expPath} ${_flowNode}]
-	 ]
+   tablelist::tablelist ${_depFrame}.table -selectmode extended -columns ${columns} \
+      -arrowcolor white -spacing 1 -resizablecolumns 1 -movablecolumns 0 \
+      -stretch all -relief flat -labelrelief flat -showseparators 1 -borderwidth 0 \
+      -labelcommand tablelist::sortByColumn -labelpady 5 \
+      -stripebg #e4e8ec -labelbd 1 -labelrelief raised \
+      -yscrollcommand [list ${yscrollW} set] -xscrollcommand [list ${xscrollW} set] \
+      -editstartcommand [list ResourceView_editDepRowStartCallback ${_expPath} ${_flowNode}] \
+      -editendcommand [list ResourceView_editDepRowEndCallback ${_expPath} ${_flowNode}]\
+      -tooltipaddcommand depTableTooltips\
+      -tooltipdelcommand "tooltip::tooltip clear"
+      ]
 
    set resourceTableVar [ResourceView_getDepTableVar ${dependsTableW}]
    global ${resourceTableVar}
@@ -566,6 +610,8 @@ proc ResourceView_createDependsWidget { _depFrame _expPath _moduleNode _flowNode
          -yscrollcommand [list ${yScrollNodeW} set] -xscrollcommand [list ${xScrollNodeW} set] \
 	 -editstartcommand [list ResourceView_editNodeDepRowStartCallback ${_expPath} ${_moduleNode}] \
 	 -editendcommand [list ResourceView_editDepRowEndCallback ${_expPath} ${_flowNode}] \
+      -tooltipaddcommand depTableTooltips\
+      -tooltipdelcommand "tooltip::tooltip clear"
 	 ]
 
    set nodeTableVar [ResourceView_getDepTableVar ${nodeDependsTableW}]
