@@ -194,6 +194,7 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
                           index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
                           local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
                           hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \
+                          time_delta [lindex ${depEntry} $ResourceTableColumnMap(TimeDeltaColumnNumber)] \
                           valid_dow [lindex ${depEntry} $ResourceTableColumnMap(ValidDowColumnNumber)] \
                           valid_hour [lindex ${depEntry} $ResourceTableColumnMap(ValidHourColumnNumber)] \
                           exp [file normalize [lindex ${depEntry} $ResourceTableColumnMap(ExpColumnNumber)] ] ]
@@ -232,6 +233,7 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
                           index [lindex ${depEntry} $ResourceTableColumnMap(IndexColumnNumber)] \
                           local_index [lindex ${depEntry} $ResourceTableColumnMap(LocalIndexColumnNumber)] \
                           hour [lindex ${depEntry} $ResourceTableColumnMap(HourColumnNumber)] \
+                          time_delta [lindex ${depEntry} $ResourceTableColumnMap(TimeDeltaColumnNumber)] \
                           valid_dow [lindex ${depEntry} $ResourceTableColumnMap(ValidDowColumnNumber)] \
                           valid_hour [lindex ${depEntry} $ResourceTableColumnMap(ValidHourColumnNumber)] \
                           exp [file normalize [lindex ${depEntry} $ResourceTableColumnMap(ExpColumnNumber)] ] ]
