@@ -30,7 +30,7 @@ namespace eval XpBrowser {
             variable Bmflow    
             variable Bxflow    
             variable Bimport   
-            variable Baudit    
+            variable Baudit     
             variable Bexptime  
             variable Boverview 
             variable BSetExpdate 
@@ -145,7 +145,8 @@ proc XpBrowser::create { frm } {
       variable notebook
 
       variable Bmflow    
-      variable Bxflow    
+      variable Bxflow 
+      variable Bdkfont 
       variable Bimport   
       variable Baudit    
       variable Bexptime  
@@ -164,11 +165,11 @@ proc XpBrowser::create { frm } {
       label $XpBfrm.lab -text "" -font "12"
 
       # -- get a frame for Experience attributes
-      set tsel [TitleFrame $XpBfrm.texp1 -text $Dialogs::Gui_selectedExp -font "ansi 10"]
+      set tsel  [TitleFrame $XpBfrm.texp1 -text $Dialogs::Gui_selectedExp ]
       set subf1 [$tsel getframe]
 
 
-      label $subf1.lname -text $Dialogs::Gui_ExpName -font "ansi 10"
+      label $subf1.lname -text $Dialogs::Gui_ExpName
       set expsel [Entry $subf1.entrysel  -textvariable ::_XpBrSelected \
                 -width 70\
 		-editable true\
@@ -186,50 +187,53 @@ proc XpBrowser::create { frm } {
 					}
 				      }
 
+      
       # -- Need an other frame to pack expdate, catchup and 2 buttons
       set frmother [frame $subf1.oth -border 2 -relief flat]
 
-      label $subf1.ldate -text  $Dialogs::Gui_ExDatep -font "ansi 10"
+      label $subf1.ldate -text  $Dialogs::Gui_ExDatep
       set Eexpdate [Entry $frmother.entrydate  -textvariable ::_ExpDate \
                 -width 10\
 		-bg #FFFFFF \
                 -command  {} \
 		-helptext "Experiment Date"]
 
-      set BSetExpdate [button $frmother.bsdate       -text "Set" -command {XpBrowser::SetExpdate $::_XpBrSelected $::_ExpDate}]
+      set BSetExpdate [button $frmother.bsdate -text "Set" -command {XpBrowser::SetExpdate $::_XpBrSelected $::_ExpDate}]
 
-      label $frmother.lcatch -text $Dialogs::Gui_ExpCatchup -font "ansi 10"
+      label $frmother.lcatch -text $Dialogs::Gui_ExpCatchup 
       set Eexpcatch [Entry $frmother.entrycatch  -textvariable ::_ExpCatchup \
                 -width 2\
 		-bg #FFFFFF \
                 -command  {} \
 		-helptext "Experiment Catchup"]
       
-      set BSetCatchup [button $frmother.bscatch       -text "Set" -command {XpBrowser::SetCatchup $::_XpBrSelected $::_ExpCatchup}]
+      set BSetCatchup [button $frmother.bscatch -text "Set" -command {XpBrowser::SetCatchup $::_XpBrSelected $::_ExpCatchup}]
 
+      set Bdkfont  [button $frmother.dkfont -relief flat -image $XPManager::img_font -command {DkfFont_init}]
+      tooltip::tooltip $frmother.dkfont  $Dialogs::XpB_dkfont
 
       # -- get frame for Control buttons
       set XpBfrmCb [frame $XpBfrm.cbutt  -border 2 -relief flat]
-      set tcbut [TitleFrame $XpBfrmCb.t -text $Dialogs::Gui_ControlExp -font "ansi 10"]
+      set tcbut [TitleFrame $XpBfrmCb.t -text $Dialogs::Gui_ControlExp ]
       set subfcb [$tcbut getframe]
 
-      set Bmflow     [button $subfcb.mflow  -text $Dialogs::XpB_flowmgr] 
+      set Bmflow     [button $subfcb.mflow -text $Dialogs::XpB_flowmgr] 
       $Bmflow configure -command [list XpBrowser::ExpSelected $Bmflow]
 
-      set Bxflow     [button $subfcb.xflow       -text $Dialogs::XpB_xflow     -command {\
+      set Bxflow     [button $subfcb.xflow  -text $Dialogs::XpB_xflow     -command {\
                       catch {[exec ${SEQ_MANAGER_BIN}/Exec_MaestroXFlow.ksh $::_XpBrSelected &]}}]
 
-      set Bimport    [button $subfcb.import      -text $Dialogs::XpB_import    -command {\
+      set Bimport    [button $subfcb.import -text $Dialogs::XpB_import    -command {\
                       Import::ImportExp $::_XpBrSelected}]
 
-      set Baudit     [button $subfcb.audit       -text $Dialogs::XpB_audit     -command {\
+      set Baudit     [button $subfcb.audit  -text $Dialogs::XpB_audit     -command {\
                       Audit::AuditExp $::_XpBrSelected}]
 
-      set Bexptime   [button $subfcb.exptime     -text $Dialogs::XpB_exptime   -command {\
-                      Dialogs::show_msgdlg "Future Use"  ok info "" .}]
-      set Boverview  [button $subfcb.overview    -text $Dialogs::XpB_overv     -command {\
+      set Bexptime   [button $subfcb.exptime  -text $Dialogs::XpB_exptime   -command {\
                       Dialogs::show_msgdlg "Future Use"  ok info "" .}]
 
+      set Boverview  [button $subfcb.overview -text $Dialogs::XpB_overv     -command {\
+                      Dialogs::show_msgdlg "Future Use"  ok info "" .}]
 
       # -- create notebook
       set notebook [NoteBook $XpBfrm.nb]
@@ -298,13 +302,14 @@ proc XpBrowser::create { frm } {
       grid $expsel        -row 0 -column 1 -padx 2 -pady 1 -sticky w
       grid $subf1.bbrowse -row 0 -column 2 -padx 4 -sticky w
     
-      grid $subf1.ldate   -row 1 -column 0 -padx 4 -pady 1 -sticky w 
+      grid $subf1.ldate   -row 1 -column 0 -padx 4 -pady 1 -sticky w  
 
       pack $Eexpdate        -side left 
       pack $BSetExpdate     -side left -padx 4
       pack $frmother.lcatch -side left -padx 4
       pack $Eexpcatch       -side left -padx 4
       pack $BSetCatchup     -side left -padx 4
+      pack $Bdkfont         -side left -padx 4
 
       grid $frmother -row 1 -column 1 -pady 1 -sticky w
 

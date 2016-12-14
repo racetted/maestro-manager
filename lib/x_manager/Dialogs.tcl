@@ -122,6 +122,7 @@ proc Dialogs::setDlg {} {
          variable XpB_audit
          variable XpB_exptime
          variable XpB_overv
+         variable XpB_dkfont
          variable XpB_xpbrowser
          
 	 variable XpB_MyExp
@@ -219,6 +220,7 @@ proc Dialogs::setDlg {} {
                   set XpB_audit "Audit with"
                   set XpB_exptime "Exp. Timing"
                   set XpB_overv "Add to Overview"
+                  set XpB_dkfont "select font"
 		  set Bug_message "Launch Bugzilla"
 		  set Bug_title "Submit a bug Report"
 	          set Pref_window_size "Xflow window size"
@@ -316,6 +318,7 @@ proc Dialogs::setDlg {} {
                   set XpB_audit "Audit avec"
                   set XpB_exptime "Temps Exp."
                   set XpB_overv "Ajouter dans l'Overview"
+                  set XpB_dkfont "Font Selection"
 		  set Bug_message "Lancer bugzilla"
 		  set Bug_title "Soumettre un bogue"
 		  set Pref_depot_title "Configuration du depot des Experiences"

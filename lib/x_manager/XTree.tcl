@@ -39,8 +39,8 @@ namespace eval XTree {
 #-----------------------------------------------------------
 proc XTree::create { frm nb } {
 
-    set title [TitleFrame $frm.t -text $Dialogs::XpB_xpbrowser]
-    set sw    [ScrolledWindow [$title getframe].sw -relief sunken -borderwidth 1 ]
+    set title [TitleFrame $frm.t -text $Dialogs::XpB_xpbrowser ]
+    set sw    [ScrolledWindow [$title getframe].sw -relief sunken -borderwidth 2 ]
 
     #Tree .tree -xscrollcommand {.xsb set} -yscrollcommand {.ysb set}
 
@@ -136,6 +136,7 @@ proc XTree::getdir { tree node path } {
 
         if { [file isdirectory $f] } {
                    $tree insert end $node n:$count \
+                       -font TkTextFont \
                        -text      $tail \
                        -image     [Bitmap::get folder] \
                        -drawcross allways \

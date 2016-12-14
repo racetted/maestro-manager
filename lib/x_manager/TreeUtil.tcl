@@ -106,19 +106,19 @@ proc TreeUtil::MpopNode {frm tree} {
     menu $frm.stpopup -tearoff 0
     $frm.stpopup add separator 
 
-    $frm.stpopup add command -label {Expand Node Tree}  -command "TreeUtil::ExpandNode $tree"
-    $frm.stpopup add command -label {Browse Node}       -command "TreeUtil::BrowseNode $tree"
+    $frm.stpopup add command -label {Expand Node Tree} -font TkTextFont  -command "TreeUtil::ExpandNode $tree"
+    $frm.stpopup add command -label {Browse Node}  -font TkTextFont     -command "TreeUtil::BrowseNode $tree"
 
-    $frm.stpopup add command -label {Import Exps below} -command {
+    $frm.stpopup add command  -label {Import Exps below} -font TkTextFont -command {
 			                 Import::ImportExp $TreeUtil::_PopUpSelection 
 			            }
 
 
-    $frm.stpopup add command -label {Create New Exp at this level} -command {NewExp::New_xp $TreeUtil::_PopUpSelection [$XpBrowser::notebook raise]}
+    $frm.stpopup add command  -label {Create New Exp at this level} -font TkTextFont -command {NewExp::New_xp $TreeUtil::_PopUpSelection [$XpBrowser::notebook raise]}
     
-    $frm.stpopup add command -label {View git}     -command "TreeUtil::RunGit $frm $tree" 
-    $frm.stpopup add command -label {Download git} -command "TreeUtil::DownloadGit $frm $tree" 
-    $frm.stpopup add command -label {Quit} -command {} 
+    $frm.stpopup add command -label {View git}     -font TkTextFont  -command "TreeUtil::RunGit $frm $tree" 
+    $frm.stpopup add command -label {Download git} -font TkTextFont -command "TreeUtil::DownloadGit $frm $tree" 
+    $frm.stpopup add command -label {Quit}         -font TkTextFont -command {} 
 
 
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
@@ -138,10 +138,10 @@ proc TreeUtil::MpopRNode {frm tree} {
 
     menu $frm.rpopup -tearoff 0
     $frm.rpopup add separator 
-    $frm.rpopup add command -label {Expand Root Node}              -command "TreeUtil::ExpandNode $tree"
-    $frm.rpopup add command -label {Refresh Tree}                  -command "TreeUtil::Refresh_Exp $frm"
-    $frm.rpopup add command -label {Create New Exp at this level}  -command [list TreeUtil::NewXpRootLevel $tree [$XpBrowser::notebook raise]] 
-    $frm.rpopup add command -label {Quit} -command {} 
+    $frm.rpopup add command -label {Expand Root Node}  -font TkTextFont            -command "TreeUtil::ExpandNode $tree"
+    $frm.rpopup add command -label {Refresh Tree}      -font TkTextFont             -command "TreeUtil::Refresh_Exp $frm"
+    $frm.rpopup add command -label {Create New Exp at this level} -font TkTextFont -command [list TreeUtil::NewXpRootLevel $tree [$XpBrowser::notebook raise]] 
+    $frm.rpopup add command -label {Quit} -font TkTextFont -command {} 
 
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
 }
@@ -157,10 +157,10 @@ proc TreeUtil::MpopXPNode {frm tree} {
     # -- Create  menu, for Experiments Nodes  
     menu $frm.xpopup -tearoff 0
     $frm.xpopup add separator 
-    $frm.xpopup add command -label {Exp Config}                  -command "TreeUtil::EditExpConfig $tree"
-    $frm.xpopup add command -label {Exp Resource}                 -command "TreeUtil::EditExpResources $tree"
-    $frm.xpopup add command -label {Delete}                 -command "TreeUtil::DeleteExp $tree"
-    $frm.xpopup add command -label {Quit} -command {} 
+    $frm.xpopup add command -label {Exp Config}   -font TkTextFont -command "TreeUtil::EditExpConfig $tree"
+    $frm.xpopup add command -label {Exp Resource} -font TkTextFont -command "TreeUtil::EditExpResources $tree"
+    $frm.xpopup add command -label {Delete}       -font TkTextFont -command "TreeUtil::DeleteExp $tree"
+    $frm.xpopup add command -label {Quit}         -font TkTextFont -command {} 
 
     $tree bindText  <Button-3>  "TreeUtil::_treepopup $frm $tree [$tree selection get]"
 }
@@ -179,7 +179,7 @@ proc TreeUtil::EditExpConfig { tree } {
 #---------------------------------------------------
 proc TreeUtil::EditExpResources { tree } {
      set node [$tree selection get]
-     set data  [$tree itemcget $node -data]
+     set data [$tree itemcget $node -data]
      
      ::ModuleFlowView_goEditor $data/resources/resources.def
 }
@@ -225,10 +225,10 @@ proc TreeUtil::TLcreate { frm lbl panel tree } {
     # -- Create a menu for Tools 
     set menu   [menu $frm.lbpopup -tearoff 0]
     $menu add separator 
-    $menu add command -label {Refresh Tree}       -command  "TreeUtil::Refresh_Exp $frm"
-    $menu add command -label {Open Selected Node} -command  "TreeUtil::OpenNode $tree"
-    $menu add command -label {List Selected Node} -command  "TreeUtil::BrowseNode $tree"
-    $menu add command -label {Quit} -command {}
+    $menu add command -label {Refresh Tree}       -font TkTextFont -command  "TreeUtil::Refresh_Exp $frm"
+    $menu add command -label {Open Selected Node} -font TkTextFont -command  "TreeUtil::OpenNode $tree"
+    $menu add command -label {List Selected Node} -font TkTextFont -command  "TreeUtil::BrowseNode $tree"
+    $menu add command -label {Quit} -font TkTextFont  -command {}
 
     bind $lbl  <Button-3>  "TreeUtil::_lblpopup $frm"
 
@@ -393,7 +393,7 @@ proc TreeUtil::ShowNodeContent { nodepath } {
 	set ListNode [toplevel .listnode]
 	wm title $ListNode "Node Content"
 	set frm [ frame $ListNode.frame -border 2 -relief flat]
-	label $frm.lab -text "Content of Node : $nodepath " -font "ansi 12 "
+	label $frm.lab -text "Content of Node : $nodepath " -font TkTextFont
 
         set vsb $frm.vsb
 	set hsb $frm.hsb
@@ -423,13 +423,13 @@ proc TreeUtil::ShowNodeContent { nodepath } {
 
         # -- ok butt
 	set bfrm [frame $ListNode.bframe -border 2 -relief flat]
-	set Bok [button $bfrm.bok -text "Ok" -image $XPManager::img_Ok -command "destroy $ListNode"]
+	set Bok [button $bfrm.bok -text "Ok" -font TkTextFont -image $XPManager::img_Ok -command "destroy $ListNode"]
 
 	pack $Bok -side bottom
 
         grid $frm.tbl -row 0 -rowspan 2 -column 0 -sticky news
 	grid [$frm.tbl cornerpath] -row 0 -column 1 -sticky ew
-	grid $vsb          -row 1 -column 1 -sticky ns
+	grid $vsb -row 1 -column 1 -sticky ns
 	grid $hsb -row 2 -column 0 -sticky ew
 
 	grid rowconfigure    $frm 1 -weight 1

@@ -26,6 +26,8 @@ global MUSER
 global array ExperimentInode
 global array ArrayTabsDepot
 global ListAllExperiments
+global List_Exps
+set List_Exps {}
 set ListAllExperiments {}
 
 # -- read args --> Crap this should not be here
@@ -80,7 +82,7 @@ namespace eval XPManager {
     variable ExpPreOpsRepository
 
     # -- buttons icones
-    foreach img {bug XpSel FoldXp Tool Refresh Ok Cancel Close Add Stop Remove Save Next Previous Apply Help Quit Notify Up} {
+    foreach img {bug XpSel FoldXp Tool Refresh Ok Cancel Close Add Stop Remove Save Next Previous Apply Help Quit Notify Up font} {
                eval variable img_$img [image create photo -file ${SEQ_MANAGER_BIN}/../etc/images/$img.gif]
     }
 
@@ -103,7 +105,7 @@ namespace eval XPManager {
 	namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/x_manager/$script
     }
 
-    foreach script { Preferences.tcl XpOptions.tcl } {
+    foreach script { Preferences.tcl XpOptions.tcl dkffont.tcl } {
 	namespace inscope :: source ${SEQ_MANAGER_BIN}/../lib/common/$script
     }
    
@@ -127,12 +129,14 @@ proc XPManager::create { {startup_exp ""} } {
     variable ExpOpsRepository
     variable ExpParRepository
     variable ExpPreOpsRepository
-
+ 
     _create_intro
     update
 
     SelectFont::loadfont
+     
     bind all <F12> { catch {console show} }
+   
 
    if { [info exists ::env(CMCLNG)] == 0 || [string compare "$::env(CMCLNG)" "english"] == 0 } {
               source ${SEQ_MANAGER_BIN}/../lib/x_manager/menu_english.tcl
@@ -302,7 +306,8 @@ proc XPManager::main {} {
 
     wm withdraw .
     wm title . $Dialogs::XPM_ApplicationName 
-
+    
+    SharedData_init
     XPManager::create
 
     BWidget::place . 0 0 center

@@ -36,7 +36,11 @@ proc XpOptions::globalOptions {} {
      option add *Listbox.background      white
      option add *Spinbox.background      white
      option add *Text.background         white
-
+     option add *Menu.Font               TkMenuFont
+     option add *Listbox.Font            TkTextFont
+     option add *Button.Font             TkTextFont
+     option add *Label.font              TkTextFont
+                
 }
 
 proc XpOptions::tablelistOptions {} {
@@ -48,4 +52,5 @@ proc XpOptions::tablelistOptions {} {
      option add *Tablelist.movableColumns    yes
      option add *Tablelist.labelCommand      tablelist::sortByColumn
      option add *Tablelist.labelCommand2     tablelist::addToSortColumns
+     option add *Tablelist.Font              TkHeadingFont
 }
