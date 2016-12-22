@@ -107,6 +107,25 @@ proc SharedData_initColors {} {
                                     IndianRed3 BlueViolet SeaGreen plum3 salmon sienna wheat3 yellow3 MediumVioletRed RosyBrown3 }
 }
 
+proc SharedData_initfont {} {
+   if { [SharedData_getMiscData FONT_NAME] != "" } {
+      # use user defined font
+      SharedData_setDefaultFonts [SharedData_getMiscData FONT_NAME] [SharedData_getMiscData FONT_NAME_SIZE] [SharedData_getMiscData FONT_NAME_SLANT] [SharedData_getMiscData FONT_NAME_UNDERL]
+      SharedData_setEntryFonts   [SharedData_getMiscData FONT_LABEL] [SharedData_getMiscData FONT_LABEL_SIZE] [SharedData_getMiscData FONT_LABEL_SLANT] [SharedData_getMiscData FONT_LABEL_UNDERL]
+  }
+}
+proc SharedData_setDefaultFonts { {_family fixed} {_size 12} {_slant roman} {_underline 0}} {
+   font configure TkDefaultFont -size ${_size} -family ${_family} -slant $_slant  -underline ${_underline}
+   font configure TkHeadingFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline} 
+   font configure TkFixedFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline}
+   font configure TkIconFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline}
+   font configure TkCaptionFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline}
+}
+proc SharedData_setEntryFonts { {_family fixed} {_size 12} {_slant roman} {_underline 0}} {
+  font configure TkTextFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline} 
+  font configure TkMenuFont -size ${_size} -family ${_family} -slant $_slant -underline ${_underline}
+  font configure TkTooltipFont -size [expr ${_size} - 2] -family ${_family} -slant $_slant -underline ${_underline}
+}
 proc SharedData_init {} {
    SharedData_initColors
 
@@ -132,6 +151,21 @@ proc SharedData_init {} {
    SharedData_setMiscData MSG_CENTER_NUMBER_ROWS 25
 
    SharedData_setMiscData FONT_BOLD "-microsoft-verdana-bold-r-normal--11-*-*-*-p-*-iso8859-10"
+   SharedData_setMiscData FONT_NAME "" 
+   SharedData_setMiscData FONT_TASK "" 
+   SharedData_setMiscData FONT_LABEL "" 
+   SharedData_setMiscData FONT_NAME_SIZE 10 
+   SharedData_setMiscData FONT_TASK_SIZE 10 
+   SharedData_setMiscData FONT_LABEL_SIZE 10 
+   SharedData_setMiscData FONT_NAME_STYLE "normal" 
+   SharedData_setMiscData FONT_TASK_STYLE "normal" 
+   SharedData_setMiscData FONT_LABEL_STYLE "normal" 
+   SharedData_setMiscData FONT_NAME_SLANT "roman" 
+   SharedData_setMiscData FONT_TASK_SLANT "roman" 
+   SharedData_setMiscData FONT_LABEL_SLANT "roman" 
+   SharedData_setMiscData FONT_NAME_UNDERL 0 
+   SharedData_setMiscData FONT_TASK_UNDERL 0 
+   SharedData_setMiscData FONT_LABEL_UNDERL 0 
    SharedData_setMiscData DEBUG_TRACE 1
    SharedData_setMiscData DEBUG_LEVEL 5
    SharedData_setMiscData AUTO_LAUNCH true
@@ -146,6 +180,7 @@ proc SharedData_init {} {
    SharedData_setMiscData MENU_RELIEF flat
 
    SharedData_readProperties
+   SharedData_initfont
 }
 
 proc SharedData_readProperties {} {

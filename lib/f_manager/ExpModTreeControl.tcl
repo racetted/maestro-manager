@@ -59,7 +59,8 @@ proc ExpModTreeControl_readAppConfig {} {
 }
 
 proc ExpModTreeControl_init { _sourceWidget _expPath } {
-   global errorInfo
+   global errorInfo List_Exps
+
    if { [ catch { 
       # tracing settings
       # by default errors and info level are enabled
@@ -70,10 +71,13 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
       ::log::lvSuppress error 0
       ::log::lvSuppress info 0
       ::log::lvSuppress debug
+      SharedData_init
 
       ExpModTreeControl_readAppConfig
 
       if { [ExpModTreeView_isOpened ${_expPath}] == false } {
+         lappend List_Exps ${_expPath}
+
          # get exp first module
          set entryFlowFile [ExpLayout_getEntryModulePath ${_expPath}]/flow.xml
 
@@ -82,7 +86,6 @@ proc ExpModTreeControl_init { _sourceWidget _expPath } {
          #set ${expChecksum}_DebugOn true
          set ${expChecksum}_DebugOn false
          ExpModTreeControl_debugChanged ${_expPath}
-
          # recursive read of all module flow.xml
          # the exp module tree is created at the same time
          ModuleFlow_readXml ${_expPath} ${entryFlowFile} ""
