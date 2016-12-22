@@ -967,7 +967,7 @@ proc ResourceView_addEntryMACHINE {_batchFrame _row {_value ""}} {
       label ${labelW} -text "Machine:"
       set attrVariable [ResourceView_getAttrVariable ${_batchFrame} machine]
       global ${attrVariable}
-      ComboBox ${entryW} -values { pollux castor hadar spica \$FRONTEND \$BACKEND } -textvariable ${attrVariable} 
+      ComboBox ${entryW} -values { \${FRONTEND} \${BACKEND} } -textvariable ${attrVariable} 
       trace add variable ${attrVariable} write "ResourceView_setDataChanged ${_batchFrame} true"
       ResourceView_registerVariable [winfo toplevel ${_batchFrame}] ${attrVariable}
       ResourceView_registerStateChangeWidgets [winfo toplevel ${_batchFrame}] "${entryW} configure -state "
