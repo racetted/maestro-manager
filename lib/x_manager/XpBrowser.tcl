@@ -209,8 +209,8 @@ proc XpBrowser::create { frm } {
       
       set BSetCatchup [button $frmother.bscatch -text "Set" -command {XpBrowser::SetCatchup $::_XpBrSelected $::_ExpCatchup}]
 
-      set Bdkfont  [button $frmother.dkfont -relief flat -image $XPManager::img_font -command {DkfFont_init}]
-      tooltip::tooltip $frmother.dkfont  $Dialogs::XpB_dkfont
+      #set Bdkfont  [button $frmother.dkfont -relief flat -image $XPManager::img_font -command {DkfFont_init}]
+      #tooltip::tooltip $frmother.dkfont  $Dialogs::XpB_dkfont
 
       # -- get frame for Control buttons
       set XpBfrmCb [frame $XpBfrm.cbutt  -border 2 -relief flat]
@@ -309,7 +309,7 @@ proc XpBrowser::create { frm } {
       pack $frmother.lcatch -side left -padx 4
       pack $Eexpcatch       -side left -padx 4
       pack $BSetCatchup     -side left -padx 4
-      pack $Bdkfont         -side left -padx 4
+      #pack $Bdkfont         -side left -padx 4
 
       grid $frmother -row 1 -column 1 -pady 1 -sticky w
 
