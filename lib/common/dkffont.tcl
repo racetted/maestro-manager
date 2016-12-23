@@ -81,44 +81,45 @@ namespace eval ::dkfFontSel {
                    if { [info exists list_item($keyFound)] } {
                      set list_item(${keyFound}) 1
                    }
-                   if {(${keyFound} == "font_task" && $font_task) || (${keyFound} == "font_name" && $font_title) || (${keyFound} == "font_label" && $font_label) } {
+                  
+                   if {(${keyFound} == "font_task" && $font_title) || (${keyFound} == "font_name" && $font_task ) || (${keyFound} == "font_label" && $font_label) } {
                      puts $out "${keyFound} = [string trim [lindex $font 0]]"
                    } elseif { [string match $patternst ${keyFound}] || [string match $patternsl ${keyFound}] || [ string match $patternul ${keyFound}] } {
-                      if {(${keyFound} == "font_task_style" && $font_task &&  $Style(bold)) || 
-                          (${keyFound} == "font_name_style" && $font_title && $Style(bold)) ||
+                      if {(${keyFound} == "font_task_style" && $font_title  &&  $Style(bold)) || 
+                          (${keyFound} == "font_name_style" && $font_task && $Style(bold)) ||
                           (${keyFound} == "font_label_style" && $font_label &&  $Style(bold))} {
                         puts $out "${keyFound} = bold"
-                      } elseif {(${keyFound} == "font_task_style" && $font_task &&  !$Style(bold))  || 
-                                (${keyFound} == "font_name_style" && $font_title &&  !$Style(bold)) ||
+                      } elseif {(${keyFound} == "font_task_style" && $font_title &&  !$Style(bold))  || 
+                                (${keyFound} == "font_name_style" && $font_task  &&  !$Style(bold)) ||
                                 (${keyFound} == "font_label_style" && $font_label &&  !$Style(bold))} {
                         puts $out "${keyFound} = normal"
                       } elseif {[string match $patternst ${keyFound}]}  {
                         puts $out ${line}
                       }
-                      if {(${keyFound} == "font_task_slant" && $font_task && $Style(italic))  ||
-                          (${keyFound} == "font_name_slant" && $font_title && $Style(italic)) ||
+                      if {(${keyFound} == "font_task_slant" && $font_title && $Style(italic))  ||
+                          (${keyFound} == "font_name_slant" && $font_task  && $Style(italic)) ||
                           (${keyFound} == "font_label_slant" && $font_label && $Style(italic))} {
                         puts $out "${keyFound} = italic"
-                      } elseif {(${keyFound} == "font_task_slant" && $font_task && !$Style(italic) )  ||
-                            (${keyFound} == "font_name_slant" && $font_title && !$Style(italic) ) ||
+                      } elseif {(${keyFound} == "font_task_slant" && $font_title && !$Style(italic) )  ||
+                            (${keyFound} == "font_name_slant" && $font_task  && !$Style(italic) ) ||
                             (${keyFound} == "font_label_slant" && $font_label && !$Style(italic))} {
                         puts $out "${keyFound} = roman"
                       } elseif {[string match $patternsl ${keyFound}]} {
                          puts $out ${line}
                       }
-                      if {(${keyFound} == "font_task_underl" && $font_task && $Style(underline)) ||
-                          (${keyFound} == "font_name_underl" && $font_title && $Style(underline)) ||
+                      if {(${keyFound} == "font_task_underl" && $font_title && $Style(underline)) ||
+                          (${keyFound} == "font_name_underl" && $font_task  && $Style(underline)) ||
                           (${keyFound} == "font_label_underl" && $font_label && $Style(underline)) } {
                         puts $out "${keyFound} = 1"
-                      } elseif {(${keyFound} == "font_task_underl" && $font_task && !$Style(underline)) ||
-                          (${keyFound} == "font_name_underl"  && $font_title && !$Style(underline)) ||
+                      } elseif {(${keyFound} == "font_task_underl" && $font_title && !$Style(underline)) ||
+                          (${keyFound} == "font_name_underl"  && $font_task  && !$Style(underline)) ||
                           (${keyFound} == "font_label_underl" && $font_label && !$Style(underline)) } {
                         puts $out "${keyFound} = 0"
                       } elseif {[string match $patternul ${keyFound}]} {
                         puts $out ${line}
                       }
-                   } elseif {(${keyFound} == "font_task_size" && $font_task)  || 
-                             (${keyFound} == "font_name_size" && $font_title) ||
+                   } elseif {(${keyFound} == "font_task_size" && $font_title)  || 
+                             (${keyFound} == "font_name_size" && $font_task) ||
                              (${keyFound} == "font_label_size" && $font_label)} {
                       puts $out "${keyFound} = [string trim [lindex $font 1]]"
                    } else {
@@ -363,9 +364,8 @@ namespace eval ::dkfFontSel {
 	}
                 # Font styles.
 	foreach {applystyle lcapply row col l r} {
-	    Task      task       0 0 {} Titles
-	    Titles    titles     0 1 Task Label
-            Label     label      0 2 Titles {}
+	    Task     task       0 0 {} Label
+            Label    label      0 1 Task {}
 	} {
 	    set b $w.applyon$applystyle
 	    checkbutton $b -variable [namespace current]::Applyon($lcapply) 
