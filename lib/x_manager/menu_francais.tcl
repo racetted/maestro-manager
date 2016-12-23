@@ -30,6 +30,7 @@ set descmenu {
             }
 	    "Preferences" {} {} 0 {
 	    {command "&Configurer les preferences " {} "Preferences de l'Usager" {} -command {Preferences::PrefShow}}
+            {command "fonts Selection" {} $Dialogs::XpB_dkfont {} -command {DkfFont_init}}
             }
             "Aide" {} {} 0 {
 	      {command "Aide" {} "Aide" {} -command {About::Help}}
