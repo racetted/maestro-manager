@@ -108,7 +108,7 @@
 *DKFChooseFont.applyonTitles.accelerator:Control-l
 
 ! Italicised style toggle.  The accelerator focusses and invokes.
-*DKFChooseFont.applyonLabel.text:  Label
+*DKFChooseFont.applyonLabel.text:  Labels
 *DKFChooseFont.applyonLabel.underline:	0
 *DKFChooseFont.applyonLabel.accelerator:	Control-b
 
