@@ -706,7 +706,8 @@ proc NewExp::FinalCheck { win path name entrmod arlocation arvalues new} {
          } else {
             Import::ImportNext $NewExp::PrefWinDirs $Import::_importname \
                $Import::_selected $Import::Destination $Import::_ImportGit \
-               $Import::_ImportCte NewExp::ArrayDirLocations NewExp::ArrayEntryValues
+               $Import::_ImportCte NewExp::ArrayDirLocations NewExp::ArrayEntryValues \
+               $Import::_Makelinks
          }
       }
 }

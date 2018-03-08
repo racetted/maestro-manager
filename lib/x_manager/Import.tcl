@@ -38,7 +38,9 @@ proc Import::ImportExp { exp } {
       
       variable _importGit 
       variable _importCte 
+      variable _Makelinks 
       variable ImportCte 
+      variable Makelinks 
       variable ImportW 
       variable initdir 
       variable Destination 
@@ -54,6 +56,7 @@ proc Import::ImportExp { exp } {
       # -- Initialize 
       set Import::initdir "" 
       set Import::_importGit 0 
+      set Import::_Makelinks 0 
       set Import::_importCte 0 
 
       # -- What if depot is not given
@@ -108,6 +111,7 @@ proc Import::ImportExp { exp } {
 		    -helptext "List of Available Paths"]
 
       set ImportGit [checkbutton $subf5.radgit -text "Import Git" -font 8 -variable Import::_ImportGit -onvalue 1 -offvalue 0]
+      set Makelinks [checkbutton $subf5.radmkl -text "Makelinks after importation" -font 8 -variable Import::_Makelinks -onvalue 1 -offvalue 0]
       set ImportCte [checkbutton $subf5.radcte -text "Copy Constants Locally (MB)" -font 8 -variable Import::_ImportCte -onvalue 1 -offvalue 0 \
                       -command {Import::GetConstantsSize $Import::_selected} ]
 
@@ -189,6 +193,7 @@ proc Import::ImportExp { exp } {
 
       pack $gexp -anchor w -pady 2 -padx 2
       pack $ImportGit -side left -padx 4
+      pack $Makelinks -side left -padx 4
       pack $ImportCte -side left -padx 4
       pack $ImportSize -side left -padx 4
 
@@ -290,7 +295,7 @@ proc Import::UpdateIMportWidget { wid1 wid2 } {
       set Import::_Importsize ""
 }
 
-proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues } {
+proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues mklinks} {
       
       upvar  $arlocation arloc
       upvar  $arvalues   arval
@@ -342,7 +347,7 @@ proc Import::ImportNext { win newname srcexp dest git cte arlocation arvalues } 
 
       set ButFrame [frame $Ctrlfrm2.bfrm]
       set CancelB2 [button $ButFrame.cancel -text "Cancel"  -command {destroy $Import::ImportW2}]
-      set NextB2   [button $ButFrame.next   -text "Proceed" -command [list Import::ExecImport $Import::ImportW2 $newname $srcexp $dest $git $cte]]
+      set NextB2   [button $ButFrame.next   -text "Proceed" -command [list Import::ExecImport $Import::ImportW2 $newname $srcexp $dest $git $cte $mklinks]]
     
 
       pack $NextB2   -side right  -padx 5 -pady 5
@@ -485,7 +490,7 @@ proc Import::CheckName { widgt } {
 }
 
 
-proc Import::ExecImport {win newname srcexp dest git cte} {
+proc Import::ExecImport {win newname srcexp dest git cte mklinks} {
       
       global SEQ_MANAGER_BIN
 
@@ -541,12 +546,18 @@ proc Import::ExecImport {win newname srcexp dest git cte} {
       } else {
               set arg_cte "-c"
       }
+  
+      if { $mklinks == 1 } {
+              set arg_mklinks "-m"
+      } else {
+              set arg_mklinks ""
+      }
 
       # -- Notes : import will put the target name of link 
       if {[string compare "$newname" ""] != 0 } {
-		set cmdargs "-s $srcexp -d $dest/$newname -n $arg_git $arg_cte"
+		set cmdargs "-s $srcexp -d $dest/$newname -n $arg_git $arg_cte $arg_mklinks"
       } else {
-		set cmdargs "-s $srcexp -d $dest $arg_git $arg_cte"
+		set cmdargs "-s $srcexp -d $dest $arg_git $arg_cte $arg_mklinks"
       }
       
       $WinInfoWidget insert end "cmd:import_maestro_exp $cmdargs\n"

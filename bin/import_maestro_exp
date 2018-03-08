@@ -20,7 +20,7 @@
 # */
 
 
-USAGE="\nUSAGE: import_maestro_exp [-h] [-cgn] -s source -d destination\n
+USAGE="\nUSAGE: import_maestro_exp [-h] [-cgnm] -s source -d destination\n
  where:\n
   -h: display help\n
   -s: path to the source suite/experiment\n
@@ -29,6 +29,7 @@ USAGE="\nUSAGE: import_maestro_exp [-h] [-cgn] -s source -d destination\n
   -g: enable git depot creation tag\n 
   -c: disable copying of constants directory\n
   -y: force yes to overwrite experiment question\n
+  -m: call makelinks after importation\n
   -r: enable reference implementation tag\n
  Description: retrieve a source maestro suite/experiment and set up its new git repository (if specified)\n
  Example: import_maestro_exp -s ~afsiops/maestro_suites/ensemble/forecast/e100 -d /tmp -g\n"
@@ -41,10 +42,11 @@ ntag=0
 gtag=0
 ctag=0
 rtag=0
+mtag=0
 src=""
 dest=""
 
-while getopts hcgnrs:d:y options 2> /dev/null; do
+while getopts hcgnrmvs:d:y options 2> /dev/null; do
   case $options in
     h)
       echo $USAGE 1>&2 && exit 0;;
@@ -56,6 +58,10 @@ while getopts hcgnrs:d:y options 2> /dev/null; do
       ntag=1;;
     r)
       rtag=1;;
+    m)
+      mtag=1;;
+    v)
+      set -x;;
     s)
       src=$(true_path $OPTARG) || exit 1;;
     d)
@@ -88,62 +94,60 @@ fi
 if [ $ntag -eq 1 ]; then
   # with -n option: renaming the suite/experiment
   final_exp=$(basename $dest)
-  dest=$(true_path $(dirname $dest)) || exit 1
+  destdir=${dest%/*}
 else
   # w/o -n option
   final_exp=$(basename $src)
-  dest=$(true_path $dest) || exit 1
+  destdir=$dest
 fi
 
-if [[ -d $dest/${final_exp} || -f $dest/${final_exp} || -L $dest/${final_exp} ]]; then
-  echo "$dest/${final_exp} exists. Overwrite? (y/n) " 1>&2
+if [[ -d $destdir/${final_exp} || -f $destdir/${final_exp} || -L $destdir/${final_exp} ]]; then
+  echo "$destdir/${final_exp} exists. Overwrite? (y/n) " 1>&2
   if [[ -z $answer ]]; then
     read answer
   fi
   if [[ "$answer" = "Y" || "$answer" = "y" ]]; then
-    echo "Removing $dest/${final_exp}..." 1>&2
-    rm -rf $dest/${final_exp}
+    echo "Removing $destdir/${final_exp}..." 1>&2
+    rm -rf $destdir/${final_exp}
   else
     echo "Skip importing!" 1>&2
     exit 0
   fi
 fi
 
+mkdir -p $destdir 
+destdir=$(true_path $destdir)
+
 echo "Retrieving $exp...\n
 SOURCE=$src\n
-DESTINATION=$dest\n" 1>&2
+DESTINATION=$destdir\n" 1>&2
 
 # deal with suites with sub-modules
 cd $src && has_submodule=$(git config --list | grep \^submodule)
 if [[ -n ${has_submodule} ]]; then
- git clone --no-hardlinks $src $dest/${final_exp}
- cd $dest/${final_exp} && git submodule update --init && git submodule foreach 'set -e; branch=$(git config -f ${toplevel}/.gitmodules submodule.${name}.branch); git checkout ${branch}'
+ git clone --no-hardlinks $src $destdir/${final_exp}
+ cd $destdir/${final_exp} && git submodule update --init && git submodule foreach 'set -e; branch=$(git config -f ${toplevel}/.gitmodules submodule.${name}.branch); git checkout ${branch}'
 else
- rsync -rlpv --exclude ".git" --exclude "hub" --exclude "logs" --exclude "sequencing" --exclude "listings" $src/ $dest/${final_exp}/
+ rsync -rlpv --exclude ".git" --exclude "hub" --exclude "logs" --exclude "sequencing" --exclude "listings" $src/ $destdir/${final_exp}/
  # copy directories/links under hub
  if [[ $ctag -eq 1 ]]; then
-   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv --exclude "constants/" {} $dest/${final_exp}/ \;
+   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv --exclude "constants/" --exclude "*/work/"  {} $destdir/${final_exp}/ \;
  else
-   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv {} $dest/${final_exp}/ \;
+   find . -name hub  \( -type d -o -type l \) -exec rsync -rlpRv --exclude "*/work/" {} $destdir/${final_exp}/ \;
  fi
  if [ $gtag -eq 1 ]; then
   echo "\nEnabling git tag..." 1>&2
   # tell git to ignore its operations under logs/listings/sequencing
   echo "*" > $TMPDIR/.gitignore
-  find $dest/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
+  find $destdir/${final_exp} \( -name logs -o -name listings -o -name sequencing \) -type d -exec cp $TMPDIR/.gitignore  {}/ \;
   # setup a local git repository
-  cd $dest/${final_exp} && setup_git_repository
+  cd $destdir/${final_exp} && setup_git_repository
  fi
 fi
 
 # copy only the first level of logs, listings and sequencing
-cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type d \) -exec rsync -dlpRv {} $dest/${final_exp}/   \;
-cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type l \) -exec mkdir -p $dest/$final_exp/{} \; 
-
-# special case for afsisio when group permission is required to run as afsiops
-if [ "$(id -nu)" = "afsisio" ]; then
-  find $dest/${final_exp}/* \( -name logs -o -name sequencing -o -name listings -o -name ExpDate -o -name ExpOptions.xml -o -name ExpTimings -o -name flow.xml \) \( -type d -o -type f \) -exec chmod -R 775 {} \;
-fi
+cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type d \) -exec rsync -dlpRv {} $destdir/${final_exp}/   \;
+cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type l \) -exec mkdir -p $destdir/$final_exp/{} \; 
 
 if [ $rtag -eq 1 ]; then
   echo "\nEnabling reference implementation tag..." 1>&2
@@ -153,15 +157,32 @@ if [ $rtag -eq 1 ]; then
     implementation..." 1>&2
   else
     # Inject experiment documentation
-    docfile=$dest/${final_exp}/.ref_info
+    docfile=$destdir/${final_exp}/.ref_info
     echo MAESTRO_CURRENT_REF=${MAESTRO_CURRENT_REF} >${docfile}
     echo MAESTRO_MODULE_NAME=${MAESTRO_MODULE_NAME} >>${docfile}
     echo MAESTRO_MODULE_PATH=${MAESTRO_MODULE_PATH} >>${docfile}
 
     # Inject s.ssmuse.dot command required to acquire reference
-    ssmfile=$dest/${final_exp}/.ref_load
+    ssmfile=$destdir/${final_exp}/.ref_load
     echo ". s.ssmuse.dot $(dirname ${MAESTRO_CURRENT_REF})" >${ssmfile}
   fi
+fi
+
+# Run makelinks on each experiment
+if [ $mtag -eq 1 ]; then 
+
+  cd $src 
+  for hubdirs in `find . -name hub  \( -type d -o -type l \) ` ;  do 
+      exp=${hubdirs%*/hub}
+      cd $destdir/$final_exp/$exp
+      if [[ "$answer" = "Y" || "$answer" = "y" ]]; then
+         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#./*}
+         makelinks  -f -c -e $final_exp/${exp#./*}  
+      else
+         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#./*}
+         makelinks  -e $final_exp/${exp#./*} 
+      fi  
+  done 
 fi
 
 echo "\nDone importing ${final_exp}\n" 1>&2
