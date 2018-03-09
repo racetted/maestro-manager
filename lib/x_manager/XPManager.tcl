@@ -305,8 +305,8 @@ proc XPManager::main {} {
     option add *TitleFrame.l.font {helvetica 11 bold italic}
 
     wm withdraw .
-    wm title . $Dialogs::XPM_ApplicationName 
-    
+    wm title . $Dialogs::XPM_ApplicationName
+
     SharedData_init
     XPManager::create
 

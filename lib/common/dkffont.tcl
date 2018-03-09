@@ -159,7 +159,7 @@ namespace eval ::dkfFontSel {
       } else {
            file rename -force $f.new $f
            SharedData_init
-            
+           
            if { [llength ${List_Exps}] > 0} {
              set ll [lsort -unique ${List_Exps}]
              foreach _expPath $ll {
@@ -171,11 +171,10 @@ namespace eval ::dkfFontSel {
             # refresh module tree
                DrawUtil_clearCanvas [ExpModTreeView_getCanvas ${_expPath}]
                ExpModTreeView_draw ${_expPath} [ExpModTree_getEntryModRecord ${_expPath}]
-               
-               
              }
           }
        }
+
     }
 
     # Local procedure names (ones that it is a bad idea to refer to
@@ -391,12 +390,14 @@ namespace eval ::dkfFontSel {
 	    pack $b -side left -fill x -padx {0 2m} 
 	    bind $b <$dir> [list focus $w.butnframe.$target]
 	}
+
 	button $w.butnframe.apl -text "Apply"
         
     }
     # Install the accelerator for the given window ($w) on the second
     # given window ($bindwin) as the script ($script).
     proc 'set_accel {w bindwin script} {
+
 	set accel [option get $w accelerator Accelerator]
 	if {[string length $accel]} {bind $bindwin <$accel> $script}
     }
@@ -419,6 +420,7 @@ namespace eval ::dkfFontSel {
 	    }
 	}
 	set Family [$w get $index]
+
 	##DEBUG
 	#wm title [winfo toplevel $w] $Family
 	'set_font
@@ -429,7 +431,8 @@ namespace eval ::dkfFontSel {
 	'set_font
 	set font [$w.sample.text cget -font]
         readProperties $font
-	uplevel #0 $script [list $font]
+        set oltitle  [wm  title .] 
+	uplevel #0 $script [list  $oltitle]
     }
 
 
