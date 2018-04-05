@@ -176,11 +176,11 @@ if [ $mtag -eq 1 ]; then
       exp=${hubdirs%*/hub}
       cd $destdir/$final_exp/$exp
       if [[ "$answer" = "Y" || "$answer" = "y" ]]; then
-         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#./*}
-         makelinks  -f -c -e $final_exp/${exp#./*}  
+         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#.*}
+         makelinks  -f -c -e $final_exp/${exp#.*}  
       else
-         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#./*}
-         makelinks  -e $final_exp/${exp#./*} 
+         export SEQ_EXP_HOME=$destdir/$final_exp/${exp#.*}
+         makelinks  -e $final_exp/${exp#.*} 
       fi  
   done 
 fi

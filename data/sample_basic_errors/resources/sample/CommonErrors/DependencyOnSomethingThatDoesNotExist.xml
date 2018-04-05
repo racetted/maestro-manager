@@ -1,0 +1,4 @@
+<NODE_RESOURCES>
+    <DEPENDS_ON dep_name="/path/to/something/that/is/not/there" type="node" status="end"/>
+</NODE_RESOURCES>
+

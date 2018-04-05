@@ -1,0 +1,41 @@
+<MODULE name="sample">
+    <SUBMITS sub_name="SyntaxErrors"/>
+    <SUBMITS sub_name="CommonErrors"/>
+    <FAMILY name="SyntaxErrors">
+        <SUBMITS sub_name="InConfig"/>
+        <SUBMITS sub_name="InTask"/>
+        <SUBMITS sub_name="InResourcesFile"/>
+        <TASK name="InConfig"/>
+        <TASK name="InTask"/>
+        <TASK name="InResourcesFile"/>
+    </FAMILY>
+    <FAMILY name="CommonErrors">
+        <SUBMITS sub_name="FaultyLoopResources"/>
+        <SUBMITS sub_name="BadDependencyThatWillNeverStart"/>
+        <SUBMITS sub_name="DependencyOnSomethingThatDoesNotExist"/>
+        <SUBMITS sub_name="MissingVariableInResources"/>
+        <SUBMITS sub_name="DepOnLoopWithoutIndexDefined"/>
+        <SUBMITS sub_name="UnknownMachine"/>
+        <SUBMITS sub_name="ErrorInConfig"/>
+        <SUBMITS sub_name="MissingInput"/>
+        <SUBMITS sub_name="MissingExecutable"/>
+        <SUBMITS sub_name="ErrorInTask"/>
+        <LOOP name="FaultyLoopResources">
+            <SUBMITS sub_name="DependencyOnSomethingThatDoesNotExist"/>
+            <TASK name="DependencyOnSomethingThatDoesNotExist"/>
+        </LOOP>
+        <TASK name="BadDependencyThatWillNeverStart">
+            <SUBMITS sub_name="Dependee"/>
+        </TASK>
+        <TASK name="DependencyOnSomethingThatDoesNotExist"/>
+        <TASK name="Dependee"/>
+        <TASK name="MissingVariableInResources"/>
+        <TASK name="DepOnLoopWithoutIndexDefined"/>
+        <TASK name="UnknownMachine"/>
+        <TASK name="ErrorInConfig"/>
+        <TASK name="MissingInput"/>
+        <TASK name="MissingExecutable"/>
+        <TASK name="ErrorInTask"/>
+    </FAMILY>
+</MODULE>
+

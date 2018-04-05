@@ -1,0 +1,4 @@
+<NODE_RESOURCES>
+    <DEPENDS_ON dep_name="/sample/CommonErrors/Dependee" type="node" status="end"/>
+</NODE_RESOURCES>
+

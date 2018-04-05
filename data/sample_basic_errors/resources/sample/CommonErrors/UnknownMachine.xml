@@ -1,0 +1,4 @@
+<NODE_RESOURCES>
+    <BATCH machine="this_host_does_not_exist"/>
+</NODE_RESOURCES>
+

@@ -1,0 +1,14 @@
+
+function will_die_this_time {
+#set -x will not be passed into functions so declare it if you want to see traces of why the job died
+set -x
+ls AFileThatDoesNotExist
+echo "Wait what? I'm not supposed to run." 
+}
+
+# you can go past trapping by using the || syntax, example: 
+
+ls AFileThatDoesNotExist || echo "Oh it's fine, I don't really need it" 
+
+will_die_this_time
+
