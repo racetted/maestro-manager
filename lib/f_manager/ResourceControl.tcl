@@ -220,7 +220,7 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
    if { [${flowNodeRecord} cget -status] != "new" } {
       # open the flow.xml doc
       set flowXmlFile [ModuleLayout_getFlowXml ${_expPath} ${_moduleNode}]
-      set flowXmlDoc [ResourceXml_parseFile ${flowXmlFile}]
+      set flowXmlDoc  [ResourceXml_parseFile ${flowXmlFile}]
 
       set moduleNodeRecord [ModuleFlow_getRecordName ${_expPath} ${_moduleNode}]
 
@@ -242,7 +242,26 @@ proc ResourceControl_saveDepsData { _expPath _moduleNode _flowNode _resourceXmlD
       }
 
       # save the xml file and delete the xml doc
-      ResourceXml_saveDocument ${flowXmlFile} ${flowXmlDoc} true
+      set fid  [open "$::env(TMPDIR)/${flowXmlDoc}.tmp" w 0664]
+      set result [${flowXmlDoc} asXML]
+      puts ${fid} ${result}
+      close ${fid}
+
+      set status [catch {exec diff -q ${flowXmlFile} "$::env(TMPDIR)/${flowXmlDoc}.tmp" } output]
+      if {$status == 1} {
+        puts "** ${flowXmlFile} and $::env(TMPDIR)/${flowXmlDoc}.tmp are different **"
+        puts "***************************************************************************"
+        puts ""
+        puts $output
+        puts ""
+        puts "***************************************************************************"
+        if {[file writable ${flowXmlFile}]} {
+          ResourceXml_saveDocument ${flowXmlFile} ${flowXmlDoc} true
+        }
+      } 
+      if {[file exist $::env(TMPDIR)/${flowXmlDoc}.tmp]} {
+         catch {[exec rm -f $::env(TMPDIR)/${flowXmlDoc}.tmp]}
+      }
    }
 
    # store the dependencies in the  node record
