@@ -146,8 +146,15 @@ else
 fi
 
 # copy only the first level of logs, listings and sequencing
-cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type d \) -exec rsync -dlpRv {} $destdir/${final_exp}/   \;
-cd $src && find . \( -name logs -o -name listings -o -name sequencing \) \( -type l \) -exec mkdir -p $destdir/$final_exp/{} \; 
+cd $src && find . \( -name logs -o -name listings -o -name sequencing -o -name stats \) \( -type d \) -exec rsync -dlpRv {} $destdir/${final_exp}/   \;
+cd $src && find . \( -name logs -o -name listings -o -name sequencing -o -name stats \) \( -type l \) -exec mkdir -p $destdir/$final_exp/{} \; 
+# recreate sequencing / logs if they do not exist / haven't been linked 
+cd $src && for dir in `find . -name modules` ; do 
+   [[ -e ${dir%*/modules}/logs ]]  || rm -f $destdir/$final_exp/${dir%*/modules}/logs && mkdir -p $destdir/$final_exp/${dir%*/modules}/logs
+   [[ -e ${dir%*/modules}/sequencing ]] || rm -f  $destdir/$final_exp/${dir%*/modules}/sequencing &&  mkdir -p $destdir/$final_exp/${dir%*/modules}/sequencing
+   [[ -e ${dir%*/modules}/stats ]] ||  rm -f $destdir/$final_exp/${dir%*/modules}/stats &&  mkdir -p $destdir/$final_exp/${dir%*/modules}/stats
+done 
+
 
 if [ $rtag -eq 1 ]; then
   echo "\nEnabling reference implementation tag..." 1>&2
