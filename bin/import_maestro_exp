@@ -31,6 +31,7 @@ USAGE="\nUSAGE: import_maestro_exp [-h] [-cgnm] -s source -d destination\n
   -y: force yes to overwrite experiment question\n
   -m: call makelinks after importation\n
   -r: enable reference implementation tag\n
+  -v: verbose \n
  Description: retrieve a source maestro suite/experiment and set up its new git repository (if specified)\n
  Example: import_maestro_exp -s ~afsiops/maestro_suites/ensemble/forecast/e100 -d /tmp -g\n"
 
@@ -94,7 +95,7 @@ fi
 if [ $ntag -eq 1 ]; then
   # with -n option: renaming the suite/experiment
   final_exp=$(basename $dest)
-  destdir=${dest%/*}
+  destdir=$(dirname ${dest})
 else
   # w/o -n option
   final_exp=$(basename $src)
