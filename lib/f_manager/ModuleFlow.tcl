@@ -50,7 +50,13 @@ namespace import ::struct::record::*
 #           as the sequencer would see it.
 # type  - string representing node type (FamilyNode, ModuleNode, etc)
 # submits - flow children, nodes submitted by current node (values is leaf part of node i.e. see name attribute)
-# submitter - node that submits the current node; 
+#           the value of the submits attribute is a list of submit_node submit_type pair 
+#           submit_type is set to "user" when sequencer is not submitting the node but is up to user 
+#           submits={ {submit_node submit_type} {submit_node submit_type}}
+#           ex:
+#           submits={ {node1 default} {node2 user} }
+#
+# submitter - node name (not node record) that submits the current node; 
 #                 This value is empty if the submitter is the parent container, it has a value only if the submitter is a task
 #                 and the value of the submitter is then the name of the task node (not the full node)
 #                 if the node is submitted by a task, then the submitter is 
@@ -273,27 +279,30 @@ proc ModuleFlow_flowNodeRecord2Xml { _flowNodeRecord _xmlDoc _xmlParentNode _mod
    # we stop here for module node that is not root node
    if { ${nodeType} != "ModuleNode" || ${_modRootFlowNode} == ${_flowNodeRecord} } {
       # create submits tag first
-      foreach submitNode [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {   
+      foreach submitNodeRecord [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {   
          # create submit tag
          set xmlSubmitNode [${_xmlDoc} createElement SUBMITS]
          ${xmlDomNode} appendChild ${xmlSubmitNode}
-         ${xmlSubmitNode} setAttribute sub_name [${submitNode} cget -name]
-         switch [${submitNode} cget -type] {
+         ${xmlSubmitNode} setAttribute sub_name [${submitNodeRecord} cget -name]
+         switch [${submitNodeRecord} cget -type] {
             NpassTaskNode {
                # set this attribute so that the npass task is not submitted by the sequencer
                ${xmlSubmitNode} setAttribute type "user"
             }
          }
+         if { [ModuleFlow_getSubmitType ${submitNodeRecord}] == "user" } {
+            ${xmlSubmitNode} setAttribute type "user"
+         }
       }
 
       # create the flow node elements
-      foreach submitNode [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {
+      foreach submitNodeRecord [ModuleFlow_getSubmitRecords ${_flowNodeRecord}] {
          if { [ModuleFlow_isContainer ${_flowNodeRecord}] } {
             # following nodes belong to the new container node
-            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${xmlDomNode} ${_modRootFlowNode} 
+            ModuleFlow_flowNodeRecord2Xml ${submitNodeRecord} ${_xmlDoc} ${xmlDomNode} ${_modRootFlowNode} 
          } else {
             # following nodes belong to the previous container node
-            ModuleFlow_flowNodeRecord2Xml ${submitNode} ${_xmlDoc} ${_xmlParentNode} ${_modRootFlowNode} 
+            ModuleFlow_flowNodeRecord2Xml ${submitNodeRecord} ${_xmlDoc} ${_xmlParentNode} ${_modRootFlowNode} 
          }
       }
    }
@@ -505,9 +514,11 @@ proc ModuleFlow_xmlParseSubmits { _flowNodeRecord _xmlNode } {
 
    foreach submitNode ${submitNodes} {
       set flowSubmitName [${submitNode} getAttribute sub_name ""]
+      # type could be "user" if not empty
+      set flowSubmitType [${submitNode} getAttribute type "default"]
       set flowChildNode ${submitParent}/${flowSubmitName}
       ::log::log debug "ModuleFlow_xmlParseSubmits ::textutil::trim::trimPrefix ${flowChildNode} ${submitParent}"
-      lappend flowChildren ${flowSubmitName}
+      lappend flowChildren "${flowSubmitName} ${flowSubmitType}"
    }
    ${_flowNodeRecord} configure -submits ${flowChildren}
 }
@@ -604,7 +615,8 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
    }
 
    set isWorkUnit $extraArgs(is_work_unit)
-
+   set submitType default
+   set currentSubmitType  [ModuleFlow_getSubmitType ${_currentNodeRecord}]
 
    # create new node
    ::log::log debug "ModuleFlow_createNewNode flow node record:${newNodeRecord} -name ${_newName} -type ${_nodeType} -flow_path ${newNode}"
@@ -668,13 +680,13 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
             foreach switchingItemsNodeRecord ${switchingItemsNodeRecords} {
                set childPosition 0
                foreach submitNodeRecord ${submittedNodeRecords} {
-                  ModuleFlow_addSubmitNode ${switchingItemsNodeRecord} ${submitNodeRecord} ${childPosition}
+                  ModuleFlow_addSubmitNode ${switchingItemsNodeRecord} ${submitNodeRecord} [ModuleFlow_getSubmitType ${submitNodeRecord}] ${childPosition}
                   incr childPosition
                }
             }
          } else {
             foreach submitNodeRecord ${submittedNodeRecords} {
-               ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} ${childPosition}
+               ModuleFlow_addSubmitNode ${newNodeRecord} ${submitNodeRecord} [ModuleFlow_getSubmitType ${submitNodeRecord}]  ${childPosition}
                incr childPosition
             }
          }
@@ -683,10 +695,10 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          if { [${_currentNodeRecord} cget -type] == "SwitchNode" } {
             # for switchnode, the submitter is really inside the switch item
             set switchItemRecord [ModuleFlow_getCurrentSwitchItemRecord ${_currentNodeRecord}]
-            ${switchItemRecord} configure -submits ""
+            ${switchItemRecord} configure -submits {}
             ModuleFlow_addSubmitNode ${switchItemRecord} ${newNodeRecord}
          } else {
-            ${_currentNodeRecord} configure -submits ""
+            ${_currentNodeRecord} configure -submits {}
             ModuleFlow_addSubmitNode ${_currentNodeRecord} ${newNodeRecord}
          }
 
@@ -730,10 +742,10 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
          set submitter [ModuleFlow_getSubmitter ${_currentNodeRecord}]
          set currentNodePosition [ModuleFlow_getSubmitPosition ${_currentNodeRecord}]
          ModuleFlow_removeSubmitNode ${submitter} ${_currentNodeRecord}
-         ModuleFlow_addSubmitNode ${submitter} ${newNodeRecord} ${currentNodePosition}
+         ModuleFlow_addSubmitNode ${submitter} ${newNodeRecord} ${submitType} ${currentNodePosition}
 
          # next, assign current node as only submitted node of new node
-         ModuleFlow_addSubmitNode ${newNodeRecord} ${_currentNodeRecord}
+         ModuleFlow_addSubmitNode ${newNodeRecord} ${_currentNodeRecord} ${currentSubmitType}
 
          # if new node is container need to re-assign children at the container level
          if { [ModuleFlow_isContainer ${newNodeRecord}] == true } {
@@ -745,7 +757,7 @@ proc ModuleFlow_createNewNode { _expPath _currentNodeRecord _newName _nodeType _
       }
       default {
          # add current node as a submitted node to the submitter
-         ModuleFlow_addSubmitNode ${_currentNodeRecord} ${newNodeRecord} ${_insertPosition}
+         ModuleFlow_addSubmitNode ${_currentNodeRecord} ${newNodeRecord} ${submitType} ${_insertPosition}
       }
    }
 
@@ -881,7 +893,7 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
             set childPosition 0
             foreach itemSubmitRecord [ModuleFlow_getSubmitRecords ${switchItemRecord}] {
                # assign new submitter: node that was submitted by switch item to the submitter of the switch node
-               ModuleFlow_addSubmitNode ${submitter} ${itemSubmitRecord} ${childPosition}
+               ModuleFlow_addSubmitNode ${submitter} ${itemSubmitRecord} "default" ${childPosition}
                # assign new container
                ModuleFlow_assignNewContainer ${_expPath} ${itemSubmitRecord} ${parentContainerRecord} ${childPosition} nodeRecordsToDelete
                incr childPosition
@@ -903,12 +915,14 @@ proc ModuleFlow_deleteNode { _expPath _origFlowNodeRecord _flowNodeRecord {_dele
          }
 
          # if the current node is submitting other nodes, assign those to the submitter of the current node
-         set submittedNames [${_flowNodeRecord} cget -submits]
+         set submitList [${_flowNodeRecord} cget -submits]
          # assign the new nodes at the same position as the current
-         foreach submitName ${submittedNames} {
+         foreach { submitValues } ${submitList} {
+            set submitName [lindex ${submitValues} 0]
+            set submitType [lindex ${submitValues} 1]
             set submitNode ${parentContainerRecord}/${submitName}
             ::log::log debug "ModuleFlow_deleteNode ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}"
-            ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${flowNodePosition}
+            ModuleFlow_addSubmitNode ${submitter} ${submitNode} ${submitType} ${flowNodePosition}
             incr flowNodePosition
          }
       }
@@ -1064,6 +1078,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    set flowNode [ModuleFlow_record2NodeName ${_flowNodeRecord}]
    set submitter [ModuleFlow_getSubmitter ${_flowNodeRecord}]
    set nodeType [${_flowNodeRecord} cget -type]
+   set submitType [ModuleFlow_getSubmitType ${_flowNodeRecord}]
    set parentModRecord [ModuleFlow_getModuleContainer ${_flowNodeRecord}]
    set moduleLayoutNode [ModuleFlow_getLayoutNode ${parentModRecord}] 
    set submittedNodeRecords [ModuleFlow_getSubmitRecords ${_flowNodeRecord}]
@@ -1161,7 +1176,7 @@ proc ModuleFlow_renameNode { _expPath _flowNodeRecord _newName } {
    record delete instance ${_flowNodeRecord}
 
    # add new node reference to submitter
-   ModuleFlow_addSubmitNode ${submitter} ${newNodeRecord} ${submitPosition}
+   ModuleFlow_addSubmitNode ${submitter} ${newNodeRecord} ${submitType} ${submitPosition}
 
    # add new node to parent container
    ModuleFlow_addChildNode ${containerNodeRecord} ${newNodeRecord} end
@@ -1213,7 +1228,7 @@ proc ModuleFlow_assignNewContainer { _expPath _flowNodeRecord _newContainerRecor
       # continue down the submit path if not container
       set submits [${_flowNodeRecord} cget -submits]
       set childPosition 0
-      foreach submitNode ${submits} {
+      foreach { submitNode submitType } ${submits} {
          if { [ModuleFlow_isContainer ${_flowNodeRecord}] == true } {
             set submitNodeRecord ${_flowNodeRecord}/${submitNode}
             set parentContainerRecord ${recordName}
@@ -1253,7 +1268,8 @@ proc ModuleFlow_assignNewContainerDir { _expPath _moduleNode _flowNodeRecord _ne
    ModuleLayout_assignNewContainer ${_expPath} ${moduleLayoutNode} ${containerNode} ${flowNode} [${_flowNodeRecord} cget -type] ${assignMode}
    if { ! [ModuleFlow_isContainer ${_flowNodeRecord}] } {
       set submits [${_flowNodeRecord} cget -submits]
-      foreach submitNode ${submits} {
+      foreach { submitValues } ${submits} {
+         set submitNode [lindex ${submitValues} 0]
          set submitNodeName [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
          ModuleFlow_assignNewContainerDir ${_expPath} ${_moduleNode} ${submitNodeName} ${_newContainerRecord}
       }
@@ -1389,7 +1405,9 @@ proc ModuleFlow_getSubmitPosition { _flowNodeRecord } {
          set submitterNode [ModuleFlow_getSubmitter ${_flowNodeRecord}]
       }
       set submitterSubmits [${submitterNode} cget -submits]
-      set foundIndex [lsearch ${submitterSubmits} [${_flowNodeRecord} cget -name]]
+      # searching through the list of submit looking for the node name with extra space as delimiter
+      # Use the '*' cause I don't care about the submit type in the search
+      set foundIndex [lsearch ${submitterSubmits} "[${_flowNodeRecord} cget -name] *"]
       if { ${foundIndex} != -1 } {
          set position ${foundIndex}
       }
@@ -1417,7 +1435,9 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
          # get all switching items
          set submitterRecords [ModuleFlow_getAllSwitchItemFlowNodeRecord ${_flowNodeRecord}]
          foreach submitterRecord ${submitterRecords} {
-            foreach submitNode [${submitterRecord} cget -submits] {
+            foreach { submitValues } [${submitterRecord} cget -submits] {
+               set submitNode [lindex ${submitValues} 0]
+               set submitNodeName [ModuleFlow_getContainer ${_flowNodeRecord}]/${submitNode}
                lappend newSubmits ${_flowNodeRecord}/${submitNode}
             }
          }
@@ -1437,7 +1457,9 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
    } else {
       set parentContainerRecord [ModuleFlow_getContainer ${_flowNodeRecord}]
    }
-   foreach submitNode ${submits} {
+
+   foreach { submitValues } ${submits} {
+      set submitNode [lindex ${submitValues} 0]
       lappend newSubmits ${parentContainerRecord}/${submitNode}
    }
 
@@ -1447,7 +1469,7 @@ proc ModuleFlow_getSubmitRecords { _flowNodeRecord {_all false}} {
 
 # add node _submitNodeRecord to the list of nodes submitted by _flowNodeRecord at position _position
 # _flowNodeRecord & _submitNode are FlowNode records
-proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position end } } {
+proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord {_submitType default} { _position end } } {
    ::log::log debug "ModuleFlow_addSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord} _position:${_position}"
    # attach to submitter
    # submits are stored as relative path to the parent container
@@ -1458,7 +1480,7 @@ proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position en
       set submitterRecord ${_flowNodeRecord}
    }
    set currentSubmits [${submitterRecord} cget -submits]
-   set currentSubmits [linsert ${currentSubmits} ${_position} [${_submitNodeRecord} cget -name]]
+   set currentSubmits [linsert ${currentSubmits} ${_position} "[${_submitNodeRecord} cget -name] ${_submitType}"]
    ${submitterRecord} configure -submits ${currentSubmits}
    ::log::log debug "ModuleFlow_addSubmitNode ${submitterRecord} configure -submits ${currentSubmits}"
 
@@ -1466,10 +1488,10 @@ proc ModuleFlow_addSubmitNode { _flowNodeRecord _submitNodeRecord { _position en
    ModuleFlow_setSubmitter ${_submitNodeRecord} ${submitterRecord}
 }
 
-# remove node _submitNode from the list of nodes submitted by _flowNodeRecord
-# _flowNodeRecord & _submitNode are FlowNode records
-proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNode } {
-   ::log::log debug "ModuleFlow_removeSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNode:${_submitNode}"
+# remove node _submitNodeRecord from the list of nodes submitted by _flowNodeRecord
+# _flowNodeRecord & _submitNodeRecord are FlowNode records
+proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNodeRecord } {
+   # ::log::log debug "ModuleFlow_removeSubmitNode _flowNodeRecord:${_flowNodeRecord} _submitNodeRecord:${_submitNodeRecord}"
    if { [${_flowNodeRecord} cget -type] == "SwitchNode" } {
       set submitterRecord [ModuleFlow_getCurrentSwitchItemRecord ${_flowNodeRecord}]
    } else {
@@ -1478,9 +1500,10 @@ proc ModuleFlow_removeSubmitNode { _flowNodeRecord _submitNode } {
    if { [record exists instance ${submitterRecord}] } {
       # detach from submitter
       set submits [${submitterRecord} cget -submits]
-      set submitIndex [lsearch ${submits} [${_submitNode} cget -name]]
-      if { ${submitIndex} != -1 } {
-         set submits [lreplace ${submits} ${submitIndex} ${submitIndex}]
+
+      set foundIndex [lsearch ${submits} "[${_submitNodeRecord} cget -name] *"]
+      if { ${foundIndex} != -1 } {
+         set submits [lreplace ${submits} ${foundIndex} ${foundIndex}]
          ${submitterRecord} configure -submits ${submits}
       }
    }
@@ -1517,6 +1540,40 @@ proc ModuleFlow_getSubmitter { _flowNodeRecord } {
    return ${submitter}
 }
 
+# returns the submit type of the current flowNodeRecord
+# submit type is either "default" or "user"
+# the submit type is stored in the submitter record "submits" attribute
+proc ModuleFlow_getSubmitType { _flowNodeRecord } {
+   set submitType "default"
+   set submitterRecord [ModuleFlow_getSubmitter ${_flowNodeRecord}]
+   if { ${submitterRecord} != "" } {
+      set submits [${submitterRecord} cget -submits]
+      set foundIndex [lsearch ${submits} "[${_flowNodeRecord} cget -name] *"]
+      if { ${foundIndex} != -1 } {
+         set submitValues [lindex ${submits} ${foundIndex}]
+         set submitType [lindex ${submitValues} 1]
+      }
+   } 
+   return ${submitType}
+}
+
+# returns the submit type of the current flowNodeRecord
+# submit type is either "default" or "user"
+# the submit type is stored in the submitter record "submits" attribute
+proc ModuleFlow_setSubmitType { _flowNodeRecord _submitType } {
+   set submitterRecord [ModuleFlow_getSubmitter ${_flowNodeRecord}]
+   if { ${submitterRecord} != "" } {
+      set submits [${submitterRecord} cget -submits]
+      set foundIndex [lsearch ${submits} "[${_flowNodeRecord} cget -name] *"]
+      if { ${foundIndex} != -1 } {
+         set submitValues [lindex ${submits} ${foundIndex}]
+         lset submitValues 1 ${_submitType}
+         lset submits ${foundIndex} ${submitValues}
+         ${submitter} configure -submits ${submits}
+      }
+   }
+}
+
 proc ModuleFlow_addChildNode { _flowNodeRecord _childNodeRecord { _position end } } {
    # child nodes are stored as relative path to the parent container
    set childrenNodes [${_flowNodeRecord} cget -children]
@@ -1534,12 +1591,12 @@ proc ModuleFlow_getContainer { _flowNodeRecord } {
    return [file dirname ${_flowNodeRecord}]
 }
 
-# search down the given flow node submits tree to see which one submits the given node
+# search down the given flow node submits tree of _submitNodeRecord to see which one submits the given node
 # submit parent is stored as relative to container node
 # if submitter is a container, returns ""
 # if submitter is task, returns leaf part of task node
 proc ModuleFlow_searchSubmitter { _submitNodeRecord _flowNodeRecord } {
-   ::log::log debug "ModuleFlow_searchSubmitter _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
+   # ::log::log debug "ModuleFlow_searchSubmitter _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
 
    if { ${_submitNodeRecord} == "" } {
          return ""
@@ -1552,7 +1609,8 @@ proc ModuleFlow_searchSubmitter { _submitNodeRecord _flowNodeRecord } {
 
    # search for the node
    set searchSubmitNode [file tail ${_flowNodeRecord}]
-   set foundIndex [lsearch ${submitsNode} ${searchSubmitNode} ]
+   # set foundIndex [lsearch ${submitsNode} "[${_flowNodeRecord} cget -name] *"]
+   set foundIndex [lsearch ${submitsNode} "${searchSubmitNode} *"]
    if { ${foundIndex} != -1 } {
       ::log::log debug "ModuleFlow_searchSubmitter found node _submitNodeRecord:${_submitNodeRecord} _flowNodeRecord: ${_flowNodeRecord}"
       if { [ModuleFlow_isContainer ${_submitNodeRecord}] == true } {
