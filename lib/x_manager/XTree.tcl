@@ -263,6 +263,7 @@ proc XTree::lshift listVar {
 }
 
 proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffix ftype indice } {
+    # puts "XTree::FindDrawTree tree:$tree fromDir:$fromDir branche:$branche level:$level"
     global listExp listInodes stopDirList
 
     set basedir [string trimright [file join [file normalize $fromDir] { }]]
@@ -280,6 +281,7 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
 		 set dd [join ${listD}/$basename ""]
 		 file stat $basedir statinfo
 		 set inode $statinfo(ino)
+                 # add the experiment node
 		 set string ";catch { $tree insert end ${parent} ${parent}.${basename} -text $basename -data $dd -image $Preferences::exp_icon_img }"
 		 append CmdList $string
 		 eval $CmdList
@@ -287,24 +289,25 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
 		 if {[array get listInodes $inode] == "" } {
 		    set listInodes($inode) 1
 		 }
+
+                 # found an experiment, we are done
 		 return
     }
 
+    # not an experiment, search deeper 
     if { $parent == "root" } {
-           set string ";catch { $tree  insert end root home$indice -text $fromDir -image [Bitmap::get folder] -data root }"
-	   append CmdList $string
-	   set parent home$indice
+           # suite depot level
+           set currentNode home$indice 
+           set string ";catch { $tree  insert end root ${currentNode} -text $fromDir -image [Bitmap::get folder] -data root }"
     } else {
+           # sub directory level
 	   set Ftype [file type $basedir]
-           if { $parent == "home$indice" } {
-	          set string ";catch { $tree insert end ${parent} ${branche} -text $branche -image [Bitmap::get folder] }"
-	          set parent ${branche}
-	      } else {
-	          set string ";catch { $tree insert end ${parent} ${parent}.${branche} -text $branche -image [Bitmap::get folder] }"
-	          set parent ${parent}.${branche}
-	      }
-	      append CmdList $string
+           set currentNode  ${parent}.${branche} 
+	   set string ";catch { $tree insert end ${parent} ${currentNode} -text $branche -image [Bitmap::get folder] }"
+           # puts "adding $tree insert end ${parent} ${currentNode} -text $branche"
     }
+    set parent ${currentNode}
+    append CmdList $string
 
     set level [expr $level + 1]
 
@@ -313,7 +316,11 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
     }
 
     # -- if not go deep, the code capture dir and links
-    foreach dname [glob -nocomplain -type {l d r} -path $basedir *] {
+    # There is a check further to filter out items with the same inode
+    set dirList [lsort [glob -nocomplain -type {l d r} -path $basedir *]]
+   
+    foreach dname ${dirList} {
+              # puts "go deep on dname:$dname level:$level"
 	      set basename [file tail $dname]
 	      set Ftype [file type $dname]
 	      file stat $dname statinfo
@@ -321,6 +328,7 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
               if { $Ftype eq "directory" } {
                    set kris [catch {file type $dname/EntryModule} ftype]
 	           if { $kris == 0 && $ftype eq "link" == 0 } {
+                       # found an experiment
 		       set listExp($basedir) "1"
 		      
 		       set dd [join ${listD}/$basename ""]
@@ -334,6 +342,9 @@ proc XTree::FindDrawTree { tree fromDir branche level listD parent CmdList suffi
 		       }
 		   } else {
 		      # -- dont Recurse on hub , bin, src
+                      # if the inode is the same as one that I already saw, skip it
+                      # this means if a suite has both a link and a directory, only one of them will show up
+                      # i.e. gdps -> gdps_20150212
 		      if {[array get listInodes $inode] == "" } {
 		         set listInodes($inode) 1
                          if { [array get stopDirList ${basename}] == "" } {
